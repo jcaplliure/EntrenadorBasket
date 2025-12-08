@@ -2,231 +2,160 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Coach Helper</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pizarra Entrenador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f4f4; }
-        
-        .header { text-align: center; margin-bottom: 20px; position: relative;}
-        .user-info { position: absolute; top: 0; right: 0; font-size: 0.9em; color: #666; text-align: right; background: #e0e0e0; padding: 5px 10px; border-radius: 4px; }
-        .action-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 40px; }
-        .btn-crear { background: #e65100; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; transition: background 0.3s; }
-        .btn-admin { background: #546e7a; }
-        
-        .search-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 30px; margin-top: 20px; border: 1px solid #ddd; }
-        .search-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .search-input, .search-select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        .search-input { flex-grow: 2; } .search-select { flex-grow: 1; background: white;}
-        .logic-select { background-color: #f9fbe7; border-color: #c0ca33; color: #555; font-weight: bold; }
-        .btn-search { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
-        .btn-clear { text-decoration: none; color: #666; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-
-        .card { background: white; padding: 25px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 5px solid #e65100; position: relative; }
-        
-        /* BOTONES DE EDICIÓN Y BORRADO */
-        .card-actions { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
-        .btn-icon { text-decoration: none; font-size: 1.2em; opacity: 0.6; transition: all 0.2s; }
-        .btn-icon:hover { opacity: 1; transform: scale(1.1); }
-        .btn-edit { filter: hue-rotate(240deg); }
-
-        /* --- ESTILOS MULTIMEDIA (ACTUALIZADOS) --- */
-        .media-container { 
-            margin-top: 15px; 
-            margin-bottom: 15px; 
-            border-radius: 8px; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-            background: #000; 
-            display: flex; 
-            justify-content: center;
-            
-            /* ALTURA FIJA PARA UNIFORMIDAD */
-            height: 250px; 
-            width: 100%;
-        }
-
-        .drill-image { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; /* Esto recorta la imagen para que llene el hueco */
-            display: block;
-            cursor: zoom-in; /* Cambia el cursor para indicar que se puede ampliar */
-            transition: transform 0.3s;
-        }
-        .drill-image:hover { opacity: 0.9; }
-
-        video { width: 100%; height: 100%; object-fit: contain;} /* Video mantiene proporción */
-        iframe { width: 100%; height: 100%; border: none; }
-        
-        .external-link-btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f5f5f5; color: #333; text-decoration: none; font-weight: bold; text-align: center; padding: 20px; box-sizing: border-box;}
-        .external-link-btn:hover { background: #e0e0e0; }
-
-        /* --- ESTILOS DEL MODAL (VENTANA EMERGENTE) --- */
-        .modal {
-            display: none; /* Oculto por defecto */
-            position: fixed; 
-            z-index: 1000; 
-            padding-top: 50px; 
-            left: 0; top: 0; width: 100%; height: 100%; 
-            overflow: auto; 
-            background-color: rgba(0,0,0,0.9); /* Fondo negro semitransparente */
-        }
-        .modal-content {
-            margin: auto;
-            display: block;
-            width: 80%;
-            max-width: 1000px;
-            max-height: 80vh;
-            object-fit: contain;
-            border-radius: 4px;
-            box-shadow: 0 0 20px rgba(255,255,255,0.2);
-        }
-        .close-modal {
-            position: absolute;
-            top: 15px;
-            right: 35px;
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
-            transition: 0.3s;
-            cursor: pointer;
-        }
-        .close-modal:hover { color: #bbb; }
-        .modal-caption {
-            margin: auto;
-            display: block;
-            width: 80%;
-            max-width: 700px;
-            text-align: center;
-            color: #ccc;
-            padding: 10px 0;
-            height: 150px;
-        }
-
-        .tags-section { margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
-        .tag-main { background: #ffe0b2; color: #e65100; padding: 4px 10px; border-radius: 4px; font-size: 0.85em; font-weight: bold; margin-right: 5px;}
-        .tag-sec { background: #f5f5f5; color: #666; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; margin-right: 5px;}
+        .card-img-top { height: 180px; object-fit: cover; background: #eee; }
+        .card-video-placeholder { height: 180px; background: #000; display: flex; align-items: center; justify-content: center; color: white; }
+        .icon-action { cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
+        .icon-action:hover { transform: scale(1.2); }
+        .text-orange { color: #e65100; }
+        .bg-orange { background-color: #e65100; color: white; }
+        .badge-private { background: #333; color: white; position: absolute; top: 10px; right: 10px; opacity: 0.8; }
     </style>
 </head>
-<body>
+<body class="bg-light">
 
-    <div class="header">
-        <div class="user-info">
-            Hola, <b>{{ current_user.username }}</b><br>
-            <a href="/logout" style="color: #d32f2f; text-decoration: none; font-size: 0.9em;">Cerrar Sesión</a>
+<nav class="navbar navbar-expand-lg navbar-dark bg-orange mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/"><i class="bi bi-basket"></i> Entrenador Basket</a>
+        <div class="d-flex align-items-center">
+            <span class="text-white me-3 d-none d-md-block">{{ current_user.name }}</span>
+            <a href="/create" class="btn btn-light btn-sm fw-bold me-2">+ Nuevo</a>
+            <a href="/logout" class="btn btn-outline-light btn-sm">Salir</a>
         </div>
-        <h1>🏀 Pizarra de Entrenador</h1>
-        <div class="action-buttons">
-            <a href="/create" class="btn-crear">+ Crear Nuevo Ejercicio</a>
-            {% if current_user.is_admin %}
-                <a href="/tags" class="btn-crear btn-admin">🏷️ Gestionar Etiquetas</a>
+    </div>
+</nav>
+
+<div class="container">
+    <form action="/" method="get" class="bg-white p-3 rounded shadow-sm mb-4">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Buscar</label>
+                <input type="text" name="q" class="form-control form-control-sm" placeholder="Título..." value="{{ request.args.get('q', '') }}">
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Categoría</label>
+                <select name="primary" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for tag in tags %}
+                    <option value="{{ tag.id }}" {% if request.args.get('primary') == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Ordenar</label>
+                <select name="sort_by" class="form-select form-select-sm">
+                    <option value="date_desc">Más recientes</option>
+                    <option value="views_desc" {% if request.args.get('sort_by') == 'views_desc' %}selected{% endif %}>Más Vistos</option>
+                    <option value="favs_desc" {% if request.args.get('sort_by') == 'favs_desc' %}selected{% endif %}>Más Populares (Favs)</option>
+                </select>
+            </div>
+
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
+            </div>
+        </div>
+
+        <div class="mt-3 pt-2 border-top">
+            <span class="small fw-bold me-2">Mostrar:</span>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="filter_type" value="my_private" id="f1" {% if 'my_private' in request.args.getlist('filter_type') %}checked{% endif %}>
+                <label class="form-check-label small" for="f1">Mis Privados 🔒</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="filter_type" value="my_public" id="f2" {% if 'my_public' in request.args.getlist('filter_type') %}checked{% endif %}>
+                <label class="form-check-label small" for="f2">Mis Públicos 🌍</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="filter_type" value="others" id="f3" {% if 'others' in request.args.getlist('filter_type') %}checked{% endif %}>
+                <label class="form-check-label small" for="f3">Comunidad 👥</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="filter_type" value="favorites" id="f4" {% if 'favorites' in request.args.getlist('filter_type') %}checked{% endif %}>
+                <label class="form-check-label small text-danger fw-bold" for="f4">Favoritos ❤️</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" name="filter_type" value="next_practice" id="f5" {% if 'next_practice' in request.args.getlist('filter_type') %}checked{% endif %}>
+                <label class="form-check-label small text-primary fw-bold" for="f5">Próximo Entrene 📋</label>
+            </div>
+            {% if 'next_practice' in request.args.getlist('filter_type') %}
+            <a href="/clear_practice" class="btn btn-outline-danger btn-sm py-0 ms-2" style="font-size: 0.7rem;">Limpiar Entrene</a>
             {% endif %}
         </div>
-    </div>
+    </form>
 
-    <div class="search-container">
-        <form class="search-form" action="/" method="GET">
-            <input type="text" name="q" class="search-input" placeholder="🔍 Texto..." value="{{ request.args.get('q', '') }}">
-            <select name="primary" class="search-select">
-                <option value="">-- Etiqueta Principal --</option>
-                {% for tag in tags %}<option value="{{ tag.id }}" {% if request.args.get('primary') == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>{% endfor %}
-            </select>
-            <select name="secondary" class="search-select">
-                <option value="">-- Etiqueta Secundaria --</option>
-                {% for tag in tags %}<option value="{{ tag.id }}" {% if request.args.get('secondary') == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>{% endfor %}
-            </select>
-            <select name="logic" class="search-select logic-select">
-                <option value="and" {% if request.args.get('logic') != 'or' %}selected{% endif %}>Cumplir TODOS</option>
-                <option value="or" {% if request.args.get('logic') == 'or' %}selected{% endif %}>Cumplir UNO</option>
-            </select>
-            <button type="submit" class="btn-search">Buscar</button>
-            {% if request.args.get('q') or request.args.get('primary') or request.args.get('secondary') %}<a href="/" class="btn-clear">❌</a>{% endif %}
-        </form>
-    </div>
-
-    <div id="imageModal" class="modal">
-        <span class="close-modal">&times;</span>
-        <img class="modal-content" id="img01">
-        <div id="caption" class="modal-caption"></div>
-    </div>
-
-    {% for ejercicio in lista_ejercicios %}
-        <div class="card">
-            <div class="card-actions">
-                <a href="/edit_drill/{{ ejercicio.id }}" class="btn-icon btn-edit" title="Editar">✏️</a>
-                <a href="/delete_drill/{{ ejercicio.id }}" class="btn-icon" onclick="return confirm('¿Borrar este ejercicio?')" title="Borrar">🗑️</a>
-            </div>
-
-            <h2 style="margin-top: 0; padding-right: 60px;">{{ ejercicio.title }}</h2>
-            
-            <div class="media-container">
-                {% if ejercicio.external_link %}
-                    {% set yt_id = ejercicio.external_link | get_youtube_id %}
-                    {% if yt_id %}
-                        <iframe src="https://www.youtube.com/embed/{{ yt_id }}" allowfullscreen></iframe>
-                    {% else %}
-                        <a href="{{ ejercicio.external_link }}" target="_blank" class="external-link-btn">🔗 Ver recurso original (Fuente Externa)</a>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for drill in drills %}
+        <div class="col">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="position-relative">
+                    {% if not drill.is_public %}
+                        <span class="badge badge-private"><i class="bi bi-lock-fill"></i> Privado</span>
                     {% endif %}
-                {% elif ejercicio.media_file %}
-                    {% if ejercicio.media_file.endswith(('mp4', 'mov', 'avi', 'webm')) %}
-                        <video controls><source src="{{ url_for('static', filename='uploads/' + ejercicio.media_file) }}" type="video/mp4"></video>
+                    
+                    {% if drill.media_file and not (drill.media_file|is_video) %}
+                        <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="card-img-top">
+                    {% elif drill.external_link and (drill.external_link|youtube_thumb) %}
+                        <img src="{{ drill.external_link|youtube_thumb }}" class="card-img-top">
+                    {% elif drill.media_file and (drill.media_file|is_video) %}
+                        <video class="card-img-top" style="background:#000;">
+                            <source src="{{ url_for('static', filename='uploads/' + drill.media_file) }}#t=0.5" type="video/mp4">
+                        </video>
+                        <div class="position-absolute top-50 start-50 translate-middle text-white fs-1"><i class="bi bi-play-circle"></i></div>
                     {% else %}
-                        <img src="{{ url_for('static', filename='uploads/' + ejercicio.media_file) }}" 
-                             class="drill-image" 
-                             alt="{{ ejercicio.title }}"
-                             onclick="openModal(this)">
+                        <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted fs-1">
+                            <i class="bi bi-link-45deg"></i>
+                        </div>
                     {% endif %}
-                {% else %}
-                    <div style="display:flex; align-items:center; color:#ccc;">Sin Multimedia</div>
-                {% endif %}
-            </div>
+                </div>
 
-            <p>{{ ejercicio.description }}</p>
-            
-            <div class="tags-section">
-                {% if ejercicio.primary_tags %}
-                    <div style="margin-bottom: 8px;">
-                        <span style="font-size:0.7em; color:#999;">PRINCIPAL:</span>
-                        {% for t in ejercicio.primary_tags %}<span class="tag-main">{{ t.name }}</span>{% endfor %}
+                <div class="card-body">
+                    <h5 class="card-title fw-bold text-truncate">{{ drill.title }}</h5>
+                    <div class="mb-2">
+                        {% for tag in drill.primary_tags %}
+                            <span class="badge bg-secondary">{{ tag.name }}</span>
+                        {% endfor %}
                     </div>
-                {% endif %}
-                {% if ejercicio.secondary_tags %}
+                    <p class="card-text small text-muted text-truncate">{{ drill.description or 'Sin descripción' }}</p>
+                </div>
+                
+                <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center">
+                    <div class="small text-muted">
+                        <i class="bi bi-eye"></i> {{ drill.views }}
+                    </div>
                     <div>
-                        <span style="font-size:0.7em; color:#999;">SECUNDARIO:</span>
-                        {% for t in ejercicio.secondary_tags %}<span class="tag-sec">{{ t.name }}</span>{% endfor %}
+                        <a href="/toggle_practice/{{ drill.id }}" class="text-decoration-none me-3 icon-action" title="Añadir a próximo entrene">
+                            {% if drill in current_user.mochila %}
+                                <i class="bi bi-clipboard-check-fill text-primary"></i>
+                            {% else %}
+                                <i class="bi bi-clipboard text-muted"></i>
+                            {% endif %}
+                        </a>
+                        
+                        <a href="/toggle_fav/{{ drill.id }}" class="text-decoration-none me-3 icon-action" title="Favorito">
+                            {% if drill in current_user.favoritos %}
+                                <i class="bi bi-heart-fill text-danger"></i>
+                            {% else %}
+                                <i class="bi bi-heart text-muted"></i>
+                            {% endif %}
+                        </a>
+
+                        {% if drill.user_id == current_user.id or current_user.is_admin %}
+                        <a href="/delete/{{ drill.id }}" class="text-decoration-none icon-action" onclick="return confirm('¿Borrar?');">
+                            <i class="bi bi-trash text-muted"></i>
+                        </a>
+                        {% endif %}
                     </div>
-                {% endif %}
+                </div>
             </div>
         </div>
-    {% else %}
-        <div style="text-align: center; color: #777; margin-top: 50px;"><p>No se encontraron ejercicios.</p></div>
-    {% endfor %}
-
-    <script>
-        // Obtener elementos
-        var modal = document.getElementById("imageModal");
-        var modalImg = document.getElementById("img01");
-        var captionText = document.getElementById("caption");
-        var span = document.getElementsByClassName("close-modal")[0];
-
-        // Función para abrir
-        function openModal(element) {
-            modal.style.display = "block";
-            modalImg.src = element.src;
-            captionText.innerHTML = element.alt; // Pone el título del ejercicio abajo
-        }
-
-        // Función para cerrar (X)
-        span.onclick = function() {
-            modal.style.display = "none";
-        }
-
-        // Cerrar si haces click fuera de la imagen
-        modal.onclick = function(event) {
-            if (event.target === modal) {
-                modal.style.display = "none";
-            }
-        }
-    </script>
-
+        {% endfor %}
+    </div>
+</div>
 </body>
 </html>

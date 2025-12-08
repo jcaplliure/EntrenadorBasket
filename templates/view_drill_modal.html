@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ drill.title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+<div class="container mt-4 mb-5" style="max-width: 800px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="/" class="btn btn-outline-secondary btn-sm">&larr; Volver a la Pizarra</a>
+        
+        <div>
+            <a href="/toggle_practice/{{ drill.id }}" class="btn btn-sm me-1 {% if drill in current_user.mochila %}btn-primary{% else %}btn-outline-primary{% endif %}" title="Próximo Entrene">
+                <i class="bi bi-clipboard-check"></i> Próximo Entrene
+            </a>
+            <a href="/toggle_fav/{{ drill.id }}" class="btn btn-sm {% if drill in current_user.favoritos %}btn-danger{% else %}btn-outline-danger{% endif %}" title="Favoritos">
+                <i class="bi bi-heart-fill"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            
+            <div class="bg-black text-center" style="min-height: 300px; display: flex; align-items: center; justify-content: center;">
+                {% if media_type == 'video_file' %}
+                    <video controls autoplay class="w-100" style="max-height: 500px;">
+                        <source src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" type="video/mp4">
+                        Tu navegador no soporta vídeo.
+                    </video>
+                {% elif media_type == 'image_file' %}
+                    <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="img-fluid" style="max-height: 500px;">
+                {% elif media_type == 'youtube' %}
+                    <div class="ratio ratio-16x9">
+                        <iframe src="https://www.youtube.com/embed/{{ drill.external_link|get_youtube_id }}" allowfullscreen></iframe>
+                    </div>
+                {% else %}
+                    <div class="py-5 text-white">
+                        <i class="bi bi-link-45deg fs-1"></i>
+                        <p>Enlace externo: <a href="{{ drill.external_link }}" target="_blank" class="text-white fw-bold">{{ drill.external_link }}</a></p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="p-4">
+                <h2 class="fw-bold mb-3">{{ drill.title }}</h2>
+                
+                <div class="mb-4">
+                    {% for tag in drill.primary_tags %}
+                        <span class="badge bg-secondary fs-6 me-1">{{ tag.name }}</span>
+                    {% endfor %}
+                    {% if not drill.is_public %}
+                        <span class="badge bg-dark ms-2"><i class="bi bi-lock-fill"></i> Privado</span>
+                    {% endif %}
+                </div>
+
+                <h5 class="fw-bold text-muted">Descripción</h5>
+                <p class="fs-5" style="white-space: pre-line;">{{ drill.description or 'Sin descripción detallada.' }}</p>
+
+                {% if drill.external_link and media_type != 'youtube' %}
+                <div class="mt-4 p-3 bg-light rounded border">
+                    <i class="bi bi-box-arrow-up-right me-2"></i> 
+                    <strong>Recurso Externo:</strong> 
+                    <a href="{{ drill.external_link }}" target="_blank" class="text-break">{{ drill.external_link }}</a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="card-footer bg-white text-muted d-flex justify-content-between">
+                <small>Subido por: <strong>{{ drill.author.name or drill.author.email }}</strong></small>
+                <small>Visto {{ drill.views }} veces</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
