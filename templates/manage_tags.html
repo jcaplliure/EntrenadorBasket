@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestionar Etiquetas</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f4f4f4; }
+        h1 { text-align: center; color: #333; margin-bottom: 30px; }
+        
+        /* CAJA PARA CREAR NUEVA (Lo nuevo) */
+        .create-box {
+            background: #e8f5e9; /* Verde muy clarito */
+            border: 1px solid #c8e6c9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .create-box input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #aaa;
+            border-radius: 4px;
+        }
+        .btn-add {
+            background: #2e7d32; /* Verde fuerte */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-add:hover { background: #1b5e20; }
+
+        /* LISTA DE ETIQUETAS */
+        .admin-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; padding: 10px; border-bottom: 2px solid #eee; color: #666; font-size: 0.9em; }
+        td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        
+        .edit-form { display: flex; gap: 10px; }
+        .edit-input { padding: 5px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1; }
+        
+        .btn-save { background: #1976d2; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .btn-save:hover { background: #0d47a1; }
+        
+        .btn-delete { background: #e53935; color: white; text-decoration: none; padding: 6px 12px; border-radius: 4px; font-size: 0.9em; margin-left: 10px;}
+        .btn-delete:hover { background: #b71c1c; }
+        
+        .back-link { display: block; margin-top: 20px; text-align: center; text-decoration: none; color: #666; }
+    </style>
+</head>
+<body>
+
+    <h1>🏷️ Gestión de Etiquetas</h1>
+
+    <div class="create-box">
+        <form action="/add_tag" method="POST" style="width: 100%; display: flex; gap: 10px;">
+            <input type="text" name="name" placeholder="Ej: Bloqueo Directo, 1c1..." required>
+            <button type="submit" class="btn-add">➕ Añadir Nueva</button>
+        </form>
+    </div>
+
+    <div class="admin-panel">
+        <table>
+            <thead>
+                <tr>
+                    <th>Editar Nombre</th>
+                    <th style="width: 100px; text-align: center;">Borrar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tag in tags %}
+                <tr>
+                    <td>
+                        <form action="/update_tag" method="POST" class="edit-form">
+                            <input type="hidden" name="id" value="{{ tag.id }}">
+                            <input type="text" name="name" value="{{ tag.name }}" class="edit-input">
+                            <button type="submit" class="btn-save" title="Guardar cambios">💾</button>
+                        </form>
+                    </td>
+                    <td style="text-align: center;">
+                        <a href="/delete_tag/{{ tag.id }}" class="btn-delete" onclick="return confirm('¿Seguro? Se quitará de todos los ejercicios.')">🗑️</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <a href="/" class="back-link">← Volver a la Pizarra</a>
+
+</body>
+</html>

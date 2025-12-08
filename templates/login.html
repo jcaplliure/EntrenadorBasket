@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <style>
+        body { font-family: sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; background: #f4f4f4; text-align: center;}
+        form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #e65100; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;}
+    </style>
+</head>
+<body>
+    <h1 style="color: #e65100;">🏀 Entrenador Basket</h1>
+    <form method="POST">
+        <h2>Iniciar Sesión</h2>
+        <input type="text" name="username" placeholder="Usuario" required>
+        <input type="password" name="password" placeholder="Contraseña" required>
+        <button type="submit">Entrar</button>
+        <p style="font-size: 0.9em; margin-top: 20px;">¿No tienes cuenta? <a href="/register">Regístrate aquí</a></p>
+    </form>
+</body>
+</html>
