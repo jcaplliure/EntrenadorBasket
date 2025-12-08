@@ -1,22 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Login</title>
+    <meta charset="UTF-8">
+    <title>Iniciar Sesión</title>
     <style>
-        body { font-family: sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; background: #f4f4f4; text-align: center;}
-        form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #e65100; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;}
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f4; margin: 0; }
+        .login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; width: 300px; }
+        h1 { color: #e65100; margin-bottom: 30px; }
+        
+        .google-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: #4285F4; color: white;
+            padding: 12px 24px; border-radius: 4px;
+            text-decoration: none; font-weight: bold;
+            font-size: 1.1em; width: 100%; box-sizing: border-box;
+            transition: background 0.3s;
+        }
+        .google-btn:hover { background: #357ae8; }
     </style>
 </head>
 <body>
-    <h1 style="color: #e65100;">🏀 Entrenador Basket</h1>
-    <form method="POST">
-        <h2>Iniciar Sesión</h2>
-        <input type="text" name="username" placeholder="Usuario" required>
-        <input type="password" name="password" placeholder="Contraseña" required>
-        <button type="submit">Entrar</button>
-        <p style="font-size: 0.9em; margin-top: 20px;">¿No tienes cuenta? <a href="/register">Regístrate aquí</a></p>
-    </form>
+    <div class="login-box">
+        <h1>🏀 Entrenador Basket</h1>
+        <p style="color: #666; margin-bottom: 30px;">Identifícate para acceder a la pizarra.</p>
+        
+        <a href="/login/google" class="google-btn">
+            Iniciar con Google
+        </a>
+    </div>
 </body>
 </html>
