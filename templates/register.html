@@ -1,22 +1,43 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Registro</title>
-    <style>
-        body { font-family: sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; background: #f4f4f4; text-align: center;}
-        form { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #333; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;}
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crear Cuenta</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Crear Cuenta</h1>
-    <form method="POST">
-        <p>💡 Truco: Si tu usuario es <b>admin</b> serás Administrador.</p>
-        <input type="text" name="username" placeholder="Elige Usuario" required>
-        <input type="password" name="password" placeholder="Elige Contraseña" required>
-        <button type="submit">Registrarse</button>
-        <p><a href="/login">Volver al Login</a></p>
-    </form>
+<body class="bg-light d-flex align-items-center justify-content-center" style="min-height: 100vh;">
+
+    <div class="card shadow p-4" style="max-width: 400px; width: 100%;">
+        <h3 class="text-center mb-4 fw-bold">Crear Cuenta</h3>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-danger">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+
+        <form action="/register" method="POST">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Nombre</label>
+                <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Email</label>
+                <input type="email" name="email" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Contraseña</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Registrarse</button>
+            </div>
+        </form>
+        <div class="text-center mt-3">
+            <a href="/login">Volver al Login</a>
+        </div>
+    </div>
+
 </body>
 </html>
