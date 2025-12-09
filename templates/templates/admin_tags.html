@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin - Etiquetas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand navbar-dark bg-dark mb-4">
+        <div class="container">
+            <span class="navbar-brand fw-bold">👮‍♂️ Zona Admin</span>
+            <div class="navbar-nav">
+                <a class="nav-link active fw-bold" href="/admin/tags">Etiquetas</a>
+                <a class="nav-link" href="/admin/config">Configuración</a>
+                <a class="nav-link text-warning ms-3" href="/">Volver a Web</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 600px;">
+        <h4 class="mb-3">🏷️ Gestionar Etiquetas</h4>
+        
+        <div class="card p-3 mb-4 shadow-sm">
+            <form action="/admin/tags" method="POST" class="d-flex gap-2">
+                <input type="text" name="tag_name" class="form-control" placeholder="Nueva etiqueta..." required>
+                <button type="submit" class="btn btn-primary">Añadir</button>
+            </form>
+        </div>
+
+        <div class="list-group shadow-sm">
+            {% for tag in tags %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <span class="fw-bold">{{ tag.name }}</span>
+                <a href="/admin/delete_tag/{{ tag.id }}" class="btn btn-outline-danger btn-sm border-0" onclick="return confirm('¿Borrar etiqueta?');">
+                    <i class="bi bi-trash"></i>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

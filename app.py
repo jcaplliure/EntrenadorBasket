@@ -1,3 +1,14 @@
+¡Oído cocina\! 👨‍🍳 Aquí tienes el archivo **`app.py` completo y reconstruido**.
+
+He incluido:
+
+1.  Todo el código que ya funcionaba (Login, Registro, Base de Datos, Google Auth).
+2.  **Tus claves de Google reales** (las he recuperado de nuestro chat para que no tengas que buscarlas: `...4k7ct` y `...Wieq9W`).
+3.  **El BLOQUE 1 COMPLETO:** Al final del archivo he añadido toda la parte de Administración (Etiquetas + Configuración de Imagen).
+
+Simplemente **copia todo esto**, pégalo en tu `app.py` vacío y guarda.
+
+```python
 import os
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -22,7 +33,7 @@ app.config['SECRET_KEY'] = 'clave_secreta_super_segura'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
 
-# --- GOOGLE KEYS (YA CONFIGURADAS) ---
+# --- GOOGLE KEYS (YA PUESTAS) ---
 app.config['GOOGLE_CLIENT_ID'] = '706704268052-lhvlruk0fjs8hhma8bk76bv711a4k7ct.apps.googleusercontent.com'
 app.config['GOOGLE_CLIENT_SECRET'] = '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'
 
@@ -313,6 +324,57 @@ def logout():
     logout_user()
     return redirect('/login')
 
+# --- ZONA DE ADMINISTRACIÓN (BLOQUE 1 COMPLETO) ---
+@app.route('/admin', methods=['GET'])
+@login_required
+def admin_panel():
+    if not current_user.is_admin:
+        return redirect('/')
+    return redirect('/admin/tags')
+
+@app.route('/admin/tags', methods=['GET', 'POST'])
+@login_required
+def manage_tags():
+    if not current_user.is_admin: return redirect('/')
+    
+    if request.method == 'POST':
+        tag_name = request.form.get('tag_name').strip()
+        if tag_name:
+            existing = Tag.query.filter_by(name=tag_name).first()
+            if not existing:
+                db.session.add(Tag(name=tag_name))
+                db.session.commit()
+            else:
+                flash('Esa etiqueta ya existe.')
+    
+    tags = Tag.query.order_by(Tag.name).all()
+    return render_template('admin_tags.html', tags=tags)
+
+@app.route('/admin/delete_tag/<int:id>')
+@login_required
+def delete_tag(id):
+    if not current_user.is_admin: return redirect('/')
+    tag = Tag.query.get(id)
+    if tag:
+        db.session.delete(tag)
+        db.session.commit()
+    return redirect('/admin/tags')
+
+@app.route('/admin/config', methods=['GET', 'POST'])
+@login_required
+def admin_config():
+    if not current_user.is_admin: return redirect('/')
+    
+    if request.method == 'POST':
+        file = request.files.get('default_image')
+        if file:
+            filename = 'default_link_image.jpg'
+            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(path)
+            return redirect(url_for('admin_config', updated=datetime.now().timestamp()))
+
+    return render_template('admin_config.html')
+
 def crear_datos_prueba():
     if Tag.query.count() == 0:
         lista = ["Tiro", "Entrada", "Pase", "Bote", "Defensa", "Rebote", "Físico", "Táctica"]
@@ -324,3 +386,4 @@ if __name__ == '__main__':
         db.create_all()
         crear_datos_prueba()
     app.run(debug=True)
+```

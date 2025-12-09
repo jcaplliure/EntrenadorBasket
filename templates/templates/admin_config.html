@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin - Configuración</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand navbar-dark bg-dark mb-4">
+        <div class="container">
+            <span class="navbar-brand fw-bold">👮‍♂️ Zona Admin</span>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/admin/tags">Etiquetas</a>
+                <a class="nav-link active fw-bold" href="/admin/config">Configuración</a>
+                <a class="nav-link text-warning ms-3" href="/">Volver a Web</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 600px;">
+        <h4 class="mb-3">⚙️ Configuración Visual</h4>
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">Imagen por defecto (Solo Link)</div>
+            <div class="card-body text-center">
+                <p class="text-muted small">Esta imagen saldrá si un ejercicio solo tiene enlace externo.</p>
+                
+                <div class="mb-3 border rounded p-2 d-inline-block bg-light">
+                    <img src="{{ url_for('static', filename='uploads/default_link_image.jpg') }}?v={{ request.args.get('updated', '') }}" 
+                         alt="No configurada" 
+                         style="height: 150px; object-fit: cover;"
+                         onerror="this.style.display='none'">
+                    <p class="small text-muted mb-0 mt-1">Imagen Actual</p>
+                </div>
+
+                <form action="/admin/config" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <input type="file" name="default_image" class="form-control" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Subir Nueva Imagen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

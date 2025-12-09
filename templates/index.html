@@ -3,159 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Pizarra Entrenador</title>
+    <title>Entrenador Basket</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .card-img-top { height: 180px; object-fit: cover; background: #eee; }
-        .card-video-placeholder { height: 180px; background: #000; display: flex; align-items: center; justify-content: center; color: white; }
-        .icon-action { cursor: pointer; font-size: 1.2rem; transition: 0.2s; }
-        .icon-action:hover { transform: scale(1.2); }
-        .text-orange { color: #e65100; }
-        .bg-orange { background-color: #e65100; color: white; }
-        .badge-private { background: #333; color: white; position: absolute; top: 10px; right: 10px; opacity: 0.8; }
+        .card-img-top { height: 200px; object-fit: cover; }
+        .drill-card { transition: transform 0.2s; cursor: pointer; }
+        .drill-card:hover { transform: translateY(-5px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .ratio-16x9 { background-color: #000; }
+        .text-orange { color: #fd7e14; }
+        .bg-orange { background-color: #fd7e14; }
     </style>
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-orange mb-4">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="/"><i class="bi bi-basket"></i> Entrenador Basket</a>
-        <div class="d-flex align-items-center">
-            <span class="text-white me-3 d-none d-md-block">{{ current_user.name }}</span>
-            <a href="/create" class="btn btn-light btn-sm fw-bold me-2">+ Nuevo</a>
-            <a href="/logout" class="btn btn-outline-light btn-sm">Salir</a>
-        </div>
-    </div>
-</nav>
-
-<div class="container">
-    <form action="/" method="get" class="bg-white p-3 rounded shadow-sm mb-4">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label small fw-bold">Buscar</label>
-                <input type="text" name="q" class="form-control form-control-sm" placeholder="Título..." value="{{ request.args.get('q', '') }}">
-            </div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="bi bi-basket text-orange"></i> Entrenador<span class="text-orange">Basket</span>
+            </a>
             
-            <div class="col-md-3">
-                <label class="form-label small fw-bold">Categoría</label>
-                <select name="primary" class="form-select form-select-sm">
-                    <option value="">Todas</option>
-                    {% for tag in tags %}
-                    <option value="{{ tag.id }}" {% if request.args.get('primary') == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <form class="d-flex mx-auto my-2 my-lg-0 w-50" action="/" method="GET">
+                    <div class="input-group">
+                        <span class="input-group-text bg-secondary border-0 text-white"><i class="bi bi-search"></i></span>
+                        <input class="form-control border-0 bg-secondary text-white placeholder-light" type="search" name="q" placeholder="Buscar ejercicio..." value="{{ request.args.get('q', '') }}">
+                    </div>
+                </form>
 
-            <div class="col-md-3">
-                <label class="form-label small fw-bold">Ordenar</label>
-                <select name="sort_by" class="form-select form-select-sm">
-                    <option value="date_desc">Más recientes</option>
-                    <option value="views_desc" {% if request.args.get('sort_by') == 'views_desc' %}selected{% endif %}>Más Vistos</option>
-                    <option value="favs_desc" {% if request.args.get('sort_by') == 'favs_desc' %}selected{% endif %}>Más Populares (Favs)</option>
-                </select>
-            </div>
-
-            <div class="col-md-2 d-grid">
-                <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
-            </div>
-        </div>
-
-        <div class="mt-3 pt-2 border-top">
-            <span class="small fw-bold me-2">Mostrar:</span>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" name="filter_type" value="my_private" id="f1" {% if 'my_private' in request.args.getlist('filter_type') %}checked{% endif %}>
-                <label class="form-check-label small" for="f1">Mis Privados 🔒</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" name="filter_type" value="my_public" id="f2" {% if 'my_public' in request.args.getlist('filter_type') %}checked{% endif %}>
-                <label class="form-check-label small" for="f2">Mis Públicos 🌍</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" name="filter_type" value="others" id="f3" {% if 'others' in request.args.getlist('filter_type') %}checked{% endif %}>
-                <label class="form-check-label small" for="f3">Comunidad 👥</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" name="filter_type" value="favorites" id="f4" {% if 'favorites' in request.args.getlist('filter_type') %}checked{% endif %}>
-                <label class="form-check-label small text-danger fw-bold" for="f4">Favoritos ❤️</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" name="filter_type" value="next_practice" id="f5" {% if 'next_practice' in request.args.getlist('filter_type') %}checked{% endif %}>
-                <label class="form-check-label small text-primary fw-bold" for="f5">Próximo Entrene 📋</label>
-            </div>
-            {% if 'next_practice' in request.args.getlist('filter_type') %}
-            <a href="/clear_practice" class="btn btn-outline-danger btn-sm py-0 ms-2" style="font-size: 0.7rem;">Limpiar Entrene</a>
-            {% endif %}
-        </div>
-    </form>
-
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for drill in drills %}
-        <div class="col">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="position-relative">
-                    {% if not drill.is_public %}
-                        <span class="badge badge-private"><i class="bi bi-lock-fill"></i> Privado</span>
-                    {% endif %}
+                <div class="d-flex align-items-center mt-2 mt-lg-0">
+                    <span class="text-white me-3 d-none d-lg-block small">{{ current_user.name }}</span>
                     
-                    {% if drill.media_file and not (drill.media_file|is_video) %}
-                        <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="card-img-top">
-                    {% elif drill.external_link and (drill.external_link|youtube_thumb) %}
-                        <img src="{{ drill.external_link|youtube_thumb }}" class="card-img-top">
-                    {% elif drill.media_file and (drill.media_file|is_video) %}
-                        <video class="card-img-top" style="background:#000;">
-                            <source src="{{ url_for('static', filename='uploads/' + drill.media_file) }}#t=0.5" type="video/mp4">
-                        </video>
-                        <div class="position-absolute top-50 start-50 translate-middle text-white fs-1"><i class="bi bi-play-circle"></i></div>
-                    {% else %}
-                        <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted fs-1">
-                            <i class="bi bi-link-45deg"></i>
-                        </div>
+                    {% if current_user.is_admin %}
+                        <a href="/admin" class="btn btn-warning btn-sm me-2 fw-bold text-dark">
+                            <i class="bi bi-gear-fill"></i> Admin
+                        </a>
                     {% endif %}
-                </div>
 
-                <div class="card-body">
-                    <h5 class="card-title fw-bold text-truncate">{{ drill.title }}</h5>
-                    <div class="mb-2">
-                        {% for tag in drill.primary_tags %}
-                            <span class="badge bg-secondary">{{ tag.name }}</span>
+                    <a href="/create" class="btn btn-primary btn-sm fw-bold me-2">+ Nuevo</a>
+                    <a href="/logout" class="btn btn-outline-light btn-sm">Salir</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <form action="/" method="GET" class="card p-3 shadow-sm border-0 mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">Etiqueta Principal</label>
+                    <select name="primary" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Todas las etiquetas</option>
+                        {% for tag in tags %}
+                            <option value="{{ tag.id }}" {% if request.args.get('primary') == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>
                         {% endfor %}
-                    </div>
-                    <p class="card-text small text-muted text-truncate">{{ drill.description or 'Sin descripción' }}</p>
+                    </select>
                 </div>
-                
-                <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center">
-                    <div class="small text-muted">
-                        <i class="bi bi-eye"></i> {{ drill.views }}
-                    </div>
-                    <div>
-                        <a href="/toggle_practice/{{ drill.id }}" class="text-decoration-none me-3 icon-action" title="Añadir a próximo entrene">
-                            {% if drill in current_user.mochila %}
-                                <i class="bi bi-clipboard-check-fill text-primary"></i>
-                            {% else %}
-                                <i class="bi bi-clipboard text-muted"></i>
-                            {% endif %}
-                        </a>
-                        
-                        <a href="/toggle_fav/{{ drill.id }}" class="text-decoration-none me-3 icon-action" title="Favorito">
-                            {% if drill in current_user.favoritos %}
-                                <i class="bi bi-heart-fill text-danger"></i>
-                            {% else %}
-                                <i class="bi bi-heart text-muted"></i>
-                            {% endif %}
-                        </a>
 
-                        {% if drill.user_id == current_user.id or current_user.is_admin %}
-                        <a href="/delete/{{ drill.id }}" class="text-decoration-none icon-action" onclick="return confirm('¿Borrar?');">
-                            <i class="bi bi-trash text-muted"></i>
-                        </a>
+                <div class="col-md-7">
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="filter_type" value="my_private" id="check1" {% if 'my_private' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label small" for="check1">🔒 Mis Privados</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="filter_type" value="my_public" id="check2" {% if 'my_public' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label small" for="check2">🌍 Mis Públicos</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="filter_type" value="favorites" id="check3" {% if 'favorites' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label small text-danger fw-bold" for="check3">❤️ Favoritos</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="filter_type" value="next_practice" id="check4" {% if 'next_practice' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label small text-success fw-bold" for="check4">🎒 Mochila</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-2 text-end">
+                    <a href="/" class="text-decoration-none small text-muted">Limpiar filtros</a>
+                </div>
+            </div>
+            <input type="hidden" name="q" value="{{ request.args.get('q', '') }}">
+        </form>
+
+        {% if current_user.mochila.count() > 0 %}
+            <div class="alert alert-success d-flex justify-content-between align-items-center py-2 shadow-sm">
+                <span>🎒 Tienes <b>{{ current_user.mochila.count() }}</b> ejercicios en la mochila</span>
+                <a href="/clear_practice" class="btn btn-sm btn-outline-success border-0 fw-bold">Vaciar mochila</a>
+            </div>
+        {% endif %}
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 pb-5">
+            {% for drill in drills %}
+            <div class="col">
+                <div class="card h-100 drill-card border-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#drillModal" data-bs-url="/drill/{{ drill.id }}">
+                    
+                    <div class="position-relative bg-dark rounded-top overflow-hidden" style="height: 200px;">
+                        
+                        {% if drill.media_file and drill.media_file|is_video %}
+                            <video class="w-100 h-100 object-fit-cover" style="opacity: 0.8;">
+                                <source src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" type="video/mp4">
+                            </video>
+                            <div class="position-absolute top-50 start-50 translate-middle">
+                                <i class="bi bi-play-circle-fill text-white display-4 opacity-75"></i>
+                            </div>
+
+                        {% elif drill.media_file %}
+                            <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="w-100 h-100 object-fit-cover">
+
+                        {% elif drill.external_link and 'youtu' in drill.external_link %}
+                            <img src="{{ drill.external_link|youtube_thumb }}" class="w-100 h-100 object-fit-cover">
+                            <div class="position-absolute top-50 start-50 translate-middle">
+                                <i class="bi bi-youtube text-danger display-4 bg-white rounded-circle"></i>
+                            </div>
+
+                        {% else %}
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-secondary text-white">
+                                <i class="bi bi-link-45deg display-1 opacity-50"></i>
+                            </div>
+                        {% endif %}
+
+                        <div class="position-absolute top-0 end-0 m-2 d-flex gap-1">
+                            {% if drill in current_user.favoritos %}
+                                <span class="badge bg-danger"><i class="bi bi-heart-fill"></i></span>
+                            {% endif %}
+                            {% if drill in current_user.mochila %}
+                                <span class="badge bg-success"><i class="bi bi-backpack-fill"></i></span>
+                            {% endif %}
+                        </div>
+                        {% if not drill.is_public %}
+                            <div class="position-absolute top-0 start-0 m-2">
+                                <span class="badge bg-dark bg-opacity-75"><i class="bi bi-lock-fill"></i> Privado</span>
+                            </div>
                         {% endif %}
                     </div>
+
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold text-truncate">{{ drill.title }}</h5>
+                        <p class="card-text text-muted small text-truncate">{{ drill.description or 'Sin descripción' }}</p>
+                        
+                        <div class="mt-2">
+                            {% for tag in drill.primary_tags[:3] %}
+                                <span class="badge bg-light text-dark border me-1">{{ tag.name }}</span>
+                            {% endfor %}
+                            {% if drill.primary_tags|length > 3 %}
+                                <span class="badge bg-light text-muted border">+{{ drill.primary_tags|length - 3 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-white border-0 pt-0 d-flex justify-content-between align-items-center text-muted small">
+                        <span><i class="bi bi-person-circle me-1"></i> {{ drill.author.name }}</span>
+                        <span><i class="bi bi-eye"></i> {{ drill.views }}</span>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-basket display-1 text-muted opacity-25"></i>
+                <p class="mt-3 text-muted">No se han encontrado ejercicios.</p>
+                <a href="/" class="btn btn-outline-primary">Ver todos</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="modal fade" id="drillModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
                 </div>
             </div>
         </div>
-        {% endfor %}
     </div>
-</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Script para cargar el contenido del modal dinámicamente
+        const drillModal = document.getElementById('drillModal')
+        drillModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget
+            const url = button.getAttribute('data-bs-url')
+            const modalContent = drillModal.querySelector('.modal-content')
+            
+            // Limpiar contenido previo y mostrar spinner
+            modalContent.innerHTML = `
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>`
+
+            // Cargar contenido real
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    modalContent.innerHTML = html
+                })
+        })
+    </script>
+
 </body>
 </html>
