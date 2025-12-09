@@ -13,3 +13,4 @@ Werkzeug
 authlib
 requests
 pillow
+email_validator

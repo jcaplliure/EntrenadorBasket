@@ -22,7 +22,7 @@ app.config['SECRET_KEY'] = 'clave_secreta_super_segura'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
 
-# --- GOOGLE KEYS ---
+# --- GOOGLE KEYS (YA CONFIGURADAS) ---
 app.config['GOOGLE_CLIENT_ID'] = '706704268052-lhvlruk0fjs8hhma8bk76bv711a4k7ct.apps.googleusercontent.com'
 app.config['GOOGLE_CLIENT_SECRET'] = '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'
 
@@ -68,7 +68,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=True)
-    password_hash = db.Column(db.String(128), nullable=True) # Nuevo: para contraseña
+    password_hash = db.Column(db.String(128), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     
     favoritos = db.relationship('Drill', secondary=favorites, backref=db.backref('favorited_by', lazy='dynamic'))
@@ -78,6 +78,7 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
+        if not self.password_hash: return False
         return check_password_hash(self.password_hash, password)
 
 class Tag(db.Model):
@@ -118,6 +119,13 @@ def is_video(filename):
     if not filename: return False
     ext = filename.split('.')[-1].lower()
     return ext in ['mp4', 'mov', 'avi']
+
+@app.template_filter('get_youtube_id')
+def get_youtube_id(url):
+    if not url: return None
+    if 'youtu.be' in url: return url.split('/')[-1]
+    if 'youtube.com' in url and 'v=' in url: return url.split('v=')[1].split('&')[0]
+    return None
 
 # --- RUTAS ---
 @app.route('/')
@@ -242,7 +250,7 @@ def delete_drill(id):
         db.session.commit()
     return redirect('/')
 
-# --- AUTH ROUTES (LOGIN CLÁSICO + GOOGLE) ---
+# --- AUTH ROUTES ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
@@ -257,8 +265,6 @@ def register():
             
         new_user = User(email=email, name=name)
         new_user.set_password(password)
-        
-        # Admin automático para ti
         if email.lower() == 'jcaplliure@gmail.com': new_user.is_admin = True
         
         db.session.add(new_user)
@@ -270,18 +276,15 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated: return redirect('/')
-    
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
         user = User.query.filter_by(email=email).first()
-        
         if user and user.check_password(password):
             login_user(user)
             return redirect('/')
         else:
             flash('Email o contraseña incorrectos')
-            
     return render_template('login.html')
 
 @app.route('/login/google')
@@ -321,4 +324,3 @@ if __name__ == '__main__':
         db.create_all()
         crear_datos_prueba()
     app.run(debug=True)
-
