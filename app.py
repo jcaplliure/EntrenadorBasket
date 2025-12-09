@@ -1,14 +1,3 @@
-¡Oído cocina\! 👨‍🍳 Aquí tienes el archivo **`app.py` completo y reconstruido**.
-
-He incluido:
-
-1.  Todo el código que ya funcionaba (Login, Registro, Base de Datos, Google Auth).
-2.  **Tus claves de Google reales** (las he recuperado de nuestro chat para que no tengas que buscarlas: `...4k7ct` y `...Wieq9W`).
-3.  **El BLOQUE 1 COMPLETO:** Al final del archivo he añadido toda la parte de Administración (Etiquetas + Configuración de Imagen).
-
-Simplemente **copia todo esto**, pégalo en tu `app.py` vacío y guarda.
-
-```python
 import os
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -386,4 +375,3 @@ if __name__ == '__main__':
         db.create_all()
         crear_datos_prueba()
     app.run(debug=True)
-```
