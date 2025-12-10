@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -64,7 +65,6 @@ drill_secondary_tags = db.Table('drill_secondary_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
 )
 
-# NUEVA TABLA PARA CONTROLAR VISITAS ÚNICAS POR IP
 class DrillView(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
@@ -78,6 +78,9 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     
+    # Preferencia de bloques del usuario
+    last_blocks_config = db.Column(db.String(500), nullable=True, default="Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma")
+
     favoritos = db.relationship('Drill', secondary=favorites, backref=db.backref('favorited_by', lazy='dynamic'))
     mochila = db.relationship('Drill', secondary=next_practice, backref=db.backref('in_practice_plan', lazy='dynamic'))
 
@@ -107,6 +110,41 @@ class Drill(db.Model):
     primary_tags = db.relationship('Tag', secondary=drill_primary_tags, backref='primary_drills')
     secondary_tags = db.relationship('Tag', secondary=drill_secondary_tags, backref='secondary_drills')
 
+# --- MODELOS FASE 2 (ENTRENAMIENTOS PRO) ---
+
+class TrainingTemplate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    blocks_structure = db.Column(db.String(500), nullable=False)
+
+class TrainingPlan(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False) 
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    team_name = db.Column(db.String(100), nullable=True) 
+    notes = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Estructura de bloques
+    structure = db.Column(db.String(500), nullable=True) 
+    
+    # NUEVO: Para compartir (WhatsApp/Mail)
+    is_public = db.Column(db.Boolean, default=False)
+
+    items = db.relationship('TrainingItem', backref='plan', lazy=True, cascade="all, delete-orphan")
+
+class TrainingItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    training_plan_id = db.Column(db.Integer, db.ForeignKey('training_plan.id'), nullable=False)
+    drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
+    
+    block_name = db.Column(db.String(50), nullable=False)
+    order = db.Column(db.Integer, default=0)
+    notes = db.Column(db.String(200), nullable=True)
+
+    drill = db.relationship('Drill')
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -135,26 +173,20 @@ def get_youtube_id(url):
     return None
 
 # --- RUTAS ---
-
-# 1. HOME (MODO INVITADO HABILITADO)
 @app.route('/')
 def home():
     query = request.args.get('q', '').strip()
     primary_id = request.args.get('primary', '')
     filter_type = request.args.getlist('filter_type')
-    # CAMBIO: Por defecto ordenamos por FAVORITOS (más popular)
     sort_by = request.args.get('sort_by', 'favs_desc') 
     
-    # Lógica de usuario logueado vs invitado
     if current_user.is_authenticated:
         base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
     else:
-        # Invitado: Solo ve lo público
         base_condition = (Drill.is_public == True)
 
     drills_query = Drill.query.filter(base_condition)
     
-    # Filtros avanzados (Solo si logueado, o lógica parcial para invitado)
     if filter_type:
         conditions = []
         if current_user.is_authenticated:
@@ -167,24 +199,16 @@ def home():
             if 'next_practice' in filter_type:
                 practice_ids = [d.id for d in current_user.mochila]
                 conditions.append(Drill.id.in_(practice_ids) if practice_ids else Drill.id == -1)
-        
-        # Si hay condiciones las aplicamos
         if conditions: drills_query = drills_query.filter(or_(*conditions))
 
     if query: drills_query = drills_query.filter(or_(Drill.title.ilike(f'%{query}%'), Drill.description.ilike(f'%{query}%')))
     if primary_id and primary_id.isdigit(): drills_query = drills_query.filter(Drill.primary_tags.any(id=int(primary_id)))
 
-    # Ordenación
-    if sort_by == 'views_desc': 
-        drills_query = drills_query.order_by(Drill.views.desc())
-    elif sort_by == 'favs_desc': 
-        drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
-    elif sort_by == 'name_asc':
-        drills_query = drills_query.order_by(Drill.title.asc())
-    elif sort_by == 'date_asc': 
-        drills_query = drills_query.order_by(Drill.date_posted.asc())
-    else: 
-        drills_query = drills_query.order_by(Drill.date_posted.desc())
+    if sort_by == 'views_desc': drills_query = drills_query.order_by(Drill.views.desc())
+    elif sort_by == 'favs_desc': drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
+    elif sort_by == 'name_asc': drills_query = drills_query.order_by(Drill.title.asc())
+    elif sort_by == 'date_asc': drills_query = drills_query.order_by(Drill.date_posted.asc())
+    else: drills_query = drills_query.order_by(Drill.date_posted.desc())
 
     drills = drills_query.all()
     tags = Tag.query.order_by(Tag.name).all()
@@ -248,7 +272,6 @@ def edit_drill(id):
             
         file = request.files.get('archivo')
         pasted_image = request.form.get('pasted_image')
-        
         if file and file.filename != '':
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -266,24 +289,51 @@ def edit_drill(id):
 
     return render_template('edit_drill.html', drill=drill, etiquetas=tags)
 
-# 2. VISTA DETALLE CON CONTADOR DE VISITAS ÚNICO POR IP
+# --- NUEVA RUTA FASE 2: CONFIGURADOR DE ENTRENO ---
+@app.route('/create_plan', methods=['GET', 'POST'])
+@login_required
+def create_plan():
+    STANDARD_BLOCKS = "Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma"
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        team = request.form.get('team')
+        date_str = request.form.get('date')
+        notes = request.form.get('notes')
+        blocks_csv = request.form.get('blocks_csv')
+
+        current_user.last_blocks_config = blocks_csv
+        
+        plan_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str else datetime.utcnow()
+        new_plan = TrainingPlan(
+            name=name,
+            team_name=team,
+            date=plan_date,
+            notes=notes,
+            structure=blocks_csv, 
+            user_id=current_user.id,
+            is_public=False # Por defecto privado
+        )
+        db.session.add(new_plan)
+        db.session.commit()
+        
+        return redirect('/')
+
+    user_blocks = current_user.last_blocks_config if current_user.last_blocks_config else STANDARD_BLOCKS
+    blocks_list = user_blocks.split(',')
+    
+    return render_template('create_plan.html', blocks=blocks_list, standard_blocks=STANDARD_BLOCKS)
+
 @app.route('/drill/<int:id>')
-# Quitamos login_required para que invitados lo vean
 def view_drill(id):
     drill = Drill.query.get_or_404(id)
-    
-    # Si es privado y el usuario no es el dueño, fuera
     if not drill.is_public:
         if not current_user.is_authenticated or drill.user_id != current_user.id:
             return redirect('/')
 
-    # Lógica de conteo de visitas única
     user_ip = request.remote_addr
-    # Buscamos si esta IP ya vio este ejercicio
     existing_view = DrillView.query.filter_by(drill_id=id, ip_address=user_ip).first()
-    
     if not existing_view:
-        # Primera vez -> Sumamos visita y registramos la IP
         drill.views += 1
         new_view = DrillView(drill_id=id, ip_address=user_ip)
         db.session.add(new_view)

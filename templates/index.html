@@ -35,7 +35,8 @@
                         {% if current_user.is_admin %}
                             <a href="/admin" class="btn btn-warning btn-sm me-2 fw-bold text-dark"><i class="bi bi-gear-fill"></i> Admin</a>
                         {% endif %}
-                        <a href="/create" class="btn btn-primary btn-sm fw-bold me-2">+ Nuevo</a>
+                        <a href="#" class="btn btn-outline-light btn-sm me-2"><i class="bi bi-journal-bookmark"></i> Mis Planes</a>
+                        <a href="/create" class="btn btn-primary btn-sm fw-bold me-2">+ Nuevo Ejercicio</a>
                         <a href="/logout" class="btn btn-outline-light btn-sm">Salir</a>
                     {% else %}
                         <span class="text-white me-3 small">Modo Invitado</span>
@@ -48,66 +49,51 @@
 
     <div class="container mt-4">
         <form action="/" method="GET" class="card p-3 shadow-sm border-0 mb-4">
-            <div class="row g-3 align-items-end">
-                
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold text-muted">Buscar</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                        <input class="form-control border-start-0 ps-0" type="search" name="q" placeholder="Título, descripción..." value="{{ request.args.get('q', '') }}">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm h-100">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                        <input class="form-control border-start-0 ps-0" type="search" name="q" placeholder="Buscar..." value="{{ request.args.get('q', '') }}">
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <div class="mb-2">
-                        <select name="primary" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="">Todas las etiquetas</option>
-                            {% for tag in tags %}
-                                <option value="{{ tag.id }}" {% if request.args.get('primary') == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    {% if current_user.is_authenticated %}
-                    <div class="d-flex flex-wrap gap-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="filter_type" value="my_private" id="check1" {% if 'my_private' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
-                            <label class="form-check-label small" for="check1">🔒 Privados</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="filter_type" value="favorites" id="check3" {% if 'favorites' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
-                            <label class="form-check-label small text-danger fw-bold" for="check3">❤️ Favoritos</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="filter_type" value="next_practice" id="check4" {% if 'next_practice' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
-                            <label class="form-check-label small text-success fw-bold" for="check4">🏀 Próximo Entrene</label>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold text-muted">Ordenar por</label>
-                    <select name="sort_by" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="favs_desc" {% if request.args.get('sort_by') == 'favs_desc' %}selected{% endif %}>❤️ Más Favoritos (Default)</option>
-                        <option value="views_desc" {% if request.args.get('sort_by') == 'views_desc' %}selected{% endif %}>👁️ Más Vistos</option>
-                        <option value="date_desc" {% if request.args.get('sort_by') == 'date_desc' %}selected{% endif %}>📅 Más Recientes</option>
-                        <option value="date_asc" {% if request.args.get('sort_by') == 'date_asc' %}selected{% endif %}>📅 Más Antiguos</option>
-                        <option value="name_asc" {% if request.args.get('sort_by') == 'name_asc' %}selected{% endif %}>🔤 Nombre (A-Z)</option>
+                <div class="col-md-4">
+                    <select name="primary" class="form-select form-select-sm h-100" onchange="this.form.submit()">
+                        <option value="">Todas las etiquetas</option>
+                        {% for tag in tags %}
+                            <option value="{{ tag.id }}" {% if request.args.get('primary') == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>
+                        {% endfor %}
                     </select>
-                    <div class="text-end mt-2">
-                        <a href="/" class="text-decoration-none small text-muted">Limpiar filtros</a>
+                </div>
+
+                <div class="col-md-4">
+                     <select name="sort_by" class="form-select form-select-sm h-100" onchange="this.form.submit()">
+                        <option value="favs_desc" {% if request.args.get('sort_by') == 'favs_desc' %}selected{% endif %}>❤️ Populares</option>
+                        <option value="views_desc" {% if request.args.get('sort_by') == 'views_desc' %}selected{% endif %}>👁️ Vistos</option>
+                        <option value="date_desc" {% if request.args.get('sort_by') == 'date_desc' %}selected{% endif %}>📅 Recientes</option>
+                        <option value="date_asc" {% if request.args.get('sort_by') == 'date_asc' %}selected{% endif %}>📅 Antiguos</option>
+                        <option value="name_asc" {% if request.args.get('sort_by') == 'name_asc' %}selected{% endif %}>🔤 Nombre</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                {% if current_user.is_authenticated %}
+                <div class="d-flex gap-3">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" name="filter_type" value="favorites" id="check3" {% if 'favorites' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
+                        <label class="form-check-label small text-danger" for="check3"><i class="bi bi-heart-fill"></i> Favoritos</label>
+                    </div>
+                     <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" name="filter_type" value="my_private" id="check1" {% if 'my_private' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
+                        <label class="form-check-label small" for="check1">🔒 Privados</label>
                     </div>
                 </div>
+                {% else %}
+                <div></div> {% endif %}
+                <a href="/" class="text-decoration-none small text-muted">Limpiar filtros</a>
             </div>
         </form>
-
-        {% if current_user.is_authenticated and current_user.mochila|length > 0 %}
-            <div class="alert alert-success d-flex justify-content-between align-items-center py-2 shadow-sm">
-                <span>🏀 Tienes <b>{{ current_user.mochila|length }}</b> ejercicios para el Próximo Entrene</span>
-                <a href="/clear_practice" class="btn btn-sm btn-outline-success border-0 fw-bold">Limpiar todo</a>
-            </div>
-        {% endif %}
 
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 pb-5">
             {% for drill in drills %}
@@ -142,9 +128,6 @@
                         <div class="position-absolute top-0 end-0 m-2 d-flex gap-1">
                             {% if drill in current_user.favoritos %}
                                 <span class="badge bg-danger"><i class="bi bi-heart-fill"></i></span>
-                            {% endif %}
-                            {% if drill in current_user.mochila %}
-                                <span class="badge bg-success"><i class="bi bi-basket-fill"></i></span>
                             {% endif %}
                         </div>
                         {% endif %}

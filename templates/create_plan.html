@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nuevo Entrenamiento</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+    <div class="container mt-4 mb-5" style="max-width: 800px;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold"><i class="bi bi-clipboard-data text-primary"></i> Planificar Sesión</h3>
+            <a href="/" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+        </div>
+
+        <form action="/create_plan" method="POST" id="planForm">
+            
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Nombre del Entreno</label>
+                            <input type="text" name="name" class="form-control" placeholder="Ej: Defensa Zonal Martes" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Equipo</label>
+                            <input type="text" name="team" class="form-control" placeholder="Ej: Cadete A">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Fecha</label>
+                            <input type="date" name="date" class="form-control" value="{{ now }}" required>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label text-muted small">Notas generales</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Objetivos principales..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-end mb-2">
+                <label class="fw-bold text-uppercase text-muted small">Estructura de la sesión</label>
+                <button type="button" class="btn btn-link btn-sm text-decoration-none" onclick="resetBlocks()">
+                    <i class="bi bi-arrow-counterclockwise"></i> Restablecer Estándar
+                </button>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body bg-light">
+                    <div id="blocks-container">
+                        {% for block in blocks %}
+                        <div class="block-row input-group mb-2">
+                            <span class="input-group-text bg-white handle" style="cursor: move"><i class="bi bi-list"></i></span>
+                            <input type="text" class="form-control" value="{{ block }}">
+                            <button type="button" class="btn btn-outline-secondary" onclick="moveUp(this)"><i class="bi bi-arrow-up"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="moveDown(this)"><i class="bi bi-arrow-down"></i></button>
+                            <button type="button" class="btn btn-outline-danger" onclick="removeBlock(this)"><i class="bi bi-trash"></i></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="button" class="btn btn-outline-primary w-100 mt-2 border-dashed" onclick="addBlock()">
+                        <i class="bi bi-plus-lg"></i> Añadir Bloque
+                    </button>
+                </div>
+            </div>
+
+            <input type="hidden" name="blocks_csv" id="blocks_csv">
+
+            <div class="d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-primary btn-lg fw-bold">Crear y Empezar</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const container = document.getElementById('blocks-container');
+        const standardBlocks = "{{ standard_blocks }}".split(',');
+
+        function addBlock(value = "") {
+            const div = document.createElement('div');
+            div.className = 'block-row input-group mb-2';
+            div.innerHTML = `
+                <span class="input-group-text bg-white"><i class="bi bi-grip-vertical text-muted"></i></span>
+                <input type="text" class="form-control" value="${value}" placeholder="Nombre del bloque..." required>
+                <button type="button" class="btn btn-outline-secondary" onclick="moveUp(this)"><i class="bi bi-arrow-up-short"></i></button>
+                <button type="button" class="btn btn-outline-secondary" onclick="moveDown(this)"><i class="bi bi-arrow-down-short"></i></button>
+                <button type="button" class="btn btn-outline-danger" onclick="removeBlock(this)"><i class="bi bi-trash"></i></button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeBlock(btn) {
+            btn.closest('.block-row').remove();
+        }
+
+        function moveUp(btn) {
+            const row = btn.closest('.block-row');
+            if (row.previousElementSibling) {
+                row.parentNode.insertBefore(row, row.previousElementSibling);
+            }
+        }
+
+        function moveDown(btn) {
+            const row = btn.closest('.block-row');
+            if (row.nextElementSibling) {
+                row.parentNode.insertBefore(row.nextElementSibling, row);
+            }
+        }
+
+        function resetBlocks() {
+            if(!confirm('¿Volver a la estructura estándar?')) return;
+            container.innerHTML = '';
+            standardBlocks.forEach(block => addBlock(block));
+        }
+
+        // Antes de enviar, juntamos todos los nombres en un String separado por comas
+        document.getElementById('planForm').addEventListener('submit', function(e) {
+            const inputs = container.querySelectorAll('input[type="text"]');
+            const values = Array.from(inputs).map(input => input.value.trim()).filter(v => v);
+            document.getElementById('blocks_csv').value = values.join(',');
+        });
+    </script>
+</body>
+</html>
