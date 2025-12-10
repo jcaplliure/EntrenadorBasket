@@ -9,6 +9,13 @@
         .paste-area { border: 2px dashed #ccc; padding: 20px; text-align: center; color: #777; cursor: pointer; }
         .paste-area:hover, .paste-area.active { border-color: #e65100; background: #fff3e0; }
         #preview-img { max-height: 200px; display: none; margin-top: 10px; border-radius: 5px; }
+        
+        /* ESTILO BOTONES ETIQUETAS (BLOQUE 2) */
+        .btn-check:checked + .btn-outline-secondary {
+            background-color: #e65100;
+            color: white;
+            border-color: #e65100;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -23,14 +30,14 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Descripción (Opcional)</label>
+                        <label class="form-label fw-bold">Descripción</label>
                         <textarea name="descripcion" class="form-control" rows="3"></textarea>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">Imagen o Archivo</label>
                         <div id="paste-zone" class="paste-area rounded">
-                            <p class="mb-0">Haz clic aquí y pega una imagen (Ctrl+V) o selecciona un archivo</p>
+                            <p class="mb-0">Haz clic y pega (Ctrl+V) o selecciona archivo</p>
                         </div>
                         <input type="file" name="archivo" id="file-input" class="form-control mt-2" style="display:none;">
                         <input type="hidden" name="pasted_image" id="pasted-image-input">
@@ -38,29 +45,27 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">O enlace externo (Youtube/Instagram)</label>
+                        <label class="form-label">O enlace externo</label>
                         <input type="url" name="external_link" class="form-control" placeholder="https://...">
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Etiquetas</label>
-                        <select name="primary_tags" class="form-select" multiple>
+                        <label class="form-label fw-bold d-block">Etiquetas (Selecciona varias)</label>
+                        <div class="d-flex flex-wrap gap-2">
                             {% for tag in etiquetas %}
-                            <option value="{{ tag.id }}">{{ tag.name }}</option>
+                            <input type="checkbox" class="btn-check" name="primary_tags" id="tag_{{tag.id}}" value="{{tag.id}}" autocomplete="off">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag_{{tag.id}}">{{ tag.name }}</label>
                             {% endfor %}
-                        </select>
-                        <small class="text-muted">Mantén Ctrl (o Cmd) para seleccionar varias.</small>
+                        </div>
                     </div>
                     
                     <div class="form-check mb-4">
                         <input class="form-check-input" type="checkbox" name="is_public" id="publicCheck" checked>
-                        <label class="form-check-label" for="publicCheck">
-                            Hacer público este ejercicio 🌍
-                        </label>
+                        <label class="form-check-label" for="publicCheck">Hacer público 🌍</label>
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary fw-bold">Guardar Ejercicio</button>
+                        <button type="submit" class="btn btn-primary fw-bold">Guardar</button>
                         <a href="/" class="btn btn-outline-secondary">Cancelar</a>
                     </div>
                 </form>
@@ -74,10 +79,8 @@
         const previewImg = document.getElementById('preview-img');
         const hiddenInput = document.getElementById('pasted-image-input');
 
-        // Al hacer clic, abre el selector de archivos normal
         pasteZone.addEventListener('click', () => fileInput.click());
 
-        // Manejar archivo seleccionado manualmente
         fileInput.addEventListener('change', function() {
             if (this.files && this.files[0]) {
                 const reader = new FileReader();
@@ -90,7 +93,6 @@
             }
         });
 
-        // Manejar Ctrl+V (Pegar)
         document.addEventListener('paste', function(e) {
             const items = e.clipboardData.items;
             for (let i = 0; i < items.length; i++) {
@@ -101,12 +103,12 @@
                         const base64String = event.target.result;
                         previewImg.src = base64String;
                         previewImg.style.display = 'block';
-                        hiddenInput.value = base64String; // Guardamos la imagen en el input oculto
-                        pasteZone.innerHTML = "<p class='text-success fw-bold'>¡Imagen pegada del portapapeles!</p>";
+                        hiddenInput.value = base64String;
+                        pasteZone.innerHTML = "<p class='text-success fw-bold'>¡Imagen pegada!</p>";
                         pasteZone.classList.add('active');
                     };
                     reader.readAsDataURL(blob);
-                    e.preventDefault(); // Evita que se pegue dos veces
+                    e.preventDefault();
                     break;
                 }
             }

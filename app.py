@@ -22,8 +22,10 @@ app.config['SECRET_KEY'] = 'clave_secreta_super_segura'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
 
-# --- GOOGLE KEYS (YA PUESTAS) ---
+# --- GOOGLE KEYS ---
+# IMPORTANTE: Asegúrate de que estas claves coinciden con las de tu consola de Google Cloud
 app.config['GOOGLE_CLIENT_ID'] = '706704268052-lhvlruk0fjs8hhma8bk76bv711a4k7ct.apps.googleusercontent.com'
+# Si cambiaste la clave secreta recientemente en PythonAnywhere, asegúrate de actualizarla aquí también antes de subir:
 app.config['GOOGLE_CLIENT_SECRET'] = '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'
 
 # --- SETUP ---
@@ -134,7 +136,7 @@ def home():
     query = request.args.get('q', '').strip()
     primary_id = request.args.get('primary', '')
     filter_type = request.args.getlist('filter_type')
-    sort_by = request.args.get('sort_by', 'date_desc')
+    sort_by = request.args.get('sort_by', 'date_desc') # Por defecto: más recientes
     
     base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
     drills_query = Drill.query.filter(base_condition)
@@ -155,9 +157,17 @@ def home():
     if query: drills_query = drills_query.filter(or_(Drill.title.ilike(f'%{query}%'), Drill.description.ilike(f'%{query}%')))
     if primary_id and primary_id.isdigit(): drills_query = drills_query.filter(Drill.primary_tags.any(id=int(primary_id)))
 
-    if sort_by == 'views_desc': drills_query = drills_query.order_by(Drill.views.desc())
-    elif sort_by == 'favs_desc': drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
-    else: drills_query = drills_query.order_by(Drill.date_posted.desc())
+    # --- LÓGICA DE ORDENACIÓN NUEVA ---
+    if sort_by == 'views_desc': 
+        drills_query = drills_query.order_by(Drill.views.desc())
+    elif sort_by == 'favs_desc': 
+        drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
+    elif sort_by == 'name_asc':
+        drills_query = drills_query.order_by(Drill.title.asc())
+    elif sort_by == 'date_asc': # Más antiguos primero
+        drills_query = drills_query.order_by(Drill.date_posted.asc())
+    else: # date_desc (Más recientes primero) - DEFAULT
+        drills_query = drills_query.order_by(Drill.date_posted.desc())
 
     drills = drills_query.all()
     tags = Tag.query.order_by(Tag.name).all()
@@ -313,7 +323,7 @@ def logout():
     logout_user()
     return redirect('/login')
 
-# --- ZONA DE ADMINISTRACIÓN (BLOQUE 1 COMPLETO) ---
+# --- ZONA DE ADMINISTRACIÓN ---
 @app.route('/admin', methods=['GET'])
 @login_required
 def admin_panel():

@@ -37,13 +37,9 @@
 
                 <div class="d-flex align-items-center mt-2 mt-lg-0">
                     <span class="text-white me-3 d-none d-lg-block small">{{ current_user.name }}</span>
-                    
                     {% if current_user.is_admin %}
-                        <a href="/admin" class="btn btn-warning btn-sm me-2 fw-bold text-dark">
-                            <i class="bi bi-gear-fill"></i> Admin
-                        </a>
+                        <a href="/admin" class="btn btn-warning btn-sm me-2 fw-bold text-dark"><i class="bi bi-gear-fill"></i> Admin</a>
                     {% endif %}
-
                     <a href="/create" class="btn btn-primary btn-sm fw-bold me-2">+ Nuevo</a>
                     <a href="/logout" class="btn btn-outline-light btn-sm">Salir</a>
                 </div>
@@ -64,7 +60,7 @@
                     </select>
                 </div>
 
-                <div class="col-md-7">
+                <div class="col-md-6">
                     <div class="d-flex flex-wrap gap-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="filter_type" value="my_private" id="check1" {% if 'my_private' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
@@ -80,22 +76,33 @@
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="filter_type" value="next_practice" id="check4" {% if 'next_practice' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
-                            <label class="form-check-label small text-success fw-bold" for="check4">🎒 Mochila</label>
+                            <label class="form-check-label small text-success fw-bold" for="check4">🏀 Próximo Entrene</label>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-2 text-end">
-                    <a href="/" class="text-decoration-none small text-muted">Limpiar filtros</a>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">Ordenar por</label>
+                    <select name="sort_by" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="date_desc" {% if request.args.get('sort_by') == 'date_desc' %}selected{% endif %}>📅 Más recientes</option>
+                        <option value="date_asc" {% if request.args.get('sort_by') == 'date_asc' %}selected{% endif %}>📅 Más antiguos</option>
+                        <option value="views_desc" {% if request.args.get('sort_by') == 'views_desc' %}selected{% endif %}>👁️ Más vistos</option>
+                        <option value="favs_desc" {% if request.args.get('sort_by') == 'favs_desc' %}selected{% endif %}>❤️ Más favoritos</option>
+                        <option value="name_asc" {% if request.args.get('sort_by') == 'name_asc' %}selected{% endif %}>🔤 Nombre (A-Z)</option>
+                    </select>
                 </div>
+            </div>
+            
+            <div class="text-end mt-2">
+                <a href="/" class="text-decoration-none small text-muted">Limpiar filtros</a>
             </div>
             <input type="hidden" name="q" value="{{ request.args.get('q', '') }}">
         </form>
 
         {% if current_user.mochila|length > 0 %}
             <div class="alert alert-success d-flex justify-content-between align-items-center py-2 shadow-sm">
-                <span>🎒 Tienes <b>{{ current_user.mochila|length }}</b> ejercicios en la mochila</span>
-                <a href="/clear_practice" class="btn btn-sm btn-outline-success border-0 fw-bold">Vaciar mochila</a>
+                <span>🏀 Tienes <b>{{ current_user.mochila|length }}</b> ejercicios para el Próximo Entrene</span>
+                <a href="/clear_practice" class="btn btn-sm btn-outline-success border-0 fw-bold">Limpiar todo</a>
             </div>
         {% endif %}
 
@@ -105,7 +112,6 @@
                 <div class="card h-100 drill-card border-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#drillModal" data-bs-url="/drill/{{ drill.id }}">
                     
                     <div class="position-relative bg-dark rounded-top overflow-hidden" style="height: 200px;">
-                        
                         {% if drill.media_file and drill.media_file|is_video %}
                             <video class="w-100 h-100 object-fit-cover" style="opacity: 0.8;">
                                 <source src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" type="video/mp4">
@@ -113,21 +119,17 @@
                             <div class="position-absolute top-50 start-50 translate-middle">
                                 <i class="bi bi-play-circle-fill text-white display-4 opacity-75"></i>
                             </div>
-
                         {% elif drill.media_file %}
                             <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="w-100 h-100 object-fit-cover">
-
                         {% elif drill.external_link and 'youtu' in drill.external_link %}
                             <img src="{{ drill.external_link|youtube_thumb }}" class="w-100 h-100 object-fit-cover">
                             <div class="position-absolute top-50 start-50 translate-middle">
                                 <i class="bi bi-youtube text-danger display-4 bg-white rounded-circle"></i>
                             </div>
-
                         {% else %}
                             <img src="{{ url_for('static', filename='uploads/default_link_image.jpg') }}" 
                                  class="w-100 h-100 object-fit-cover"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                            
                             <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-secondary text-white" style="display:none">
                                 <i class="bi bi-link-45deg display-1 opacity-50"></i>
                             </div>
@@ -138,7 +140,7 @@
                                 <span class="badge bg-danger"><i class="bi bi-heart-fill"></i></span>
                             {% endif %}
                             {% if drill in current_user.mochila %}
-                                <span class="badge bg-success"><i class="bi bi-backpack-fill"></i></span>
+                                <span class="badge bg-success"><i class="bi bi-basket-fill"></i></span>
                             {% endif %}
                         </div>
                         {% if not drill.is_public %}
@@ -151,7 +153,6 @@
                     <div class="card-body">
                         <h5 class="card-title fw-bold text-truncate">{{ drill.title }}</h5>
                         <p class="card-text text-muted small text-truncate">{{ drill.description or 'Sin descripción' }}</p>
-                        
                         <div class="mt-2">
                             {% for tag in drill.primary_tags[:3] %}
                                 <span class="badge bg-light text-dark border me-1">{{ tag.name }}</span>
@@ -182,9 +183,7 @@
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-body text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
+                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>
                 </div>
             </div>
         </div>
@@ -197,19 +196,9 @@
             const button = event.relatedTarget
             const url = button.getAttribute('data-bs-url')
             const modalContent = drillModal.querySelector('.modal-content')
-            
-            modalContent.innerHTML = `
-                <div class="modal-body text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                </div>`
-
-            fetch(url)
-                .then(response => response.text())
-                .then(html => {
-                    modalContent.innerHTML = html
-                })
+            modalContent.innerHTML = `<div class="modal-body text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>`
+            fetch(url).then(response => response.text()).then(html => { modalContent.innerHTML = html })
         })
     </script>
-
 </body>
 </html>
