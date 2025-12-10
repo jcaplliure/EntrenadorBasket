@@ -23,9 +23,7 @@ app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
 
 # --- GOOGLE KEYS ---
-# IMPORTANTE: Asegúrate de que estas claves coinciden con las de tu consola de Google Cloud
 app.config['GOOGLE_CLIENT_ID'] = '706704268052-lhvlruk0fjs8hhma8bk76bv711a4k7ct.apps.googleusercontent.com'
-# Si cambiaste la clave secreta recientemente en PythonAnywhere, asegúrate de actualizarla aquí también antes de subir:
 app.config['GOOGLE_CLIENT_SECRET'] = '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'
 
 # --- SETUP ---
@@ -136,7 +134,7 @@ def home():
     query = request.args.get('q', '').strip()
     primary_id = request.args.get('primary', '')
     filter_type = request.args.getlist('filter_type')
-    sort_by = request.args.get('sort_by', 'date_desc') # Por defecto: más recientes
+    sort_by = request.args.get('sort_by', 'date_desc')
     
     base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
     drills_query = Drill.query.filter(base_condition)
@@ -157,17 +155,11 @@ def home():
     if query: drills_query = drills_query.filter(or_(Drill.title.ilike(f'%{query}%'), Drill.description.ilike(f'%{query}%')))
     if primary_id and primary_id.isdigit(): drills_query = drills_query.filter(Drill.primary_tags.any(id=int(primary_id)))
 
-    # --- LÓGICA DE ORDENACIÓN NUEVA ---
-    if sort_by == 'views_desc': 
-        drills_query = drills_query.order_by(Drill.views.desc())
-    elif sort_by == 'favs_desc': 
-        drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
-    elif sort_by == 'name_asc':
-        drills_query = drills_query.order_by(Drill.title.asc())
-    elif sort_by == 'date_asc': # Más antiguos primero
-        drills_query = drills_query.order_by(Drill.date_posted.asc())
-    else: # date_desc (Más recientes primero) - DEFAULT
-        drills_query = drills_query.order_by(Drill.date_posted.desc())
+    if sort_by == 'views_desc': drills_query = drills_query.order_by(Drill.views.desc())
+    elif sort_by == 'favs_desc': drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
+    elif sort_by == 'name_asc': drills_query = drills_query.order_by(Drill.title.asc())
+    elif sort_by == 'date_asc': drills_query = drills_query.order_by(Drill.date_posted.asc())
+    else: drills_query = drills_query.order_by(Drill.date_posted.desc())
 
     drills = drills_query.all()
     tags = Tag.query.order_by(Tag.name).all()
@@ -206,6 +198,52 @@ def create():
         db.session.commit()
         return redirect('/')
     return render_template('create.html', etiquetas=tags)
+
+# --- NUEVA RUTA PARA EDITAR (BLOQUE 3) ---
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_drill(id):
+    drill = Drill.query.get_or_404(id)
+    # Seguridad: Solo autor o admin pueden editar
+    if drill.user_id != current_user.id and not current_user.is_admin:
+        flash('No tienes permiso para editar este ejercicio.')
+        return redirect('/')
+
+    tags = Tag.query.order_by(Tag.name).all()
+
+    if request.method == 'POST':
+        drill.title = request.form['titulo']
+        drill.description = request.form['descripcion']
+        drill.is_public = 'is_public' in request.form
+        drill.external_link = request.form.get('external_link', '').strip()
+
+        # Actualizar etiquetas
+        drill.primary_tags = [] 
+        ids_p = request.form.getlist('primary_tags')
+        for t_id in ids_p:
+            tag = Tag.query.get(int(t_id))
+            if tag: drill.primary_tags.append(tag)
+            
+        # Actualizar archivo (Solo si suben uno nuevo)
+        file = request.files.get('archivo')
+        pasted_image = request.form.get('pasted_image')
+        
+        if file and file.filename != '':
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            drill.media_file = filename
+        elif pasted_image:
+            header, encoded = pasted_image.split(",", 1)
+            data = base64.b64decode(encoded)
+            filename = f"pasted_{int(datetime.now().timestamp())}.png"
+            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            with open(path, "wb") as f: f.write(data)
+            drill.media_file = filename
+
+        db.session.commit()
+        return redirect('/')
+
+    return render_template('edit_drill.html', drill=drill, etiquetas=tags)
 
 @app.route('/drill/<int:id>')
 @login_required

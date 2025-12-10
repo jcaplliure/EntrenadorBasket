@@ -1,82 +1,94 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ drill.title }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-</head>
-<body class="bg-light">
+<div class="modal-header border-0 pb-0">
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
 
-<div class="container mt-4 mb-5" style="max-width: 800px;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="/" class="btn btn-outline-secondary btn-sm">&larr; Volver a la Pizarra</a>
+<div class="modal-body pt-0">
+    <h3 class="fw-bold mb-1">{{ drill.title }}</h3>
+    <p class="text-muted small mb-3">
+        Subido por <span class="fw-bold text-dark">{{ drill.author.name }}</span> • {{ drill.date_posted.strftime('%d/%m/%Y') }}
+    </p>
+
+    <div class="mb-4 rounded overflow-hidden shadow-sm bg-light text-center">
         
-        <div>
-            <a href="/toggle_practice/{{ drill.id }}" class="btn btn-sm me-1 {% if drill in current_user.mochila %}btn-primary{% else %}btn-outline-primary{% endif %}" title="Próximo Entrene">
-                <i class="bi bi-clipboard-check"></i> Próximo Entrene
+        {% if media_type == 'video_file' %}
+            <div class="ratio ratio-16x9">
+                <video controls autoplay class="w-100">
+                    <source src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" type="video/mp4">
+                    Tu navegador no soporta vídeos.
+                </video>
+            </div>
+
+        {% elif media_type == 'image_file' %}
+            <a href="{{ url_for('static', filename='uploads/' + drill.media_file) }}" target="_blank" title="Haz clic para ampliar">
+                <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="img-fluid w-100" style="object-fit: contain; max-height: 500px;">
             </a>
-            <a href="/toggle_fav/{{ drill.id }}" class="btn btn-sm {% if drill in current_user.favoritos %}btn-danger{% else %}btn-outline-danger{% endif %}" title="Favoritos">
-                <i class="bi bi-heart-fill"></i>
-            </a>
-        </div>
+            <p class="text-center text-muted small mt-1 mb-0"><i class="bi bi-zoom-in"></i> Haz clic en la foto para ampliar</p>
+
+        {% elif media_type == 'youtube' %}
+            <div class="ratio ratio-16x9">
+                <iframe src="https://www.youtube.com/embed/{{ drill.external_link|get_youtube_id }}?autoplay=1" allowfullscreen></iframe>
+            </div>
+
+        {% elif media_type == 'link' %}
+            <div class="p-3 text-center">
+                <img src="{{ url_for('static', filename='uploads/default_link_image.jpg') }}" 
+                     class="img-fluid rounded mb-3" style="max-height: 200px;"
+                     onerror="this.style.display='none'">
+                
+                <h5 class="mt-2 text-dark">Este ejercicio es un enlace externo</h5>
+                <a href="{{ drill.external_link }}" target="_blank" class="btn btn-primary mt-2 px-4 fw-bold">
+                    Abrir enlace <i class="bi bi-box-arrow-up-right ms-2"></i>
+                </a>
+            </div>
+        {% endif %}
     </div>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-            
-            <div class="bg-black text-center" style="min-height: 300px; display: flex; align-items: center; justify-content: center;">
-                {% if media_type == 'video_file' %}
-                    <video controls autoplay class="w-100" style="max-height: 500px;">
-                        <source src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" type="video/mp4">
-                        Tu navegador no soporta vídeo.
-                    </video>
-                {% elif media_type == 'image_file' %}
-                    <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="img-fluid" style="max-height: 500px;">
-                {% elif media_type == 'youtube' %}
-                    <div class="ratio ratio-16x9">
-                        <iframe src="https://www.youtube.com/embed/{{ drill.external_link|get_youtube_id }}" allowfullscreen></iframe>
-                    </div>
-                {% else %}
-                    <div class="py-5 text-white">
-                        <i class="bi bi-link-45deg fs-1"></i>
-                        <p>Enlace externo: <a href="{{ drill.external_link }}" target="_blank" class="text-white fw-bold">{{ drill.external_link }}</a></p>
-                    </div>
-                {% endif %}
-            </div>
+    <div class="px-2">
+        {% if drill.description %}
+            <h6 class="fw-bold text-secondary">Descripción</h6>
+            <p class="text-dark" style="white-space: pre-wrap;">{{ drill.description }}</p>
+        {% endif %}
 
-            <div class="p-4">
-                <h2 class="fw-bold mb-3">{{ drill.title }}</h2>
-                
-                <div class="mb-4">
-                    {% for tag in drill.primary_tags %}
-                        <span class="badge bg-secondary fs-6 me-1">{{ tag.name }}</span>
-                    {% endfor %}
-                    {% if not drill.is_public %}
-                        <span class="badge bg-dark ms-2"><i class="bi bi-lock-fill"></i> Privado</span>
-                    {% endif %}
-                </div>
-
-                <h5 class="fw-bold text-muted">Descripción</h5>
-                <p class="fs-5" style="white-space: pre-line;">{{ drill.description or 'Sin descripción detallada.' }}</p>
-
-                {% if drill.external_link and media_type != 'youtube' %}
-                <div class="mt-4 p-3 bg-light rounded border">
-                    <i class="bi bi-box-arrow-up-right me-2"></i> 
-                    <strong>Recurso Externo:</strong> 
-                    <a href="{{ drill.external_link }}" target="_blank" class="text-break">{{ drill.external_link }}</a>
-                </div>
-                {% endif %}
+        {% if drill.external_link and media_type != 'link' and media_type != 'youtube' %}
+            <div class="mt-4 p-3 bg-light rounded border border-warning border-opacity-25">
+                <p class="mb-2 small fw-bold text-muted">🔗 Recurso adicional:</p>
+                <a href="{{ drill.external_link }}" target="_blank" class="btn btn-outline-dark w-100">
+                    <i class="bi bi-box-arrow-up-right"></i> Ir al enlace original
+                </a>
             </div>
-            
-            <div class="card-footer bg-white text-muted d-flex justify-content-between">
-                <small>Subido por: <strong>{{ drill.author.name or drill.author.email }}</strong></small>
-                <small>Visto {{ drill.views }} veces</small>
-            </div>
-        </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-4 pt-3 border-top">
+        {% for tag in drill.primary_tags %}
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 me-1">{{ tag.name }}</span>
+        {% endfor %}
     </div>
 </div>
 
-</body>
-</html>
+<div class="modal-footer bg-light">
+    <div class="d-flex w-100 justify-content-between align-items-center">
+        <div>
+            {% if drill.user_id == current_user.id or current_user.is_admin %}
+                <a href="/edit/{{ drill.id }}" class="btn btn-sm btn-outline-warning me-2" title="Editar">
+                    <i class="bi bi-pencil-square"></i> Editar
+                </a>
+                <a href="/delete/{{ drill.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro que quieres borrarlo?');" title="Borrar">
+                    <i class="bi bi-trash"></i>
+                </a>
+            {% endif %}
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="/toggle_practice/{{ drill.id }}" class="btn btn-light border {% if drill in current_user.mochila %}text-success fw-bold{% else %}text-muted{% endif %}">
+                <i class="bi bi-basket{% if drill in current_user.mochila %}-fill{% endif %}"></i>
+            </a>
+            
+            <a href="/toggle_fav/{{ drill.id }}" class="btn btn-light border {% if drill in current_user.favoritos %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                <i class="bi bi-heart{% if drill in current_user.favoritos %}-fill{% endif %}"></i>
+            </a>
+            
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+    </div>
+</div>
