@@ -64,6 +64,13 @@ drill_secondary_tags = db.Table('drill_secondary_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
 )
 
+# NUEVA TABLA PARA CONTROLAR VISITAS ÚNICAS POR IP
+class DrillView(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
+    ip_address = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -128,38 +135,56 @@ def get_youtube_id(url):
     return None
 
 # --- RUTAS ---
+
+# 1. HOME (MODO INVITADO HABILITADO)
 @app.route('/')
-@login_required
 def home():
     query = request.args.get('q', '').strip()
     primary_id = request.args.get('primary', '')
     filter_type = request.args.getlist('filter_type')
-    sort_by = request.args.get('sort_by', 'date_desc')
+    # CAMBIO: Por defecto ordenamos por FAVORITOS (más popular)
+    sort_by = request.args.get('sort_by', 'favs_desc') 
     
-    base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
+    # Lógica de usuario logueado vs invitado
+    if current_user.is_authenticated:
+        base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
+    else:
+        # Invitado: Solo ve lo público
+        base_condition = (Drill.is_public == True)
+
     drills_query = Drill.query.filter(base_condition)
     
+    # Filtros avanzados (Solo si logueado, o lógica parcial para invitado)
     if filter_type:
         conditions = []
-        if 'my_private' in filter_type: conditions.append(and_(Drill.user_id == current_user.id, Drill.is_public == False))
-        if 'my_public' in filter_type: conditions.append(and_(Drill.user_id == current_user.id, Drill.is_public == True))
-        if 'others' in filter_type: conditions.append(and_(Drill.user_id != current_user.id, Drill.is_public == True))
-        if 'favorites' in filter_type:
-            fav_ids = [d.id for d in current_user.favoritos]
-            conditions.append(Drill.id.in_(fav_ids) if fav_ids else Drill.id == -1)
-        if 'next_practice' in filter_type:
-            practice_ids = [d.id for d in current_user.mochila]
-            conditions.append(Drill.id.in_(practice_ids) if practice_ids else Drill.id == -1)
+        if current_user.is_authenticated:
+            if 'my_private' in filter_type: conditions.append(and_(Drill.user_id == current_user.id, Drill.is_public == False))
+            if 'my_public' in filter_type: conditions.append(and_(Drill.user_id == current_user.id, Drill.is_public == True))
+            if 'others' in filter_type: conditions.append(and_(Drill.user_id != current_user.id, Drill.is_public == True))
+            if 'favorites' in filter_type:
+                fav_ids = [d.id for d in current_user.favoritos]
+                conditions.append(Drill.id.in_(fav_ids) if fav_ids else Drill.id == -1)
+            if 'next_practice' in filter_type:
+                practice_ids = [d.id for d in current_user.mochila]
+                conditions.append(Drill.id.in_(practice_ids) if practice_ids else Drill.id == -1)
+        
+        # Si hay condiciones las aplicamos
         if conditions: drills_query = drills_query.filter(or_(*conditions))
 
     if query: drills_query = drills_query.filter(or_(Drill.title.ilike(f'%{query}%'), Drill.description.ilike(f'%{query}%')))
     if primary_id and primary_id.isdigit(): drills_query = drills_query.filter(Drill.primary_tags.any(id=int(primary_id)))
 
-    if sort_by == 'views_desc': drills_query = drills_query.order_by(Drill.views.desc())
-    elif sort_by == 'favs_desc': drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
-    elif sort_by == 'name_asc': drills_query = drills_query.order_by(Drill.title.asc())
-    elif sort_by == 'date_asc': drills_query = drills_query.order_by(Drill.date_posted.asc())
-    else: drills_query = drills_query.order_by(Drill.date_posted.desc())
+    # Ordenación
+    if sort_by == 'views_desc': 
+        drills_query = drills_query.order_by(Drill.views.desc())
+    elif sort_by == 'favs_desc': 
+        drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
+    elif sort_by == 'name_asc':
+        drills_query = drills_query.order_by(Drill.title.asc())
+    elif sort_by == 'date_asc': 
+        drills_query = drills_query.order_by(Drill.date_posted.asc())
+    else: 
+        drills_query = drills_query.order_by(Drill.date_posted.desc())
 
     drills = drills_query.all()
     tags = Tag.query.order_by(Tag.name).all()
@@ -199,12 +224,10 @@ def create():
         return redirect('/')
     return render_template('create.html', etiquetas=tags)
 
-# --- NUEVA RUTA PARA EDITAR (BLOQUE 3) ---
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_drill(id):
     drill = Drill.query.get_or_404(id)
-    # Seguridad: Solo autor o admin pueden editar
     if drill.user_id != current_user.id and not current_user.is_admin:
         flash('No tienes permiso para editar este ejercicio.')
         return redirect('/')
@@ -217,14 +240,12 @@ def edit_drill(id):
         drill.is_public = 'is_public' in request.form
         drill.external_link = request.form.get('external_link', '').strip()
 
-        # Actualizar etiquetas
         drill.primary_tags = [] 
         ids_p = request.form.getlist('primary_tags')
         for t_id in ids_p:
             tag = Tag.query.get(int(t_id))
             if tag: drill.primary_tags.append(tag)
             
-        # Actualizar archivo (Solo si suben uno nuevo)
         file = request.files.get('archivo')
         pasted_image = request.form.get('pasted_image')
         
@@ -245,13 +266,29 @@ def edit_drill(id):
 
     return render_template('edit_drill.html', drill=drill, etiquetas=tags)
 
+# 2. VISTA DETALLE CON CONTADOR DE VISITAS ÚNICO POR IP
 @app.route('/drill/<int:id>')
-@login_required
+# Quitamos login_required para que invitados lo vean
 def view_drill(id):
     drill = Drill.query.get_or_404(id)
-    if not drill.is_public and drill.user_id != current_user.id: return redirect('/')
-    drill.views += 1
-    db.session.commit()
+    
+    # Si es privado y el usuario no es el dueño, fuera
+    if not drill.is_public:
+        if not current_user.is_authenticated or drill.user_id != current_user.id:
+            return redirect('/')
+
+    # Lógica de conteo de visitas única
+    user_ip = request.remote_addr
+    # Buscamos si esta IP ya vio este ejercicio
+    existing_view = DrillView.query.filter_by(drill_id=id, ip_address=user_ip).first()
+    
+    if not existing_view:
+        # Primera vez -> Sumamos visita y registramos la IP
+        drill.views += 1
+        new_view = DrillView(drill_id=id, ip_address=user_ip)
+        db.session.add(new_view)
+        db.session.commit()
+
     media_type = 'none'
     if drill.media_file:
         ext = drill.media_file.split('.')[-1].lower()
