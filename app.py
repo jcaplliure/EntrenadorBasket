@@ -13,21 +13,16 @@ import base64
 from io import BytesIO
 from PIL import Image
 
-# --- CONFIGURACIÓN ---
 app = Flask(__name__)
-
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'basket.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'clave_secreta_super_segura'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
-
-# --- GOOGLE KEYS ---
 app.config['GOOGLE_CLIENT_ID'] = '706704268052-lhvlruk0fjs8hhma8bk76bv711a4k7ct.apps.googleusercontent.com'
 app.config['GOOGLE_CLIENT_SECRET'] = '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'
 
-# --- SETUP ---
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
@@ -45,17 +40,14 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- MODELOS ---
 favorites = db.Table('favorites',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('drill_id', db.Integer, db.ForeignKey('drill.id'), primary_key=True)
 )
-
 next_practice = db.Table('next_practice',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('drill_id', db.Integer, db.ForeignKey('drill.id'), primary_key=True)
 )
-
 drill_primary_tags = db.Table('drill_primary_tags',
     db.Column('drill_id', db.Integer, db.ForeignKey('drill.id'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
@@ -77,16 +69,10 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(100), nullable=True)
     password_hash = db.Column(db.String(128), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
-    
-    # Preferencia de bloques del usuario
     last_blocks_config = db.Column(db.String(500), nullable=True, default="Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma")
-
     favoritos = db.relationship('Drill', secondary=favorites, backref=db.backref('favorited_by', lazy='dynamic'))
     mochila = db.relationship('Drill', secondary=next_practice, backref=db.backref('in_practice_plan', lazy='dynamic'))
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
+    def set_password(self, password): self.password_hash = generate_password_hash(password)
     def check_password(self, password):
         if not self.password_hash: return False
         return check_password_hash(self.password_hash, password)
@@ -105,12 +91,9 @@ class Drill(db.Model):
     is_public = db.Column(db.Boolean, default=True)
     views = db.Column(db.Integer, default=0)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    
     author = db.relationship('User', backref=db.backref('drills', lazy=True))
     primary_tags = db.relationship('Tag', secondary=drill_primary_tags, backref='primary_drills')
     secondary_tags = db.relationship('Tag', secondary=drill_secondary_tags, backref='secondary_drills')
-
-# --- MODELOS FASE 2 (ENTRENAMIENTOS PRO) ---
 
 class TrainingTemplate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -125,31 +108,22 @@ class TrainingPlan(db.Model):
     team_name = db.Column(db.String(100), nullable=True) 
     notes = db.Column(db.Text, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    
-    # Estructura de bloques
     structure = db.Column(db.String(500), nullable=True) 
-    
-    # NUEVO: Para compartir (WhatsApp/Mail)
     is_public = db.Column(db.Boolean, default=False)
-
     items = db.relationship('TrainingItem', backref='plan', lazy=True, cascade="all, delete-orphan")
 
 class TrainingItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     training_plan_id = db.Column(db.Integer, db.ForeignKey('training_plan.id'), nullable=False)
     drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
-    
     block_name = db.Column(db.String(50), nullable=False)
     order = db.Column(db.Integer, default=0)
     notes = db.Column(db.String(200), nullable=True)
-
     drill = db.relationship('Drill')
 
 @login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+def load_user(user_id): return User.query.get(int(user_id))
 
-# --- FILTROS ---
 @app.template_filter('youtube_thumb')
 def youtube_thumb(url):
     if not url: return None
@@ -172,7 +146,6 @@ def get_youtube_id(url):
     if 'youtube.com' in url and 'v=' in url: return url.split('v=')[1].split('&')[0]
     return None
 
-# --- RUTAS ---
 @app.route('/')
 def home():
     query = request.args.get('q', '').strip()
@@ -180,10 +153,8 @@ def home():
     filter_type = request.args.getlist('filter_type')
     sort_by = request.args.get('sort_by', 'favs_desc') 
     
-    if current_user.is_authenticated:
-        base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
-    else:
-        base_condition = (Drill.is_public == True)
+    if current_user.is_authenticated: base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
+    else: base_condition = (Drill.is_public == True)
 
     drills_query = Drill.query.filter(base_condition)
     
@@ -224,7 +195,6 @@ def create():
         is_public = 'is_public' in request.form
         external_link = request.form.get('external_link', '').strip()
         nuevo = Drill(title=title, description=desc, is_public=is_public, user_id=current_user.id, external_link=external_link)
-
         file = request.files.get('archivo')
         pasted_image = request.form.get('pasted_image')
         if file and file.filename != '':
@@ -238,7 +208,6 @@ def create():
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             with open(path, "wb") as f: f.write(data)
             nuevo.media_file = filename
-
         ids_p = request.form.getlist('primary_tags')
         for t_id in ids_p:
             tag = Tag.query.get(int(t_id))
@@ -255,21 +224,17 @@ def edit_drill(id):
     if drill.user_id != current_user.id and not current_user.is_admin:
         flash('No tienes permiso para editar este ejercicio.')
         return redirect('/')
-
     tags = Tag.query.order_by(Tag.name).all()
-
     if request.method == 'POST':
         drill.title = request.form['titulo']
         drill.description = request.form['descripcion']
         drill.is_public = 'is_public' in request.form
         drill.external_link = request.form.get('external_link', '').strip()
-
         drill.primary_tags = [] 
         ids_p = request.form.getlist('primary_tags')
         for t_id in ids_p:
             tag = Tag.query.get(int(t_id))
             if tag: drill.primary_tags.append(tag)
-            
         file = request.files.get('archivo')
         pasted_image = request.form.get('pasted_image')
         if file and file.filename != '':
@@ -283,46 +248,80 @@ def edit_drill(id):
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             with open(path, "wb") as f: f.write(data)
             drill.media_file = filename
-
         db.session.commit()
         return redirect('/')
-
     return render_template('edit_drill.html', drill=drill, etiquetas=tags)
 
-# --- NUEVA RUTA FASE 2: CONFIGURADOR DE ENTRENO ---
 @app.route('/create_plan', methods=['GET', 'POST'])
 @login_required
 def create_plan():
     STANDARD_BLOCKS = "Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma"
-
     if request.method == 'POST':
         name = request.form.get('name')
         team = request.form.get('team')
         date_str = request.form.get('date')
         notes = request.form.get('notes')
         blocks_csv = request.form.get('blocks_csv')
-
         current_user.last_blocks_config = blocks_csv
-        
         plan_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str else datetime.utcnow()
         new_plan = TrainingPlan(
-            name=name,
-            team_name=team,
-            date=plan_date,
-            notes=notes,
-            structure=blocks_csv, 
-            user_id=current_user.id,
-            is_public=False # Por defecto privado
+            name=name, team_name=team, date=plan_date, notes=notes,
+            structure=blocks_csv, user_id=current_user.id, is_public=False
         )
         db.session.add(new_plan)
         db.session.commit()
-        
-        return redirect('/')
+        return redirect(url_for('view_plan', id=new_plan.id)) # AHORA REDIRIGE AL PLAN
 
     user_blocks = current_user.last_blocks_config if current_user.last_blocks_config else STANDARD_BLOCKS
     blocks_list = user_blocks.split(',')
-    
     return render_template('create_plan.html', blocks=blocks_list, standard_blocks=STANDARD_BLOCKS)
+
+# --- NUEVAS RUTAS BLOQUE 2 (VER PLAN Y GESTION) ---
+@app.route('/my_plans')
+@login_required
+def my_plans():
+    plans = TrainingPlan.query.filter_by(user_id=current_user.id).order_by(TrainingPlan.date.desc()).all()
+    return render_template('my_plans.html', plans=plans)
+
+@app.route('/plan/<int:id>')
+@login_required
+def view_plan(id):
+    plan = TrainingPlan.query.get_or_404(id)
+    if plan.user_id != current_user.id and not plan.is_public:
+        return redirect('/')
+    
+    # Preparar datos para el modal (Todos los drills disponibles)
+    base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
+    all_drills = Drill.query.filter(base_condition).order_by(Drill.date_posted.desc()).all()
+    tags = Tag.query.order_by(Tag.name).all()
+
+    return render_template('view_plan.html', plan=plan, all_drills=all_drills, tags=tags)
+
+@app.route('/add_item_to_plan', methods=['POST'])
+@login_required
+def add_item_to_plan():
+    plan_id = request.form.get('plan_id')
+    drill_id = request.form.get('drill_id')
+    block_name = request.form.get('block_name')
+    
+    plan = TrainingPlan.query.get(plan_id)
+    if not plan or plan.user_id != current_user.id: return "Error", 403
+
+    item = TrainingItem(training_plan_id=plan.id, drill_id=drill_id, block_name=block_name)
+    db.session.add(item)
+    db.session.commit()
+    return redirect(url_for('view_plan', id=plan.id))
+
+@app.route('/delete_plan_item/<int:id>')
+@login_required
+def delete_plan_item(id):
+    item = TrainingItem.query.get_or_404(id)
+    if item.plan.user_id == current_user.id:
+        plan_id = item.plan.id
+        db.session.delete(item)
+        db.session.commit()
+        return redirect(url_for('view_plan', id=plan_id))
+    return redirect('/')
 
 @app.route('/drill/<int:id>')
 def view_drill(id):
@@ -330,7 +329,6 @@ def view_drill(id):
     if not drill.is_public:
         if not current_user.is_authenticated or drill.user_id != current_user.id:
             return redirect('/')
-
     user_ip = request.remote_addr
     existing_view = DrillView.query.filter_by(drill_id=id, ip_address=user_ip).first()
     if not existing_view:
@@ -338,7 +336,6 @@ def view_drill(id):
         new_view = DrillView(drill_id=id, ip_address=user_ip)
         db.session.add(new_view)
         db.session.commit()
-
     media_type = 'none'
     if drill.media_file:
         ext = drill.media_file.split('.')[-1].lower()
@@ -385,7 +382,6 @@ def delete_drill(id):
         db.session.commit()
     return redirect('/')
 
-# --- AUTH ROUTES ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
@@ -393,15 +389,12 @@ def register():
         email = request.form['email']
         password = request.form['password']
         name = request.form['name']
-        
         if User.query.filter_by(email=email).first():
             flash('Ese email ya existe')
             return redirect('/register')
-            
         new_user = User(email=email, name=name)
         new_user.set_password(password)
         if email.lower() == 'jcaplliure@gmail.com': new_user.is_admin = True
-        
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user)
@@ -418,8 +411,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             return redirect('/')
-        else:
-            flash('Email o contraseña incorrectos')
+        else: flash('Email o contraseña incorrectos')
     return render_template('login.html')
 
 @app.route('/login/google')
@@ -448,19 +440,16 @@ def logout():
     logout_user()
     return redirect('/login')
 
-# --- ZONA DE ADMINISTRACIÓN ---
 @app.route('/admin', methods=['GET'])
 @login_required
 def admin_panel():
-    if not current_user.is_admin:
-        return redirect('/')
+    if not current_user.is_admin: return redirect('/')
     return redirect('/admin/tags')
 
 @app.route('/admin/tags', methods=['GET', 'POST'])
 @login_required
 def manage_tags():
     if not current_user.is_admin: return redirect('/')
-    
     if request.method == 'POST':
         tag_name = request.form.get('tag_name').strip()
         if tag_name:
@@ -468,9 +457,7 @@ def manage_tags():
             if not existing:
                 db.session.add(Tag(name=tag_name))
                 db.session.commit()
-            else:
-                flash('Esa etiqueta ya existe.')
-    
+            else: flash('Esa etiqueta ya existe.')
     tags = Tag.query.order_by(Tag.name).all()
     return render_template('admin_tags.html', tags=tags)
 
@@ -488,7 +475,6 @@ def delete_tag(id):
 @login_required
 def admin_config():
     if not current_user.is_admin: return redirect('/')
-    
     if request.method == 'POST':
         file = request.files.get('default_image')
         if file:
@@ -496,7 +482,6 @@ def admin_config():
             path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(path)
             return redirect(url_for('admin_config', updated=datetime.now().timestamp()))
-
     return render_template('admin_config.html')
 
 def crear_datos_prueba():

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ plan.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light pb-5">
+
+    <div class="bg-white shadow-sm mb-4 border-bottom">
+        <div class="container py-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <a href="/my_plans" class="text-decoration-none text-muted small mb-1 d-block"><i class="bi bi-arrow-left"></i> Mis Planes</a>
+                    <h2 class="fw-bold mb-0">{{ plan.name }}</h2>
+                    <p class="text-muted mb-0">
+                        {{ plan.date.strftime('%d/%m/%Y') }} 
+                        {% if plan.team_name %} • <span class="badge bg-secondary">{{ plan.team_name }}</span>{% endif %}
+                    </p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm"><i class="bi bi-share"></i> Compartir</button>
+                    <button class="btn btn-outline-dark btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+                </div>
+            </div>
+            {% if plan.notes %}
+                <div class="alert alert-info mt-3 mb-0 py-2 small"><i class="bi bi-info-circle"></i> {{ plan.notes }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="container" style="max-width: 900px;">
+        {% set blocks = plan.structure.split(',') %}
+        
+        {% for block in blocks %}
+        <div class="card mb-4 shadow-sm border-0">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-uppercase">{{ block }}</span>
+                <span class="badge bg-light text-dark">{{ plan.items|selectattr('block_name', 'equalto', block)|list|length }} Ejercicios</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for item in plan.items if item.block_name == block %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            {% if item.drill.media_file %}
+                            <div style="width: 60px; height: 40px; background: #eee; border-radius: 4px; overflow: hidden;">
+                                <img src="{{ url_for('static', filename='uploads/' + item.drill.media_file) }}" class="w-100 h-100 object-fit-cover">
+                            </div>
+                            {% else %}
+                            <div style="width: 60px; height: 40px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                                <i class="bi bi-link text-muted"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <span class="fw-bold d-block">{{ item.drill.title }}</span>
+                                <small class="text-muted">{{ item.drill.description|truncate(50) }}</small>
+                            </div>
+                        </div>
+                        <a href="/delete_plan_item/{{ item.id }}" class="btn btn-sm text-danger" onclick="return confirm('¿Quitar del plan?')"><i class="bi bi-x-lg"></i></a>
+                    </div>
+                    {% endfor %}
+                    
+                    <button class="list-group-item list-group-item-action text-center text-primary py-3 fw-bold" 
+                            data-bs-toggle="modal" data-bs-target="#addDrillModal" onclick="setTargetBlock('{{ block }}')">
+                        <i class="bi bi-plus-circle"></i> Añadir Ejercicio a {{ block }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="modal fade" id="addDrillModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Añadir a: <span id="modalBlockName" class="fw-bold text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    
+                    <div class="sticky-top bg-light pb-3" style="top: -16px; z-index: 10;">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input type="text" id="searchInput" class="form-control" placeholder="🔍 Buscar por nombre..." onkeyup="filterDrills()">
+                            </div>
+                            <div class="col-md-3">
+                                <select id="tagFilter" class="form-select" onchange="filterDrills()">
+                                    <option value="">Todas las etiquetas</option>
+                                    {% for tag in tags %}
+                                        <option value="{{ tag.id }}">{{ tag.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="btn-group w-100" role="group">
+                                    <input type="checkbox" class="btn-check" id="btnFav" autocomplete="off" onchange="filterDrills()">
+                                    <label class="btn btn-outline-danger" for="btnFav">❤️ Favoritos</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row row-cols-1 row-cols-md-3 g-3" id="drillsGrid">
+                        {% for drill in all_drills %}
+                        <div class="col drill-item" 
+                             data-title="{{ drill.title|lower }}" 
+                             data-tags="{% for t in drill.primary_tags %}{{ t.id }},{% endfor %}"
+                             data-fav="{% if drill in current_user.favoritos %}1{% else %}0{% endif %}">
+                            
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body p-2 d-flex gap-3 align-items-center">
+                                    <div style="width: 60px; height: 60px; background: #eee; flex-shrink: 0;">
+                                        {% if drill.media_file %}
+                                        <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="w-100 h-100 object-fit-cover rounded">
+                                        {% else %}
+                                        <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-image"></i></div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1" style="min-width: 0;">
+                                        <h6 class="mb-0 text-truncate fw-bold">{{ drill.title }}</h6>
+                                        <small class="text-muted d-block">
+                                            {% for t in drill.primary_tags[:2] %}{{ t.name }} {% endfor %}
+                                        </small>
+                                    </div>
+                                    <form action="/add_item_to_plan" method="POST">
+                                        <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                                        <input type="hidden" name="block_name" id="hiddenBlockInput_{{ drill.id }}">
+                                        <input type="hidden" name="drill_id" value="{{ drill.id }}">
+                                        <button type="submit" class="btn btn-primary btn-sm rounded-circle" style="width: 32px; height: 32px; padding: 0;">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentBlock = "";
+
+        function setTargetBlock(blockName) {
+            currentBlock = blockName;
+            document.getElementById('modalBlockName').textContent = blockName;
+            // Actualizar todos los inputs ocultos del modal
+            document.querySelectorAll('[id^="hiddenBlockInput_"]').forEach(input => {
+                input.value = blockName;
+            });
+        }
+
+        function filterDrills() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const tagId = document.getElementById('tagFilter').value;
+            const onlyFav = document.getElementById('btnFav').checked;
+            
+            const items = document.querySelectorAll('.drill-item');
+            
+            items.forEach(item => {
+                const title = item.getAttribute('data-title');
+                const tags = item.getAttribute('data-tags');
+                const isFav = item.getAttribute('data-fav') === '1';
+                
+                let visible = true;
+                
+                if (searchText && !title.includes(searchText)) visible = false;
+                if (tagId && !tags.includes(tagId + ',')) visible = false;
+                if (onlyFav && !isFav) visible = false;
+                
+                item.style.display = visible ? 'block' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>
