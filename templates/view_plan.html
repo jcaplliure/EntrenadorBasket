@@ -202,9 +202,7 @@
         }
 
         function sharePlan() {
-            // Copia la URL actual al portapapeles
             navigator.clipboard.writeText(window.location.href).then(function() {
-                // Muestra el aviso (Toast)
                 var toastEl = document.getElementById('copyToast');
                 var toast = new bootstrap.Toast(toastEl);
                 toast.show();
