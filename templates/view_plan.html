@@ -6,6 +6,17 @@
     <title>{{ plan.name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <style>
+        @media print {
+            .no-print, .btn, .modal, .navbar, .alert { display: none !important; }
+            body { background: white !important; font-size: 12pt; }
+            .card { border: 1px solid #ddd !important; box-shadow: none !important; break-inside: avoid; }
+            .card-header { background: #f8f9fa !important; color: black !important; border-bottom: 2px solid #000 !important; }
+            .list-group-item { border: none !important; border-bottom: 1px solid #eee !important; padding: 10px 0 !important; }
+            a { text-decoration: none !important; color: black !important; }
+        }
+    </style>
 </head>
 <body class="bg-light pb-5">
 
@@ -13,20 +24,21 @@
         <div class="container py-3">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <a href="/my_plans" class="text-decoration-none text-muted small mb-1 d-block"><i class="bi bi-arrow-left"></i> Mis Planes</a>
+                    <a href="/my_plans" class="text-decoration-none text-muted small mb-1 d-block no-print"><i class="bi bi-arrow-left"></i> Mis Planes</a>
                     <h2 class="fw-bold mb-0">{{ plan.name }}</h2>
                     <p class="text-muted mb-0">
                         {{ plan.date.strftime('%d/%m/%Y') }} 
                         {% if plan.team_name %} • <span class="badge bg-secondary">{{ plan.team_name }}</span>{% endif %}
                     </p>
                 </div>
-                <div>
-                    <button class="btn btn-outline-primary btn-sm"><i class="bi bi-share"></i> Compartir</button>
+                <div class="no-print">
+                    <button class="btn btn-outline-primary btn-sm" onclick="sharePlan()"><i class="bi bi-share"></i> Compartir</button>
                     <button class="btn btn-outline-dark btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
                 </div>
             </div>
             {% if plan.notes %}
                 <div class="alert alert-info mt-3 mb-0 py-2 small"><i class="bi bi-info-circle"></i> {{ plan.notes }}</div>
+                <div class="d-none d-print-block mt-2 p-2 border bg-light small">NOTES: {{ plan.notes }}</div>
             {% endif %}
         </div>
     </div>
@@ -38,32 +50,33 @@
         <div class="card mb-4 shadow-sm border-0">
             <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                 <span class="fw-bold text-uppercase">{{ block }}</span>
-                <span class="badge bg-light text-dark">{{ plan.items|selectattr('block_name', 'equalto', block)|list|length }} Ejercicios</span>
+                <span class="badge bg-light text-dark no-print">{{ plan.items|selectattr('block_name', 'equalto', block)|list|length }} Ejercicios</span>
             </div>
             <div class="card-body p-0">
-                <div class="list-group list-group-flush">
+                <div class="list-group list-group-flush px-3">
                     {% for item in plan.items if item.block_name == block %}
                     <div class="list-group-item d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-3">
                             {% if item.drill.media_file %}
-                            <div style="width: 60px; height: 40px; background: #eee; border-radius: 4px; overflow: hidden;">
+                            <div style="width: 60px; height: 40px; background: #eee; border-radius: 4px; overflow: hidden; border: 1px solid #ccc;">
                                 <img src="{{ url_for('static', filename='uploads/' + item.drill.media_file) }}" class="w-100 h-100 object-fit-cover">
                             </div>
                             {% else %}
-                            <div style="width: 60px; height: 40px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 60px; height: 40px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc;">
                                 <i class="bi bi-link text-muted"></i>
                             </div>
                             {% endif %}
+                            
                             <div>
                                 <span class="fw-bold d-block">{{ item.drill.title }}</span>
-                                <small class="text-muted">{{ item.drill.description|truncate(50) }}</small>
+                                <small class="text-muted">{{ item.drill.description|truncate(150) }}</small>
                             </div>
                         </div>
-                        <a href="/delete_plan_item/{{ item.id }}" class="btn btn-sm text-danger" onclick="return confirm('¿Quitar del plan?')"><i class="bi bi-x-lg"></i></a>
+                        <a href="/delete_plan_item/{{ item.id }}" class="btn btn-sm text-danger no-print" onclick="return confirm('¿Quitar del plan?')"><i class="bi bi-x-lg"></i></a>
                     </div>
                     {% endfor %}
                     
-                    <button class="list-group-item list-group-item-action text-center text-primary py-3 fw-bold" 
+                    <button class="list-group-item list-group-item-action text-center text-primary py-3 fw-bold no-print mt-2 border-top" 
                             data-bs-toggle="modal" data-bs-target="#addDrillModal" onclick="setTargetBlock('{{ block }}')">
                         <i class="bi bi-plus-circle"></i> Añadir Ejercicio a {{ block }}
                     </button>
@@ -73,7 +86,7 @@
         {% endfor %}
     </div>
 
-    <div class="modal fade" id="addDrillModal" tabindex="-1">
+    <div class="modal fade no-print" id="addDrillModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
@@ -145,6 +158,17 @@
         </div>
     </div>
 
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+      <div id="copyToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">
+            ¡Enlace copiado! Listo para enviar por WhatsApp.
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentBlock = "";
@@ -152,7 +176,6 @@
         function setTargetBlock(blockName) {
             currentBlock = blockName;
             document.getElementById('modalBlockName').textContent = blockName;
-            // Actualizar todos los inputs ocultos del modal
             document.querySelectorAll('[id^="hiddenBlockInput_"]').forEach(input => {
                 input.value = blockName;
             });
@@ -171,12 +194,22 @@
                 const isFav = item.getAttribute('data-fav') === '1';
                 
                 let visible = true;
-                
                 if (searchText && !title.includes(searchText)) visible = false;
                 if (tagId && !tags.includes(tagId + ',')) visible = false;
                 if (onlyFav && !isFav) visible = false;
-                
                 item.style.display = visible ? 'block' : 'none';
+            });
+        }
+
+        function sharePlan() {
+            // Copia la URL actual al portapapeles
+            navigator.clipboard.writeText(window.location.href).then(function() {
+                // Muestra el aviso (Toast)
+                var toastEl = document.getElementById('copyToast');
+                var toast = new bootstrap.Toast(toastEl);
+                toast.show();
+            }, function(err) {
+                alert('No se pudo copiar el enlace.');
             });
         }
     </script>
