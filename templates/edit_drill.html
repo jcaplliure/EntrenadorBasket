@@ -37,27 +37,26 @@
                     <label class="fw-bold mb-3">Tipo de Contenido</label>
                     <div class="row g-2 mb-3">
                         <div class="col-4">
-                            <input type="radio" class="btn-check" name="content_type" id="type_link" value="link" {% if drill.media_type == 'link' %}checked{% endif %} onchange="toggleContent()">
+                            <input type="radio" class="btn-check" name="content_type" id="type_link" value="link" {% if drill.media_type == 'link' %}checked{% endif %} onchange="toggleContent(true)">
                             <label class="btn btn-outline-primary w-100 p-3" for="type_link"><i class="bi bi-link-45deg"></i> Link</label>
                         </div>
                         <div class="col-4">
-                            <input type="radio" class="btn-check" name="content_type" id="type_image" value="image" {% if drill.media_type == 'image' %}checked{% endif %} onchange="toggleContent()">
+                            <input type="radio" class="btn-check" name="content_type" id="type_image" value="image" {% if drill.media_type == 'image' %}checked{% endif %} onchange="toggleContent(true)">
                             <label class="btn btn-outline-success w-100 p-3" for="type_image"><i class="bi bi-image"></i> Imagen</label>
                         </div>
                         <div class="col-4">
-                            <input type="radio" class="btn-check" name="content_type" id="type_pdf" value="pdf" {% if drill.media_type == 'pdf' %}checked{% endif %} onchange="toggleContent()">
+                            <input type="radio" class="btn-check" name="content_type" id="type_pdf" value="pdf" {% if drill.media_type == 'pdf' %}checked{% endif %} onchange="toggleContent(true)">
                             <label class="btn btn-outline-danger w-100 p-3" for="type_pdf"><i class="bi bi-file-pdf"></i> PDF</label>
                         </div>
                         {% if current_user.is_admin %}
                         <div class="col-12 mt-2">
-                            <input type="radio" class="btn-check" name="content_type" id="type_video" value="video_file" {% if drill.media_type == 'video_file' %}checked{% endif %} onchange="toggleContent()">
+                            <input type="radio" class="btn-check" name="content_type" id="type_video" value="video_file" {% if drill.media_type == 'video_file' %}checked{% endif %} onchange="toggleContent(true)">
                             <label class="btn btn-outline-dark w-100 p-2 border-dashed" for="type_video">Archivo MP4 (Admin)</label>
                         </div>
                         {% endif %}
                     </div>
 
                     <div class="bg-light p-3 rounded border mb-4">
-                        
                         <div id="section-link" style="display:none;">
                             <label class="small text-muted">Enlace Actual</label>
                             <div class="input-group mb-2">
@@ -146,7 +145,6 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN DINÁMICA (Igual que en create.html)
         const BANANA_IMGS = {
             tiktok: "{{ get_config_url('tiktok_bg') }}",
             instagram: "{{ get_config_url('instagram_bg') }}",
@@ -156,19 +154,18 @@
             image: "https://placehold.co/600x400/198754/FFF?text=Imagen"
         };
 
-        // Al cargar la página, inicializamos el estado
         document.addEventListener("DOMContentLoaded", function() {
-            toggleContent(); // Muestra inputs correctos
-            toggleCoverInput(); // Muestra input de portada si es custom
+            toggleContent(false); // False = No abrir fichero al cargar
+            toggleCoverInput();
             
-            // Si es link, lanzamos el detector para ver la preview automática
             const type = document.querySelector('input[name="content_type"]:checked').value;
             if (type === 'link') detectLink();
             else if (type === 'image') updatePreview(BANANA_IMGS.image);
             else if (type === 'pdf') updatePreview(BANANA_IMGS.pdf);
         });
 
-        function toggleContent() {
+        // Modificado con autoOpen
+        function toggleContent(autoOpen = false) {
             const type = document.querySelector('input[name="content_type"]:checked').value;
             const secLink = document.getElementById('section-link');
             const secFile = document.getElementById('section-file');
@@ -189,6 +186,11 @@
                     updatePreview(BANANA_IMGS.pdf);
                 } else { 
                     fileField.accept = "video/mp4"; 
+                }
+
+                // TRUCO UX
+                if (autoOpen) {
+                     setTimeout(() => fileField.click(), 100);
                 }
             }
         }
