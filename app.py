@@ -1,7 +1,7 @@
 import os
 import requests
 import json
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ba
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'clave_secreta_super_segura'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB Límite
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 app.config['GOOGLE_CLIENT_ID'] = '706704268052-lhvlruk0fjs8hhma8bk76bv711a4k7ct.apps.googleusercontent.com'
 app.config['GOOGLE_CLIENT_SECRET'] = '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'
@@ -115,12 +115,12 @@ class TrainingItem(db.Model):
     drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
     block_name = db.Column(db.String(50), nullable=False)
     order = db.Column(db.Integer, default=0)
+    duration = db.Column(db.Integer, default=10) # NUEVO: Tiempo en minutos
     drill = db.relationship('Drill')
 
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
 
-# --- CONTEXT PROCESSOR ---
 @app.context_processor
 def inject_config():
     configs = SiteConfig.query.all()
@@ -132,7 +132,6 @@ def inject_config():
         return ''
     return dict(site_config=site_config, get_config_url=get_config_url)
 
-# --- HELPERS ---
 def compress_image(file):
     img = Image.open(file)
     if img.mode in ("RGBA", "P"): img = img.convert("RGB")
@@ -158,7 +157,7 @@ def get_youtube_id(url):
     if 'youtube.com' in url and 'v=' in url: return url.split('v=')[1].split('&')[0]
     return None
 
-# --- RUTAS PRINCIPALES ---
+# --- RUTAS ---
 @app.route('/')
 def home():
     query = request.args.get('q', '').strip()
@@ -208,8 +207,7 @@ def create():
         
         nuevo = Drill(title=title, description=desc, is_public=is_public, user_id=current_user.id, media_type=content_type)
 
-        if content_type == 'link':
-            nuevo.external_link = external_link
+        if content_type == 'link': nuevo.external_link = external_link
         elif content_type in ['image', 'pdf', 'video_file']:
             file = request.files.get('archivo')
             if file and file.filename != '':
@@ -219,21 +217,12 @@ def create():
                     if ext in ['jpg', 'jpeg', 'png', 'webp']:
                         filename = f"{int(datetime.now().timestamp())}_{filename.rsplit('.', 1)[0]}.jpg"
                         compressed_file = compress_image(file)
-                        with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'wb') as f:
-                            f.write(compressed_file.getbuffer())
+                        with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'wb') as f: f.write(compressed_file.getbuffer())
                         nuevo.media_file = filename
-                    else:
-                        flash('Formato no válido')
-                        return redirect(request.url)
+                    else: return redirect(request.url)
                 elif content_type == 'pdf':
-                    if filename.lower().endswith('.pdf'):
-                        file.seek(0, os.SEEK_END)
-                        if file.tell() > 5 * 1024 * 1024:
-                            flash('PDF muy grande (Máx 5MB)')
-                            return redirect(request.url)
-                        file.seek(0)
-                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                        nuevo.media_file = filename
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    nuevo.media_file = filename
                 elif content_type == 'video_file' and current_user.is_admin:
                      file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                      nuevo.media_file = filename
@@ -244,8 +233,7 @@ def create():
             if cover_file and cover_file.filename != '':
                 c_filename = f"cover_{int(datetime.now().timestamp())}.jpg"
                 c_comp = compress_image(cover_file)
-                with open(os.path.join(app.config['UPLOAD_FOLDER'], c_filename), 'wb') as f:
-                    f.write(c_comp.getbuffer())
+                with open(os.path.join(app.config['UPLOAD_FOLDER'], c_filename), 'wb') as f: f.write(c_comp.getbuffer())
                 nuevo.cover_image = c_filename
 
         ids_p = request.form.getlist('primary_tags')
@@ -282,11 +270,8 @@ def check_link():
     if not url: return {'status': 'error'}
     try:
         headers = {'User-Agent': 'Mozilla/5.0'} 
-        response = requests.head(url, headers=headers, timeout=5, allow_redirects=True)
-        if response.status_code < 400: return {'status': 'ok'}
-        response = requests.get(url, headers=headers, timeout=5)
-        if response.status_code < 400: return {'status': 'ok'}
-        return {'status': 'error'}
+        requests.head(url, headers=headers, timeout=5)
+        return {'status': 'ok'}
     except: return {'status': 'error'}
 
 @app.route('/delete/<int:id>')
@@ -298,7 +283,7 @@ def delete_drill(id):
         db.session.commit()
     return redirect(request.referrer or '/')
 
-# --- RUTAS DE PLANES ---
+# --- RUTAS DE PLANES (MEJORADAS FASE 3) ---
 @app.route('/create_plan', methods=['GET', 'POST'])
 @login_required
 def create_plan():
@@ -333,10 +318,16 @@ def my_plans():
 def view_plan(id):
     plan = TrainingPlan.query.get_or_404(id)
     if plan.user_id != current_user.id and not plan.is_public: return redirect('/')
+    
+    # Datos para el Modal Buscador
     base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
     all_drills = Drill.query.filter(base_condition).order_by(Drill.date_posted.desc()).all()
     tags = Tag.query.order_by(Tag.name).all()
-    return render_template('view_plan.html', plan=plan, all_drills=all_drills, tags=tags)
+    
+    # Calcular tiempo total
+    total_minutes = sum(item.duration for item in plan.items)
+    
+    return render_template('view_plan.html', plan=plan, all_drills=all_drills, tags=tags, total_minutes=total_minutes)
 
 @app.route('/add_item_to_plan', methods=['POST'])
 @login_required
@@ -346,10 +337,24 @@ def add_item_to_plan():
     block_name = request.form.get('block_name')
     plan = TrainingPlan.query.get(plan_id)
     if not plan or plan.user_id != current_user.id: return "Error", 403
-    item = TrainingItem(training_plan_id=plan.id, drill_id=drill_id, block_name=block_name)
+    
+    # Añadimos con 10 min por defecto
+    item = TrainingItem(training_plan_id=plan.id, drill_id=drill_id, block_name=block_name, duration=10)
     db.session.add(item)
     db.session.commit()
     return redirect(url_for('view_plan', id=plan.id))
+
+@app.route('/update_item_duration', methods=['POST'])
+@login_required
+def update_item_duration():
+    item_id = request.json.get('item_id')
+    duration = request.json.get('duration')
+    item = TrainingItem.query.get(item_id)
+    if item and item.plan.user_id == current_user.id:
+        item.duration = int(duration)
+        db.session.commit()
+        return jsonify({'status': 'ok'})
+    return jsonify({'status': 'error'})
 
 @app.route('/delete_plan_item/<int:id>')
 @login_required
@@ -362,17 +367,59 @@ def delete_plan_item(id):
         return redirect(url_for('view_plan', id=plan_id))
     return redirect('/')
 
+# --- CLONADOR (NUEVO) ---
+@app.route('/duplicate_drill/<int:id>')
+@login_required
+def duplicate_drill(id):
+    original = Drill.query.get_or_404(id)
+    if original.user_id != current_user.id and not current_user.is_admin: return redirect('/')
+    
+    clon = Drill(
+        title=f"{original.title} (Copia)",
+        description=original.description,
+        media_type=original.media_type,
+        media_file=original.media_file, # Comparten archivo (ahorra espacio)
+        external_link=original.external_link,
+        cover_image=original.cover_image,
+        user_id=current_user.id,
+        is_public=False # Las copias nacen privadas
+    )
+    for tag in original.primary_tags: clon.primary_tags.append(tag)
+    db.session.add(clon)
+    db.session.commit()
+    flash('Ejercicio duplicado correctamente')
+    return redirect('/')
+
+@app.route('/duplicate_plan/<int:id>')
+@login_required
+def duplicate_plan(id):
+    original = TrainingPlan.query.get_or_404(id)
+    if original.user_id != current_user.id: return redirect('/')
+    
+    clon = TrainingPlan(
+        name=f"{original.name} (Copia)",
+        team_name=original.team_name,
+        notes=original.notes,
+        structure=original.structure,
+        user_id=current_user.id,
+        date=datetime.utcnow() # Fecha de hoy
+    )
+    db.session.add(clon)
+    # Clonamos los items
+    for item in original.items:
+        new_item = TrainingItem(drill_id=item.drill_id, block_name=item.block_name, order=item.order, duration=item.duration)
+        clon.items.append(new_item)
+        
+    db.session.add(clon)
+    db.session.commit()
+    flash('Plan duplicado correctamente')
+    return redirect('/my_plans')
+
 @app.route('/drill/<int:id>')
 def view_drill(id):
     drill = Drill.query.get_or_404(id)
     if not drill.is_public:
         if not current_user.is_authenticated or drill.user_id != current_user.id: return redirect('/')
-    user_ip = request.remote_addr
-    existing_view = DrillView.query.filter_by(drill_id=id, ip_address=user_ip).first()
-    if not existing_view:
-        drill.views += 1
-        db.session.add(DrillView(drill_id=id, ip_address=user_ip))
-        db.session.commit()
     return render_template('view_drill_modal.html', drill=drill)
 
 @app.route('/toggle_fav/<int:id>')
@@ -391,9 +438,7 @@ def register():
     if current_user.is_authenticated: return redirect('/')
     if request.method == 'POST':
         email = request.form['email']
-        if User.query.filter_by(email=email).first():
-            flash('Email ya existe')
-            return redirect('/register')
+        if User.query.filter_by(email=email).first(): return redirect('/register')
         new_user = User(email=email, name=request.form['name'])
         new_user.set_password(request.form['password'])
         if email.lower() == 'jcaplliure@gmail.com': new_user.is_admin = True
@@ -464,25 +509,20 @@ def delete_tag(id):
 @login_required
 def admin_config():
     if not current_user.is_admin: return redirect('/')
-    
     if request.method == 'POST':
         key = request.form.get('key')
         file = request.files.get('file')
-        if key and file and file.filename != '':
+        if key and file:
             filename = f"config_{key}_{int(datetime.now().timestamp())}.png"
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             conf = SiteConfig.query.get(key)
-            if not conf:
-                conf = SiteConfig(key=key, value=filename)
-                db.session.add(conf)
-            else:
-                conf.value = filename
+            if not conf: db.session.add(SiteConfig(key=key, value=filename))
+            else: conf.value = filename
             db.session.commit()
-            flash(f'Configuración {key} actualizada.')
+            flash('Configuración actualizada')
     
     configs = SiteConfig.query.all()
     config_dict = {c.key: c.value for c in configs}
-    
     keys_needed = [
         ('tiktok_bg', 'Fondo TikTok'), ('instagram_bg', 'Fondo Instagram'),
         ('facebook_bg', 'Fondo Facebook'), ('pdf_bg', 'Fondo PDF'),
@@ -493,7 +533,7 @@ def admin_config():
     ]
     return render_template('admin_config.html', config_dict=config_dict, keys_needed=keys_needed)
 
-# --- GENERADOR AUTO DE ICONOS BANANA ---
+# --- AUTO GEN ICONOS ---
 def generar_icono_banana(nombre, simbolo):
     path = os.path.join(app.config['UPLOAD_FOLDER'], nombre)
     if os.path.exists(path): return 
@@ -509,7 +549,6 @@ def generar_icono_banana(nombre, simbolo):
         draw.rectangle((60, 40, 140, 160), outline=(255, 255, 255, 230), width=8)
         draw.line((80, 70, 120, 70), fill=(255, 255, 255, 180), width=4)
         draw.line((80, 100, 120, 100), fill=(255, 255, 255, 180), width=4)
-        draw.line((80, 130, 120, 130), fill=(255, 255, 255, 180), width=4)
     elif simbolo == 'social':
         draw.ellipse((50, 50, 150, 150), outline=(255, 255, 255, 230), width=8)
         draw.text((85, 80), "App", fill=(255, 255, 255, 255))
@@ -545,7 +584,6 @@ def crear_datos_prueba():
         'facebook_overlay': social_icon,
         'generic_overlay': lupa_icon
     }
-    
     for k, v in defaults.items():
         if not SiteConfig.query.get(k): 
             db.session.add(SiteConfig(key=k, value=v))

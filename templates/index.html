@@ -140,12 +140,15 @@
                                 <i class="bi {% if drill in current_user.favoritos %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
                             </a>
                         </div>
+                        
                         {% if drill.user_id == current_user.id or current_user.is_admin %}
                         <div class="owner-actions" onclick="event.stopPropagation()">
-                            <a href="/edit/{{ drill.id }}" class="owner-btn"><i class="bi bi-pencil-fill small"></i></a>
+                            <a href="/duplicate_drill/{{ drill.id }}" class="owner-btn bg-primary me-1" title="Clonar"><i class="bi bi-files small"></i></a>
+                            <a href="/edit/{{ drill.id }}" class="owner-btn me-1"><i class="bi bi-pencil-fill small"></i></a>
                             <a href="/delete/{{ drill.id }}" class="owner-btn bg-danger" onclick="return confirm('¿Borrar?')"><i class="bi bi-trash-fill small"></i></a>
                         </div>
                         {% endif %}
+                        
                         {% endif %}
                     </div>
 
