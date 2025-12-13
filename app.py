@@ -115,7 +115,7 @@ class TrainingItem(db.Model):
     drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
     block_name = db.Column(db.String(50), nullable=False)
     order = db.Column(db.Integer, default=0)
-    duration = db.Column(db.Integer, default=10) # NUEVO: Tiempo en minutos
+    duration = db.Column(db.Integer, default=10) 
     drill = db.relationship('Drill')
 
 @login_manager.user_loader
@@ -283,7 +283,6 @@ def delete_drill(id):
         db.session.commit()
     return redirect(request.referrer or '/')
 
-# --- RUTAS DE PLANES (MEJORADAS FASE 3) ---
 @app.route('/create_plan', methods=['GET', 'POST'])
 @login_required
 def create_plan():
@@ -318,15 +317,10 @@ def my_plans():
 def view_plan(id):
     plan = TrainingPlan.query.get_or_404(id)
     if plan.user_id != current_user.id and not plan.is_public: return redirect('/')
-    
-    # Datos para el Modal Buscador
     base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
     all_drills = Drill.query.filter(base_condition).order_by(Drill.date_posted.desc()).all()
     tags = Tag.query.order_by(Tag.name).all()
-    
-    # Calcular tiempo total
     total_minutes = sum(item.duration for item in plan.items)
-    
     return render_template('view_plan.html', plan=plan, all_drills=all_drills, tags=tags, total_minutes=total_minutes)
 
 @app.route('/add_item_to_plan', methods=['POST'])
@@ -337,8 +331,6 @@ def add_item_to_plan():
     block_name = request.form.get('block_name')
     plan = TrainingPlan.query.get(plan_id)
     if not plan or plan.user_id != current_user.id: return "Error", 403
-    
-    # Añadimos con 10 min por defecto
     item = TrainingItem(training_plan_id=plan.id, drill_id=drill_id, block_name=block_name, duration=10)
     db.session.add(item)
     db.session.commit()
@@ -367,27 +359,16 @@ def delete_plan_item(id):
         return redirect(url_for('view_plan', id=plan_id))
     return redirect('/')
 
-# --- CLONADOR (NUEVO) ---
 @app.route('/duplicate_drill/<int:id>')
 @login_required
 def duplicate_drill(id):
     original = Drill.query.get_or_404(id)
     if original.user_id != current_user.id and not current_user.is_admin: return redirect('/')
-    
-    clon = Drill(
-        title=f"{original.title} (Copia)",
-        description=original.description,
-        media_type=original.media_type,
-        media_file=original.media_file, # Comparten archivo (ahorra espacio)
-        external_link=original.external_link,
-        cover_image=original.cover_image,
-        user_id=current_user.id,
-        is_public=False # Las copias nacen privadas
-    )
+    clon = Drill(title=f"{original.title} (Copia)", description=original.description, media_type=original.media_type, media_file=original.media_file, external_link=original.external_link, cover_image=original.cover_image, user_id=current_user.id, is_public=False)
     for tag in original.primary_tags: clon.primary_tags.append(tag)
     db.session.add(clon)
     db.session.commit()
-    flash('Ejercicio duplicado correctamente')
+    flash('Ejercicio duplicado')
     return redirect('/')
 
 @app.route('/duplicate_plan/<int:id>')
@@ -395,24 +376,14 @@ def duplicate_drill(id):
 def duplicate_plan(id):
     original = TrainingPlan.query.get_or_404(id)
     if original.user_id != current_user.id: return redirect('/')
-    
-    clon = TrainingPlan(
-        name=f"{original.name} (Copia)",
-        team_name=original.team_name,
-        notes=original.notes,
-        structure=original.structure,
-        user_id=current_user.id,
-        date=datetime.utcnow() # Fecha de hoy
-    )
+    clon = TrainingPlan(name=f"{original.name} (Copia)", team_name=original.team_name, notes=original.notes, structure=original.structure, user_id=current_user.id, date=datetime.utcnow())
     db.session.add(clon)
-    # Clonamos los items
     for item in original.items:
         new_item = TrainingItem(drill_id=item.drill_id, block_name=item.block_name, order=item.order, duration=item.duration)
         clon.items.append(new_item)
-        
     db.session.add(clon)
     db.session.commit()
-    flash('Plan duplicado correctamente')
+    flash('Plan duplicado')
     return redirect('/my_plans')
 
 @app.route('/drill/<int:id>')
@@ -432,7 +403,6 @@ def toggle_fav(id):
         db.session.commit()
     return redirect(request.referrer)
 
-# --- AUTH & ADMIN ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
@@ -533,6 +503,15 @@ def admin_config():
     ]
     return render_template('admin_config.html', config_dict=config_dict, keys_needed=keys_needed)
 
+# --- NUEVA RUTA MODO PISTA ---
+@app.route('/court_mode/<int:id>')
+@login_required
+def court_mode(id):
+    plan = TrainingPlan.query.get_or_404(id)
+    if plan.user_id != current_user.id: return redirect('/')
+    
+    return render_template('court_mode.html', plan=plan)
+
 # --- AUTO GEN ICONOS ---
 def generar_icono_banana(nombre, simbolo):
     path = os.path.join(app.config['UPLOAD_FOLDER'], nombre)
@@ -549,6 +528,7 @@ def generar_icono_banana(nombre, simbolo):
         draw.rectangle((60, 40, 140, 160), outline=(255, 255, 255, 230), width=8)
         draw.line((80, 70, 120, 70), fill=(255, 255, 255, 180), width=4)
         draw.line((80, 100, 120, 100), fill=(255, 255, 255, 180), width=4)
+        draw.line((80, 130, 120, 130), fill=(255, 255, 255, 180), width=4)
     elif simbolo == 'social':
         draw.ellipse((50, 50, 150, 150), outline=(255, 255, 255, 230), width=8)
         draw.text((85, 80), "App", fill=(255, 255, 255, 255))
