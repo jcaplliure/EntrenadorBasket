@@ -5,116 +5,239 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Editar Ejercicio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .paste-area { border: 2px dashed #ccc; padding: 20px; text-align: center; color: #777; cursor: pointer; }
-        .paste-area:hover, .paste-area.active { border-color: #e65100; background: #fff3e0; }
-        #preview-img { max-height: 200px; margin-top: 10px; border-radius: 5px; display: block; }
-        .btn-check:checked + .btn-outline-secondary {
-            background-color: #e65100; color: white; border-color: #e65100;
-        }
+        .cover-selector input:checked + label { border-color: #ffc107; background-color: #fff3cd; box-shadow: 0 0 0 2px #ffc107; }
+        .preview-box { height: 120px; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; }
     </style>
 </head>
 <body class="bg-light">
-    <div class="container mt-5" style="max-width: 600px;">
-        <div class="card shadow">
-            <div class="card-header bg-warning text-dark fw-bold">Editar Ejercicio</div>
-            <div class="card-body">
+    
+    <div class="container mt-5 mb-5" style="max-width: 700px;">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0 fw-bold"><i class="bi bi-pencil-square"></i> Editar Ejercicio</h4>
+            </div>
+            <div class="card-body p-4">
+                
                 <form action="/edit/{{ drill.id }}" method="POST" enctype="multipart/form-data">
+                    
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Título</label>
+                        <label class="fw-bold">Título</label>
                         <input type="text" name="titulo" class="form-control" value="{{ drill.title }}" required>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Descripción</label>
+                    <div class="mb-4">
+                        <label class="fw-bold">Descripción</label>
                         <textarea name="descripcion" class="form-control" rows="3">{{ drill.description }}</textarea>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Cambiar Imagen/Archivo</label>
-                        <div id="paste-zone" class="paste-area rounded">
-                            <p class="mb-0">Haz clic y pega (Ctrl+V) para cambiar</p>
+                    <hr class="my-4">
+
+                    <label class="fw-bold mb-3">Tipo de Contenido</label>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="content_type" id="type_link" value="link" {% if drill.media_type == 'link' %}checked{% endif %} onchange="toggleContent()">
+                            <label class="btn btn-outline-primary w-100 p-3" for="type_link"><i class="bi bi-link-45deg"></i> Link</label>
                         </div>
-                        <input type="file" name="archivo" id="file-input" class="form-control mt-2" style="display:none;">
-                        <input type="hidden" name="pasted_image" id="pasted-image-input">
-                        
-                        {% if drill.media_file %}
-                            <p class="small text-muted mt-2">Archivo actual:</p>
-                            <img id="preview-img" src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="img-fluid mx-auto">
-                        {% else %}
-                             <img id="preview-img" class="img-fluid mx-auto" style="display:none;">
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="content_type" id="type_image" value="image" {% if drill.media_type == 'image' %}checked{% endif %} onchange="toggleContent()">
+                            <label class="btn btn-outline-success w-100 p-3" for="type_image"><i class="bi bi-image"></i> Imagen</label>
+                        </div>
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="content_type" id="type_pdf" value="pdf" {% if drill.media_type == 'pdf' %}checked{% endif %} onchange="toggleContent()">
+                            <label class="btn btn-outline-danger w-100 p-3" for="type_pdf"><i class="bi bi-file-pdf"></i> PDF</label>
+                        </div>
+                        {% if current_user.is_admin %}
+                        <div class="col-12 mt-2">
+                            <input type="radio" class="btn-check" name="content_type" id="type_video" value="video_file" {% if drill.media_type == 'video_file' %}checked{% endif %} onchange="toggleContent()">
+                            <label class="btn btn-outline-dark w-100 p-2 border-dashed" for="type_video">Archivo MP4 (Admin)</label>
+                        </div>
                         {% endif %}
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Enlace externo</label>
-                        <input type="url" name="external_link" class="form-control" value="{{ drill.external_link or '' }}">
+                    <div class="bg-light p-3 rounded border mb-4">
+                        
+                        <div id="section-link" style="display:none;">
+                            <label class="small text-muted">Enlace Actual</label>
+                            <div class="input-group mb-2">
+                                <input type="url" name="external_link" id="linkField" class="form-control" value="{{ drill.external_link or '' }}" oninput="detectLink()">
+                                <button type="button" class="btn btn-outline-secondary" onclick="testLink()">Testear</button>
+                            </div>
+                            <div id="linkFeedback" class="small mb-2"></div>
+                        </div>
+
+                        <div id="section-file" style="display:none;">
+                            {% if drill.media_file %}
+                                <div class="alert alert-secondary py-2 small mb-2">
+                                    <i class="bi bi-paperclip"></i> Archivo actual: <strong>{{ drill.media_file }}</strong>
+                                </div>
+                            {% endif %}
+                            <label class="small text-muted" id="fileLabel">Subir nuevo archivo (Reemplazar)</label>
+                            <input type="file" name="archivo" id="fileField" class="form-control">
+                            <div class="form-text small" id="fileHelp"></div>
+                        </div>
                     </div>
 
+                    <label class="fw-bold">Imagen de Portada</label>
+                    <div class="row g-3 mb-4 cover-selector">
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="cover_option" id="cover_default" value="default" {% if not drill.cover_image %}checked{% endif %} onchange="toggleCoverInput()">
+                            <label class="card h-100 cursor-pointer" for="cover_default">
+                                <div class="card-body p-2 text-center">
+                                    <div class="preview-box mb-2">
+                                        <img id="previewDefault" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+                                        <i id="iconDefault" class="bi bi-image text-muted display-4"></i>
+                                    </div>
+                                    <small class="fw-bold d-block">Automática</small>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="cover_option" id="cover_custom" value="custom" {% if drill.cover_image %}checked{% endif %} onchange="toggleCoverInput()">
+                            <label class="card h-100 cursor-pointer" for="cover_custom">
+                                <div class="card-body p-2 text-center">
+                                    <div class="preview-box mb-2 bg-white border">
+                                        {% if drill.cover_image %}
+                                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}" style="width:100%; height:100%; object-fit:cover;">
+                                        {% else %}
+                                            <i class="bi bi-cloud-upload display-4 text-primary"></i>
+                                        {% endif %}
+                                    </div>
+                                    <small class="fw-bold d-block">Subir Propia</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="customCoverInput" class="mb-4" style="display:none;">
+                        <label class="small text-muted">Cambiar portada personalizada:</label>
+                        <input type="file" name="custom_cover_file" class="form-control" accept="image/*">
+                    </div>
+
+                    <hr class="my-4">
+
                     <div class="mb-3">
-                        <label class="form-label fw-bold d-block">Etiquetas</label>
+                        <label class="fw-bold">Etiquetas</label>
                         <div class="d-flex flex-wrap gap-2">
                             {% for tag in etiquetas %}
-                            <input type="checkbox" class="btn-check" name="primary_tags" id="tag_{{tag.id}}" value="{{tag.id}}" autocomplete="off" 
-                                {% if tag in drill.primary_tags %}checked{% endif %}>
-                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag_{{tag.id}}">{{ tag.name }}</label>
+                            <div>
+                                <input type="checkbox" class="btn-check" name="primary_tags" id="tag_{{ tag.id }}" value="{{ tag.id }}" 
+                                    {% if tag in drill.primary_tags %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary btn-sm rounded-pill" for="tag_{{ tag.id }}">{{ tag.name }}</label>
+                            </div>
                             {% endfor %}
                         </div>
                     </div>
-                    
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" name="is_public" id="publicCheck" {% if drill.is_public %}checked{% endif %}>
-                        <label class="form-check-label" for="publicCheck">Público 🌍</label>
+
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" name="is_public" id="isPublic" {% if drill.is_public %}checked{% endif %}>
+                        <label class="form-check-label" for="isPublic">Hacer público</label>
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-warning fw-bold">Actualizar Cambios</button>
-                        <a href="/" class="btn btn-outline-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-warning btn-lg fw-bold">Actualizar Ejercicio</button>
+                        <a href="/" class="btn btn-link text-decoration-none text-muted text-center">Cancelar</a>
                     </div>
+
                 </form>
             </div>
         </div>
     </div>
 
     <script>
-        const pasteZone = document.getElementById('paste-zone');
-        const fileInput = document.getElementById('file-input');
-        const previewImg = document.getElementById('preview-img');
-        const hiddenInput = document.getElementById('pasted-image-input');
+        // CONFIGURACIÓN DINÁMICA (Igual que en create.html)
+        const BANANA_IMGS = {
+            tiktok: "{{ get_config_url('tiktok_bg') }}",
+            instagram: "{{ get_config_url('instagram_bg') }}",
+            facebook: "{{ get_config_url('facebook_bg') }}",
+            generic: "{{ get_config_url('generic_bg') }}",
+            pdf: "{{ get_config_url('pdf_bg') }}",
+            image: "https://placehold.co/600x400/198754/FFF?text=Imagen"
+        };
 
-        pasteZone.addEventListener('click', () => fileInput.click());
-
-        fileInput.addEventListener('change', function() {
-            if (this.files && this.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewImg.src = e.target.result;
-                    previewImg.style.display = 'block';
-                    pasteZone.innerHTML = "<p class='text-success fw-bold'>¡Nuevo archivo listo!</p>";
-                }
-                reader.readAsDataURL(this.files[0]);
-            }
+        // Al cargar la página, inicializamos el estado
+        document.addEventListener("DOMContentLoaded", function() {
+            toggleContent(); // Muestra inputs correctos
+            toggleCoverInput(); // Muestra input de portada si es custom
+            
+            // Si es link, lanzamos el detector para ver la preview automática
+            const type = document.querySelector('input[name="content_type"]:checked').value;
+            if (type === 'link') detectLink();
+            else if (type === 'image') updatePreview(BANANA_IMGS.image);
+            else if (type === 'pdf') updatePreview(BANANA_IMGS.pdf);
         });
 
-        document.addEventListener('paste', function(e) {
-            const items = e.clipboardData.items;
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                    const blob = items[i].getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const base64String = event.target.result;
-                        previewImg.src = base64String;
-                        previewImg.style.display = 'block';
-                        hiddenInput.value = base64String;
-                        pasteZone.innerHTML = "<p class='text-success fw-bold'>¡Nueva imagen pegada!</p>";
-                    };
-                    reader.readAsDataURL(blob);
-                    e.preventDefault();
-                    break;
+        function toggleContent() {
+            const type = document.querySelector('input[name="content_type"]:checked').value;
+            const secLink = document.getElementById('section-link');
+            const secFile = document.getElementById('section-file');
+            const fileField = document.getElementById('fileField');
+            
+            if (type === 'link') {
+                secLink.style.display = 'block'; secFile.style.display = 'none';
+                detectLink();
+            } else {
+                secLink.style.display = 'none'; secFile.style.display = 'block';
+                if(type === 'image') {
+                    fileField.accept = "image/*";
+                    document.getElementById('fileHelp').innerText = "Subir nueva para reemplazar.";
+                    updatePreview(BANANA_IMGS.image);
+                } else if(type === 'pdf') {
+                    fileField.accept = "application/pdf";
+                    document.getElementById('fileHelp').innerText = "Subir nuevo PDF (Máx 5MB).";
+                    updatePreview(BANANA_IMGS.pdf);
+                } else { 
+                    fileField.accept = "video/mp4"; 
                 }
             }
-        });
+        }
+
+        function detectLink() {
+            const url = document.getElementById('linkField').value;
+            let finalSrc = BANANA_IMGS.generic;
+
+            if (url.includes('youtu')) {
+                let vidId = url.split('v=')[1];
+                if(!vidId && url.includes('youtu.be/')) vidId = url.split('youtu.be/')[1];
+                if(vidId) {
+                    vidId = vidId.split('&')[0];
+                    finalSrc = `https://img.youtube.com/vi/${vidId}/mqdefault.jpg`;
+                }
+            } else if (url.includes('tiktok.com')) finalSrc = BANANA_IMGS.tiktok;
+            else if (url.includes('instagram.com')) finalSrc = BANANA_IMGS.instagram;
+            else if (url.includes('facebook.com')) finalSrc = BANANA_IMGS.facebook;
+
+            updatePreview(finalSrc);
+        }
+
+        function updatePreview(src) {
+            const img = document.getElementById('previewDefault');
+            const icon = document.getElementById('iconDefault');
+            img.src = src; img.style.display = 'block'; icon.style.display = 'none';
+        }
+
+        function toggleCoverInput() {
+            const isCustom = document.getElementById('cover_custom').checked;
+            document.getElementById('customCoverInput').style.display = isCustom ? 'block' : 'none';
+        }
+        
+        function testLink() {
+            const url = document.getElementById('linkField').value;
+            const feedback = document.getElementById('linkFeedback');
+            if (!url) return;
+            feedback.innerHTML = '<span class="text-muted">Probando...</span>';
+            fetch('/check_link', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url: url})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') feedback.innerHTML = '<span class="text-success fw-bold">✅ Link válido</span>';
+                else feedback.innerHTML = '<span class="text-danger fw-bold">❌ Error al acceder</span>';
+            });
+        }
     </script>
 </body>
 </html>
