@@ -11,7 +11,7 @@ from datetime import datetime
 from authlib.integrations.flask_client import OAuth
 import base64
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageDraw
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ba
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'clave_secreta_super_segura'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB Límite
 
 app.config['GOOGLE_CLIENT_ID'] = '706704268052-lhvlruk0fjs8hhma8bk76bv711a4k7ct.apps.googleusercontent.com'
 app.config['GOOGLE_CLIENT_SECRET'] = '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'
@@ -56,8 +56,8 @@ drill_secondary_tags = db.Table('drill_secondary_tags',
 )
 
 class SiteConfig(db.Model):
-    key = db.Column(db.String(50), primary_key=True) # ej: 'tiktok_bg', 'play_icon'
-    value = db.Column(db.String(255), nullable=False) # ej: 'tiktok_banana.jpg'
+    key = db.Column(db.String(50), primary_key=True) 
+    value = db.Column(db.String(255), nullable=False) 
 
 class DrillView(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -120,20 +120,16 @@ class TrainingItem(db.Model):
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
 
-# --- CONTEXT PROCESSOR (DISPONIBLE EN TODAS LAS VISTAS) ---
+# --- CONTEXT PROCESSOR ---
 @app.context_processor
 def inject_config():
-    # Carga la configuración en un diccionario para usar en templates
     configs = SiteConfig.query.all()
     site_config = {c.key: c.value for c in configs}
-    
-    # Helper para obtener URL completa (si es http usa esa, si no busca en uploads)
     def get_config_url(key):
         val = site_config.get(key, '')
         if val.startswith('http'): return val
         if val: return url_for('static', filename='uploads/' + val)
-        return '' # Fallback vacío
-        
+        return ''
     return dict(site_config=site_config, get_config_url=get_config_url)
 
 # --- HELPERS ---
@@ -162,7 +158,7 @@ def get_youtube_id(url):
     if 'youtube.com' in url and 'v=' in url: return url.split('v=')[1].split('&')[0]
     return None
 
-# --- RUTAS ---
+# --- RUTAS PRINCIPALES ---
 @app.route('/')
 def home():
     query = request.args.get('q', '').strip()
@@ -464,7 +460,6 @@ def delete_tag(id):
         db.session.commit()
     return redirect('/admin/tags')
 
-# --- NUEVA RUTA: CONFIGURACIÓN VISUAL ---
 @app.route('/admin/config', methods=['GET', 'POST'])
 @login_required
 def admin_config():
@@ -474,11 +469,8 @@ def admin_config():
         key = request.form.get('key')
         file = request.files.get('file')
         if key and file and file.filename != '':
-            # Guardamos el archivo
             filename = f"config_{key}_{int(datetime.now().timestamp())}.png"
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            
-            # Actualizamos la DB
             conf = SiteConfig.query.get(key)
             if not conf:
                 conf = SiteConfig(key=key, value=filename)
@@ -488,45 +480,77 @@ def admin_config():
             db.session.commit()
             flash(f'Configuración {key} actualizada.')
     
-    # Cargamos config actual para mostrar
     configs = SiteConfig.query.all()
     config_dict = {c.key: c.value for c in configs}
     
-    # Lista de claves configurables
     keys_needed = [
-        ('tiktok_bg', 'Fondo TikTok'),
-        ('instagram_bg', 'Fondo Instagram'),
-        ('facebook_bg', 'Fondo Facebook'),
-        ('pdf_bg', 'Fondo PDF'),
-        ('generic_bg', 'Fondo Link Web'),
-        ('youtube_overlay', 'Icono Hover YouTube'),
-        ('image_overlay', 'Icono Hover Imagen'),
-        ('pdf_overlay', 'Icono Hover PDF'),
-        ('tiktok_overlay', 'Icono Hover TikTok'),
-        ('instagram_overlay', 'Icono Hover Instagram'),
-        ('facebook_overlay', 'Icono Hover Facebook'),
-        ('generic_overlay', 'Icono Hover Link Web')
+        ('tiktok_bg', 'Fondo TikTok'), ('instagram_bg', 'Fondo Instagram'),
+        ('facebook_bg', 'Fondo Facebook'), ('pdf_bg', 'Fondo PDF'),
+        ('generic_bg', 'Fondo Link Web'), ('youtube_overlay', 'Icono Hover YouTube'),
+        ('image_overlay', 'Icono Hover Imagen'), ('pdf_overlay', 'Icono Hover PDF'),
+        ('tiktok_overlay', 'Icono Hover TikTok'), ('instagram_overlay', 'Icono Hover Instagram'),
+        ('facebook_overlay', 'Icono Hover Facebook'), ('generic_overlay', 'Icono Hover Link Web')
     ]
-    
     return render_template('admin_config.html', config_dict=config_dict, keys_needed=keys_needed)
+
+# --- GENERADOR AUTO DE ICONOS BANANA ---
+def generar_icono_banana(nombre, simbolo):
+    path = os.path.join(app.config['UPLOAD_FOLDER'], nombre)
+    if os.path.exists(path): return 
+    img = Image.new('RGBA', (200, 200), (0, 0, 0, 0)) 
+    draw = ImageDraw.Draw(img)
+    if simbolo == 'play':
+        draw.polygon([(70, 50), (70, 150), (150, 100)], fill=(255, 255, 255, 230))
+        draw.ellipse((10, 10, 190, 190), outline=(255, 255, 255, 200), width=8)
+    elif simbolo == 'search':
+        draw.ellipse((50, 50, 130, 130), outline=(255, 255, 255, 230), width=10)
+        draw.line((110, 110, 160, 160), fill=(255, 255, 255, 230), width=12)
+    elif simbolo == 'doc':
+        draw.rectangle((60, 40, 140, 160), outline=(255, 255, 255, 230), width=8)
+        draw.line((80, 70, 120, 70), fill=(255, 255, 255, 180), width=4)
+        draw.line((80, 100, 120, 100), fill=(255, 255, 255, 180), width=4)
+        draw.line((80, 130, 120, 130), fill=(255, 255, 255, 180), width=4)
+    elif simbolo == 'social':
+        draw.ellipse((50, 50, 150, 150), outline=(255, 255, 255, 230), width=8)
+        draw.text((85, 80), "App", fill=(255, 255, 255, 255))
+    img.save(path, 'PNG')
 
 def crear_datos_prueba():
     if Tag.query.count() == 0:
         lista = ["Tiro", "Entrada", "Pase", "Bote", "Defensa", "Rebote", "Físico", "Táctica"]
         for n in lista: db.session.add(Tag(name=n))
-        
-        # Datos iniciales de configuración (Placeholders para no romper la web)
-        defaults = {
-            'tiktok_bg': 'https://placehold.co/600x400/000000/FFF?text=TikTok',
-            'instagram_bg': 'https://placehold.co/600x400/E1306C/FFF?text=Instagram',
-            'facebook_bg': 'https://placehold.co/600x400/1877F2/FFF?text=Facebook',
-            'pdf_bg': 'https://placehold.co/600x400/dc3545/FFF?text=PDF',
-            'generic_bg': 'https://placehold.co/600x400/eee/999?text=Enlace',
-        }
-        for k, v in defaults.items():
-            if not SiteConfig.query.get(k): db.session.add(SiteConfig(key=k, value=v))
-            
         db.session.commit()
+
+    play_icon = "banana_play.png"
+    lupa_icon = "banana_search.png"
+    doc_icon = "banana_doc.png"
+    social_icon = "banana_social.png"
+    
+    generar_icono_banana(play_icon, 'play')
+    generar_icono_banana(lupa_icon, 'search')
+    generar_icono_banana(doc_icon, 'doc')
+    generar_icono_banana(social_icon, 'social')
+
+    defaults = {
+        'tiktok_bg': 'https://placehold.co/600x400/000000/FFF?text=TikTok',
+        'instagram_bg': 'https://placehold.co/600x400/E1306C/FFF?text=Instagram',
+        'facebook_bg': 'https://placehold.co/600x400/1877F2/FFF?text=Facebook',
+        'pdf_bg': 'https://placehold.co/600x400/dc3545/FFF?text=PDF',
+        'generic_bg': 'https://placehold.co/600x400/6c757d/FFF?text=Web',
+        'youtube_overlay': play_icon,
+        'image_overlay': lupa_icon,
+        'pdf_overlay': doc_icon,
+        'tiktok_overlay': social_icon, 
+        'instagram_overlay': social_icon,
+        'facebook_overlay': social_icon,
+        'generic_overlay': lupa_icon
+    }
+    
+    for k, v in defaults.items():
+        if not SiteConfig.query.get(k): 
+            db.session.add(SiteConfig(key=k, value=v))
+            
+    db.session.commit()
 
 if __name__ == '__main__':
     with app.app_context():
