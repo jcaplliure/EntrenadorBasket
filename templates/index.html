@@ -7,12 +7,41 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .card-img-top { height: 200px; object-fit: cover; }
-        .drill-card { transition: transform 0.2s; cursor: pointer; }
-        .drill-card:hover { transform: translateY(-5px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .ratio-16x9 { background-color: #000; }
+        .drill-card { border: none; overflow: hidden; position: relative; }
+        .drill-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; transition: all 0.2s; }
+        
+        /* ZONA SUPERIOR INTELIGENTE */
+        .card-img-zone { position: relative; height: 200px; cursor: pointer; background: #000; overflow: hidden; }
+        .card-img-zone img { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.2s; }
+        .card-img-zone:hover img { opacity: 0.6; }
+        
+        /* OVERLAY (Icono Central) */
+        .overlay-icon {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 3rem; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+        }
+        .card-img-zone:hover .overlay-icon { opacity: 1; }
+
+        /* BOTONES FLOTANTES */
+        .floating-actions { position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 5px; }
+        .action-btn { 
+            background: rgba(255,255,255,0.9); border: none; border-radius: 50%; 
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            color: #333; transition: all 0.2s; cursor: pointer; text-decoration: none;
+        }
+        .action-btn:hover { background: white; transform: scale(1.1); }
+        .action-btn.fav-active { color: #dc3545; }
+        
+        /* ZONA OWNER (Editar/Borrar) */
+        .owner-actions { position: absolute; bottom: 10px; right: 10px; display: flex; gap: 5px; opacity: 0; transition: opacity 0.2s; }
+        .drill-card:hover .owner-actions { opacity: 1; }
+        .owner-btn { 
+            background: rgba(0,0,0,0.6); color: white; width: 30px; height: 30px; 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none;
+        }
+        .owner-btn:hover { background: black; color: white; }
+
         .text-orange { color: #fd7e14; }
-        .bg-orange { background-color: #fd7e14; }
     </style>
 </head>
 <body class="bg-light">
@@ -22,25 +51,15 @@
             <a class="navbar-brand fw-bold" href="/">
                 <i class="bi bi-basket text-orange"></i> Entrenador<span class="text-orange">Basket</span>
             </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="ms-auto d-flex align-items-center mt-2 mt-lg-0">
-                    
+                <div class="ms-auto d-flex align-items-center">
                     {% if current_user.is_authenticated %}
-                        <span class="text-white me-3 d-none d-lg-block small">{{ current_user.name }}</span>
-                        {% if current_user.is_admin %}
-                            <a href="/admin" class="btn btn-warning btn-sm me-2 fw-bold text-dark"><i class="bi bi-gear-fill"></i> Admin</a>
-                        {% endif %}
-                        <a href="/my_plans" class="btn btn-outline-light btn-sm me-2"><i class="bi bi-journal-bookmark"></i> Mis Planes</a>
-                        <a href="/create" class="btn btn-primary btn-sm fw-bold me-2">+ Nuevo Ejercicio</a>
+                        <a href="/my_plans" class="btn btn-outline-light btn-sm me-2">Mis Planes</a>
+                        <a href="/create" class="btn btn-primary btn-sm fw-bold me-2">+ Nuevo</a>
                         <a href="/logout" class="btn btn-outline-light btn-sm">Salir</a>
                     {% else %}
-                        <span class="text-white me-3 small">Modo Invitado</span>
-                        <a href="/login" class="btn btn-outline-light btn-sm fw-bold">Entrar / Registro</a>
+                        <a href="/login" class="btn btn-outline-light btn-sm">Entrar</a>
                     {% endif %}
                 </div>
             </div>
@@ -50,138 +69,94 @@
     <div class="container mt-4">
         <form action="/" method="GET" class="card p-3 shadow-sm border-0 mb-4">
             <div class="row g-2">
+                <div class="col-md-5">
+                    <input class="form-control form-control-sm" type="search" name="q" placeholder="Buscar título..." value="{{ request.args.get('q', '') }}">
+                </div>
+                
                 <div class="col-md-4">
-                    <div class="input-group input-group-sm h-100">
-                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                        <input class="form-control border-start-0 ps-0" type="search" name="q" placeholder="Buscar..." value="{{ request.args.get('q', '') }}">
+                    <div class="dropdown h-100">
+                        <button class="btn btn-outline-secondary btn-sm w-100 dropdown-toggle h-100 text-start" type="button" data-bs-toggle="dropdown">
+                            🏷️ Filtrar Etiquetas
+                        </button>
+                        <ul class="dropdown-menu p-2" style="max-height: 300px; overflow-y: auto;">
+                            {% for tag in tags %}
+                            <li class="form-check">
+                                <input class="form-check-input" type="checkbox" name="primary" value="{{ tag.id }}" id="t{{ tag.id }}" 
+                                    {% if tag.id|string in request.args.getlist('primary') %}checked{% endif %}>
+                                <label class="form-check-label w-100" for="t{{ tag.id }}">{{ tag.name }}</label>
+                            </li>
+                            {% endfor %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="submit" class="btn btn-primary btn-sm w-100">Aplicar Filtros</button></li>
+                        </ul>
                     </div>
                 </div>
 
-                <div class="col-md-4">
-                    <select name="primary" class="form-select form-select-sm h-100" onchange="this.form.submit()">
-                        <option value="">Todas las etiquetas</option>
-                        {% for tag in tags %}
-                            <option value="{{ tag.id }}" {% if request.args.get('primary') == tag.id|string %}selected{% endif %}>{{ tag.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-4">
+                <div class="col-md-3">
                      <select name="sort_by" class="form-select form-select-sm h-100" onchange="this.form.submit()">
-                        <option value="favs_desc" {% if request.args.get('sort_by') == 'favs_desc' %}selected{% endif %}>❤️ Populares</option>
-                        <option value="views_desc" {% if request.args.get('sort_by') == 'views_desc' %}selected{% endif %}>👁️ Vistos</option>
-                        <option value="date_desc" {% if request.args.get('sort_by') == 'date_desc' %}selected{% endif %}>📅 Recientes</option>
-                        <option value="date_asc" {% if request.args.get('sort_by') == 'date_asc' %}selected{% endif %}>📅 Antiguos</option>
-                        <option value="name_asc" {% if request.args.get('sort_by') == 'name_asc' %}selected{% endif %}>🔤 Nombre</option>
+                        <option value="favs_desc">❤️ Populares</option>
+                        <option value="date_desc">📅 Recientes</option>
                     </select>
                 </div>
-            </div>
-            
-            <div class="d-flex justify-content-between align-items-center mt-3">
-                {% if current_user.is_authenticated %}
-                <div class="d-flex gap-3">
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" name="filter_type" value="favorites" id="check3" {% if 'favorites' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
-                        <label class="form-check-label small text-danger" for="check3"><i class="bi bi-heart-fill"></i> Favoritos</label>
-                    </div>
-                     <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" name="filter_type" value="my_private" id="check1" {% if 'my_private' in request.args.getlist('filter_type') %}checked{% endif %} onchange="this.form.submit()">
-                        <label class="form-check-label small" for="check1">🔒 Privados</label>
-                    </div>
-                </div>
-                {% else %}
-                <div></div>
-                {% endif %}
-                <a href="/" class="text-decoration-none small text-muted">Limpiar filtros</a>
             </div>
         </form>
 
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 pb-5">
             {% for drill in drills %}
             <div class="col">
-                <div class="card h-100 drill-card border-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#drillModal" data-bs-url="/drill/{{ drill.id }}">
+                <div class="card h-100 drill-card shadow-sm">
                     
-                    <div class="position-relative bg-dark rounded-top overflow-hidden" style="height: 200px;">
-                        {% if drill.media_file and drill.media_file|is_video %}
-                            <video class="w-100 h-100 object-fit-cover" style="opacity: 0.8;">
-                                <source src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" type="video/mp4">
-                            </video>
-                            <div class="position-absolute top-50 start-50 translate-middle">
-                                <i class="bi bi-play-circle-fill text-white display-4 opacity-75"></i>
-                            </div>
-                        {% elif drill.media_file %}
-                            <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" class="w-100 h-100 object-fit-cover">
+                    <div class="card-img-zone" onclick="handleMediaClick('{{ drill.media_type }}', '{{ drill.media_file }}', '{{ drill.external_link }}')">
+                        
+                        {% if drill.cover_image %}
+                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}">
+                        {% elif drill.media_type == 'image' %}
+                            <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}">
                         {% elif drill.external_link and 'youtu' in drill.external_link %}
-                            <img src="{{ drill.external_link|youtube_thumb }}" class="w-100 h-100 object-fit-cover">
-                            <div class="position-absolute top-50 start-50 translate-middle">
-                                <i class="bi bi-youtube text-danger display-4 bg-white rounded-circle"></i>
-                            </div>
+                            <img src="{{ drill.external_link|youtube_thumb }}">
                         {% else %}
-                            <img src="{{ url_for('static', filename='uploads/default_link_image.jpg') }}" 
-                                 class="w-100 h-100 object-fit-cover"
-                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-                            <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-secondary text-white" style="display:none">
-                                <i class="bi bi-link-45deg display-1 opacity-50"></i>
+                            <div class="w-100 h-100 bg-secondary d-flex align-items-center justify-content-center text-white">
+                                <i class="bi bi-collection-play display-4"></i>
                             </div>
                         {% endif %}
 
+                        <div class="overlay-icon">
+                            {% if drill.media_type == 'link' %}<i class="bi bi-play-circle-fill"></i>
+                            {% elif drill.media_type == 'pdf' %}<i class="bi bi-file-earmark-arrow-down-fill"></i>
+                            {% else %}<i class="bi bi-zoom-in"></i>{% endif %}
+                        </div>
+
                         {% if current_user.is_authenticated %}
-                        <div class="position-absolute top-0 end-0 m-2 d-flex gap-1">
-                            {% if drill in current_user.favoritos %}
-                                <span class="badge bg-danger"><i class="bi bi-heart-fill"></i></span>
-                            {% endif %}
+                        <div class="floating-actions" onclick="event.stopPropagation()">
+                            <a href="/toggle_fav/{{ drill.id }}" class="action-btn {% if drill in current_user.favoritos %}fav-active{% endif %}">
+                                <i class="bi {% if drill in current_user.favoritos %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+                            </a>
+                        </div>
+                        {% if drill.user_id == current_user.id or current_user.is_admin %}
+                        <div class="owner-actions" onclick="event.stopPropagation()">
+                            <a href="/edit/{{ drill.id }}" class="owner-btn"><i class="bi bi-pencil-fill small"></i></a>
+                            <a href="/delete/{{ drill.id }}" class="owner-btn bg-danger" onclick="return confirm('¿Borrar?')"><i class="bi bi-trash-fill small"></i></a>
                         </div>
                         {% endif %}
-                        
-                        {% if not drill.is_public %}
-                            <div class="position-absolute top-0 start-0 m-2">
-                                <span class="badge bg-dark bg-opacity-75"><i class="bi bi-lock-fill"></i> Privado</span>
-                            </div>
                         {% endif %}
                     </div>
 
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold text-truncate">{{ drill.title }}</h5>
-                        <p class="card-text text-muted small text-truncate">{{ drill.description or 'Sin descripción' }}</p>
-                        <div class="mt-2">
+                    <div class="card-body cursor-pointer" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#drillModal" data-bs-url="/drill/{{ drill.id }}">
+                        <h5 class="card-title fw-bold text-truncate mb-1">{{ drill.title }}</h5>
+                        <div class="mb-2">
                             {% for tag in drill.primary_tags[:3] %}
                                 <span class="badge bg-light text-dark border me-1">{{ tag.name }}</span>
                             {% endfor %}
-                            {% if drill.primary_tags|length > 3 %}
-                                <span class="badge bg-light text-muted border">+{{ drill.primary_tags|length - 3 }}</span>
-                            {% endif %}
                         </div>
                     </div>
-                    
-                    <div class="card-footer bg-white border-0 pt-0 d-flex justify-content-between align-items-center text-muted small">
-                        <span><i class="bi bi-person-circle me-1"></i> {{ drill.author.name }}</span>
-                        <span><i class="bi bi-eye"></i> {{ drill.views }}</span>
-                    </div>
+
                 </div>
-            </div>
-            {% else %}
-            <div class="col-12 text-center py-5">
-                <i class="bi bi-basket display-1 text-muted opacity-25"></i>
-                <p class="mt-3 text-muted">No se han encontrado ejercicios.</p>
-                {% if not current_user.is_authenticated %}
-                    <a href="/login" class="btn btn-outline-primary">Inicia sesión para ver más</a>
-                {% else %}
-                    <a href="/" class="btn btn-outline-primary">Ver todos</a>
-                {% endif %}
             </div>
             {% endfor %}
         </div>
     </div>
 
-    <div class="modal fade" id="drillModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-body text-center py-5">
-                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div class="modal fade" id="drillModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"></div></div></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -190,9 +165,17 @@
             const button = event.relatedTarget
             const url = button.getAttribute('data-bs-url')
             const modalContent = drillModal.querySelector('.modal-content')
-            modalContent.innerHTML = `<div class="modal-body text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>`
-            fetch(url).then(response => response.text()).then(html => { modalContent.innerHTML = html })
+            modalContent.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>'
+            fetch(url).then(r => r.text()).then(html => { modalContent.innerHTML = html })
         })
+
+        // ACCIÓN DIRECTA (Click en imagen)
+        function handleMediaClick(type, file, link) {
+            if (type === 'link') window.open(link, '_blank');
+            else if (type === 'pdf') window.open('/static/uploads/' + file, '_blank');
+            else if (type === 'image') window.open('/static/uploads/' + file, '_blank'); // Simple zoom for Phase 1
+            else if (type === 'video_file') window.open('/static/uploads/' + file, '_blank');
+        }
     </script>
 </body>
 </html>

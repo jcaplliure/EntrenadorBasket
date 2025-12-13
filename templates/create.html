@@ -5,114 +5,242 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Crear Ejercicio</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .paste-area { border: 2px dashed #ccc; padding: 20px; text-align: center; color: #777; cursor: pointer; }
-        .paste-area:hover, .paste-area.active { border-color: #e65100; background: #fff3e0; }
-        #preview-img { max-height: 200px; display: none; margin-top: 10px; border-radius: 5px; }
-        
-        /* ESTILO BOTONES ETIQUETAS (BLOQUE 2) */
-        .btn-check:checked + .btn-outline-secondary {
-            background-color: #e65100;
-            color: white;
-            border-color: #e65100;
+        .cover-selector input:checked + label {
+            border-color: #0d6efd;
+            background-color: #f8f9fa;
+            box-shadow: 0 0 0 2px #0d6efd;
+        }
+        .preview-box {
+            height: 120px;
+            background: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-radius: 4px;
         }
     </style>
 </head>
 <body class="bg-light">
-    <div class="container mt-5" style="max-width: 600px;">
-        <div class="card shadow">
-            <div class="card-header bg-dark text-white fw-bold">Nuevo Ejercicio</div>
-            <div class="card-body">
+    
+    <div class="container mt-5 mb-5" style="max-width: 700px;">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0 fw-bold">🏀 Nuevo Ejercicio</h4>
+            </div>
+            <div class="card-body p-4">
+                
                 <form action="/create" method="POST" enctype="multipart/form-data">
+                    
                     <div class="mb-3">
                         <label class="form-label fw-bold">Título</label>
-                        <input type="text" name="titulo" class="form-control" required>
+                        <input type="text" name="titulo" class="form-control" placeholder="Ej: Trenza de 3 contraataque" required>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label class="form-label fw-bold">Descripción</label>
-                        <textarea name="descripcion" class="form-control" rows="3"></textarea>
+                        <textarea name="descripcion" class="form-control" rows="3" placeholder="Claves técnicas..."></textarea>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Imagen o Archivo</label>
-                        <div id="paste-zone" class="paste-area rounded">
-                            <p class="mb-0">Haz clic y pega (Ctrl+V) o selecciona archivo</p>
+                    <hr class="my-4">
+
+                    <label class="form-label fw-bold mb-3">Tipo de Contenido</label>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="content_type" id="type_link" value="link" checked onchange="toggleContent()">
+                            <label class="btn btn-outline-primary w-100 p-3" for="type_link"><i class="bi bi-link-45deg"></i> Link</label>
                         </div>
-                        <input type="file" name="archivo" id="file-input" class="form-control mt-2" style="display:none;">
-                        <input type="hidden" name="pasted_image" id="pasted-image-input">
-                        <img id="preview-img" class="img-fluid mx-auto d-block">
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="content_type" id="type_image" value="image" onchange="toggleContent()">
+                            <label class="btn btn-outline-success w-100 p-3" for="type_image"><i class="bi bi-image"></i> Imagen</label>
+                        </div>
+                        <div class="col-4">
+                            <input type="radio" class="btn-check" name="content_type" id="type_pdf" value="pdf" onchange="toggleContent()">
+                            <label class="btn btn-outline-danger w-100 p-3" for="type_pdf"><i class="bi bi-file-pdf"></i> PDF</label>
+                        </div>
+                        {% if current_user.is_admin %}
+                        <div class="col-12 mt-2">
+                            <input type="radio" class="btn-check" name="content_type" id="type_video" value="video_file" onchange="toggleContent()">
+                            <label class="btn btn-outline-dark w-100 p-2 border-dashed" for="type_video"><i class="bi bi-camera-video-fill"></i> Subir MP4 (Admin)</label>
+                        </div>
+                        {% endif %}
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">O enlace externo</label>
-                        <input type="url" name="external_link" class="form-control" placeholder="https://...">
+                    <div class="bg-light p-3 rounded border mb-4">
+                        
+                        <div id="section-link">
+                            <label class="form-label small text-muted">Pega el enlace (YouTube, TikTok, Insta...)</label>
+                            <div class="input-group mb-2">
+                                <input type="url" name="external_link" id="linkField" class="form-control" placeholder="https://..." oninput="detectLink()">
+                                <button type="button" class="btn btn-outline-secondary" onclick="testLink()">Testear</button>
+                            </div>
+                            <div id="linkFeedback" class="small mb-2"></div>
+                        </div>
+
+                        <div id="section-file" style="display:none;">
+                            <label class="form-label small text-muted" id="fileLabel">Archivo</label>
+                            <input type="file" name="archivo" id="fileField" class="form-control">
+                            <div class="form-text small" id="fileHelp"></div>
+                        </div>
                     </div>
 
+                    <label class="form-label fw-bold">Imagen de Portada</label>
+                    <div class="row g-3 mb-4 cover-selector">
+                        
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="cover_option" id="cover_default" value="default" checked onchange="toggleCoverInput()">
+                            <label class="card h-100 cursor-pointer" for="cover_default">
+                                <div class="card-body p-2 text-center">
+                                    <div class="preview-box mb-2">
+                                        <img id="previewDefault" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+                                        <i id="iconDefault" class="bi bi-image text-muted display-4"></i>
+                                    </div>
+                                    <small class="fw-bold d-block">Automática</small>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="col-6">
+                            <input type="radio" class="btn-check" name="cover_option" id="cover_custom" value="custom" onchange="toggleCoverInput()">
+                            <label class="card h-100 cursor-pointer" for="cover_custom">
+                                <div class="card-body p-2 text-center">
+                                    <div class="preview-box mb-2 bg-white border">
+                                        <i class="bi bi-cloud-upload display-4 text-primary"></i>
+                                    </div>
+                                    <small class="fw-bold d-block">Subir Propia</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="customCoverInput" class="mb-4" style="display:none;">
+                        <input type="file" name="custom_cover_file" class="form-control" accept="image/*">
+                    </div>
+
+                    <hr class="my-4">
+
                     <div class="mb-3">
-                        <label class="form-label fw-bold d-block">Etiquetas (Selecciona varias)</label>
+                        <label class="form-label fw-bold">Etiquetas</label>
                         <div class="d-flex flex-wrap gap-2">
                             {% for tag in etiquetas %}
-                            <input type="checkbox" class="btn-check" name="primary_tags" id="tag_{{tag.id}}" value="{{tag.id}}" autocomplete="off">
-                            <label class="btn btn-sm btn-outline-secondary rounded-pill" for="tag_{{tag.id}}">{{ tag.name }}</label>
+                            <div>
+                                <input type="checkbox" class="btn-check" name="primary_tags" id="tag_{{ tag.id }}" value="{{ tag.id }}">
+                                <label class="btn btn-outline-secondary btn-sm rounded-pill" for="tag_{{ tag.id }}">{{ tag.name }}</label>
+                            </div>
                             {% endfor %}
                         </div>
                     </div>
-                    
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" name="is_public" id="publicCheck" checked>
-                        <label class="form-check-label" for="publicCheck">Hacer público 🌍</label>
+
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" name="is_public" id="isPublic" checked>
+                        <label class="form-check-label" for="isPublic">Hacer público</label>
                     </div>
 
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary fw-bold">Guardar</button>
-                        <a href="/" class="btn btn-outline-secondary">Cancelar</a>
-                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">Guardar Ejercicio</button>
+
                 </form>
             </div>
         </div>
     </div>
 
     <script>
-        const pasteZone = document.getElementById('paste-zone');
-        const fileInput = document.getElementById('file-input');
-        const previewImg = document.getElementById('preview-img');
-        const hiddenInput = document.getElementById('pasted-image-input');
+        // CONFIGURACIÓN DE FONDOS "BANANA" (Simulados con colores por ahora hasta Fase 2)
+        const BANANA_IMGS = {
+            youtube: 'https://img.youtube.com/vi/ID/mqdefault.jpg', // ID dinámico
+            tiktok: 'https://placehold.co/600x400/000000/FFF?text=TikTok',
+            instagram: 'https://placehold.co/600x400/E1306C/FFF?text=Instagram',
+            facebook: 'https://placehold.co/600x400/1877F2/FFF?text=Facebook',
+            generic: 'https://placehold.co/600x400/eee/999?text=Enlace',
+            pdf: 'https://placehold.co/600x400/dc3545/FFF?text=PDF',
+            image: 'https://placehold.co/600x400/198754/FFF?text=Imagen'
+        };
 
-        pasteZone.addEventListener('click', () => fileInput.click());
-
-        fileInput.addEventListener('change', function() {
-            if (this.files && this.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewImg.src = e.target.result;
-                    previewImg.style.display = 'block';
-                    pasteZone.innerHTML = "<p class='text-success fw-bold'>¡Archivo seleccionado!</p>";
+        function toggleContent() {
+            const type = document.querySelector('input[name="content_type"]:checked').value;
+            const secLink = document.getElementById('section-link');
+            const secFile = document.getElementById('section-file');
+            const fileField = document.getElementById('fileField');
+            
+            if (type === 'link') {
+                secLink.style.display = 'block';
+                secFile.style.display = 'none';
+                detectLink(); // Re-ejecutar sabueso
+            } else {
+                secLink.style.display = 'none';
+                secFile.style.display = 'block';
+                
+                // Configurar input archivo
+                if(type === 'image') {
+                    fileField.accept = "image/*";
+                    document.getElementById('fileHelp').innerText = "Se comprimirá automáticamente.";
+                    updatePreview(BANANA_IMGS.image, false);
+                } else if(type === 'pdf') {
+                    fileField.accept = "application/pdf";
+                    document.getElementById('fileHelp').innerText = "Máximo 5MB.";
+                    updatePreview(BANANA_IMGS.pdf, false);
+                } else {
+                    fileField.accept = "video/mp4"; // Admin
                 }
-                reader.readAsDataURL(this.files[0]);
             }
-        });
+        }
 
-        document.addEventListener('paste', function(e) {
-            const items = e.clipboardData.items;
-            for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
-                    const blob = items[i].getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const base64String = event.target.result;
-                        previewImg.src = base64String;
-                        previewImg.style.display = 'block';
-                        hiddenInput.value = base64String;
-                        pasteZone.innerHTML = "<p class='text-success fw-bold'>¡Imagen pegada!</p>";
-                        pasteZone.classList.add('active');
-                    };
-                    reader.readAsDataURL(blob);
-                    e.preventDefault();
-                    break;
+        function detectLink() {
+            const url = document.getElementById('linkField').value;
+            const img = document.getElementById('previewDefault');
+            const icon = document.getElementById('iconDefault');
+            
+            let finalSrc = BANANA_IMGS.generic;
+
+            if (url.includes('youtu')) {
+                let vidId = url.split('v=')[1];
+                if(!vidId && url.includes('youtu.be/')) vidId = url.split('youtu.be/')[1];
+                if(vidId) {
+                    vidId = vidId.split('&')[0];
+                    finalSrc = `https://img.youtube.com/vi/${vidId}/mqdefault.jpg`;
                 }
+            } else if (url.includes('tiktok.com')) {
+                finalSrc = BANANA_IMGS.tiktok;
+            } else if (url.includes('instagram.com')) {
+                finalSrc = BANANA_IMGS.instagram;
+            } else if (url.includes('facebook.com')) {
+                finalSrc = BANANA_IMGS.facebook;
             }
-        });
+
+            updatePreview(finalSrc, true);
+        }
+
+        function updatePreview(src, isImg) {
+            const img = document.getElementById('previewDefault');
+            const icon = document.getElementById('iconDefault');
+            
+            img.src = src;
+            img.style.display = 'block';
+            icon.style.display = 'none';
+        }
+
+        function toggleCoverInput() {
+            const isCustom = document.getElementById('cover_custom').checked;
+            document.getElementById('customCoverInput').style.display = isCustom ? 'block' : 'none';
+        }
+
+        function testLink() {
+            const url = document.getElementById('linkField').value;
+            const feedback = document.getElementById('linkFeedback');
+            if (!url) return;
+            feedback.innerHTML = '<span class="text-muted">Probando...</span>';
+            fetch('/check_link', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url: url})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') feedback.innerHTML = '<span class="text-success fw-bold">✅ Link funciona</span>';
+                else feedback.innerHTML = '<span class="text-danger fw-bold">❌ No accesible (puede ser privado)</span>';
+            });
+        }
     </script>
 </body>
 </html>

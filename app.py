@@ -19,7 +19,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ba
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'clave_secreta_super_segura'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Límite global seguro (50MB) para permitir subidas de admin
+
 app.config['GOOGLE_CLIENT_ID'] = '706704268052-lhvlruk0fjs8hhma8bk76bv711a4k7ct.apps.googleusercontent.com'
 app.config['GOOGLE_CLIENT_SECRET'] = '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'
 
@@ -40,11 +41,8 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# --- MODELOS ---
 favorites = db.Table('favorites',
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('drill_id', db.Integer, db.ForeignKey('drill.id'), primary_key=True)
-)
-next_practice = db.Table('next_practice',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('drill_id', db.Integer, db.ForeignKey('drill.id'), primary_key=True)
 )
@@ -71,7 +69,6 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     last_blocks_config = db.Column(db.String(500), nullable=True, default="Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma")
     favoritos = db.relationship('Drill', secondary=favorites, backref=db.backref('favorited_by', lazy='dynamic'))
-    mochila = db.relationship('Drill', secondary=next_practice, backref=db.backref('in_practice_plan', lazy='dynamic'))
     def set_password(self, password): self.password_hash = generate_password_hash(password)
     def check_password(self, password):
         if not self.password_hash: return False
@@ -86,20 +83,20 @@ class Drill(db.Model):
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
     date_posted = db.Column(db.DateTime, default=datetime.utcnow)
-    media_file = db.Column(db.String(120), nullable=True)
-    external_link = db.Column(db.String(500), nullable=True)
+    
+    media_type = db.Column(db.String(20), default='link') # 'link', 'image', 'pdf', 'video_file'
+    media_file = db.Column(db.String(120), nullable=True) # El archivo principal
+    external_link = db.Column(db.String(500), nullable=True) 
+    
+    # NUEVO: Imagen de portada personalizada
+    cover_image = db.Column(db.String(120), nullable=True) 
+
     is_public = db.Column(db.Boolean, default=True)
     views = db.Column(db.Integer, default=0)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     author = db.relationship('User', backref=db.backref('drills', lazy=True))
     primary_tags = db.relationship('Tag', secondary=drill_primary_tags, backref='primary_drills')
     secondary_tags = db.relationship('Tag', secondary=drill_secondary_tags, backref='secondary_drills')
-
-class TrainingTemplate(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    blocks_structure = db.Column(db.String(500), nullable=False)
 
 class TrainingPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -118,11 +115,20 @@ class TrainingItem(db.Model):
     drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
     block_name = db.Column(db.String(50), nullable=False)
     order = db.Column(db.Integer, default=0)
-    notes = db.Column(db.String(200), nullable=True)
     drill = db.relationship('Drill')
 
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
+
+# --- HELPERS ---
+def compress_image(file):
+    img = Image.open(file)
+    if img.mode in ("RGBA", "P"): img = img.convert("RGB")
+    img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+    output = BytesIO()
+    img.save(output, format='JPEG', quality=75, optimize=True)
+    output.seek(0)
+    return output
 
 @app.template_filter('youtube_thumb')
 def youtube_thumb(url):
@@ -133,12 +139,6 @@ def youtube_thumb(url):
     if vid_id: return f"https://img.youtube.com/vi/{vid_id}/mqdefault.jpg"
     return None
 
-@app.template_filter('is_video')
-def is_video(filename):
-    if not filename: return False
-    ext = filename.split('.')[-1].lower()
-    return ext in ['mp4', 'mov', 'avi']
-
 @app.template_filter('get_youtube_id')
 def get_youtube_id(url):
     if not url: return None
@@ -146,10 +146,12 @@ def get_youtube_id(url):
     if 'youtube.com' in url and 'v=' in url: return url.split('v=')[1].split('&')[0]
     return None
 
+# --- RUTAS ---
 @app.route('/')
 def home():
     query = request.args.get('q', '').strip()
-    primary_id = request.args.get('primary', '')
+    # Soporte para múltiples etiquetas (Checkbox)
+    primary_ids = request.args.getlist('primary') # Recibe una lista
     filter_type = request.args.getlist('filter_type')
     sort_by = request.args.get('sort_by', 'favs_desc') 
     
@@ -167,13 +169,14 @@ def home():
             if 'favorites' in filter_type:
                 fav_ids = [d.id for d in current_user.favoritos]
                 conditions.append(Drill.id.in_(fav_ids) if fav_ids else Drill.id == -1)
-            if 'next_practice' in filter_type:
-                practice_ids = [d.id for d in current_user.mochila]
-                conditions.append(Drill.id.in_(practice_ids) if practice_ids else Drill.id == -1)
         if conditions: drills_query = drills_query.filter(or_(*conditions))
 
     if query: drills_query = drills_query.filter(or_(Drill.title.ilike(f'%{query}%'), Drill.description.ilike(f'%{query}%')))
-    if primary_id and primary_id.isdigit(): drills_query = drills_query.filter(Drill.primary_tags.any(id=int(primary_id)))
+    
+    # Lógica OR para etiquetas (si tiene alguna de las seleccionadas)
+    if primary_ids:
+        # Filtra ejercicios que tengan AL MENOS UNA de las etiquetas seleccionadas
+        drills_query = drills_query.filter(Drill.primary_tags.any(Tag.id.in_(primary_ids)))
 
     if sort_by == 'views_desc': drills_query = drills_query.order_by(Drill.views.desc())
     elif sort_by == 'favs_desc': drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
@@ -193,21 +196,66 @@ def create():
         title = request.form['titulo']
         desc = request.form['descripcion']
         is_public = 'is_public' in request.form
+        
+        # Tipo de contenido
+        content_type = request.form.get('content_type') 
         external_link = request.form.get('external_link', '').strip()
-        nuevo = Drill(title=title, description=desc, is_public=is_public, user_id=current_user.id, external_link=external_link)
-        file = request.files.get('archivo')
-        pasted_image = request.form.get('pasted_image')
-        if file and file.filename != '':
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            nuevo.media_file = filename
-        elif pasted_image:
-            header, encoded = pasted_image.split(",", 1)
-            data = base64.b64decode(encoded)
-            filename = f"pasted_{int(datetime.now().timestamp())}.png"
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            with open(path, "wb") as f: f.write(data)
-            nuevo.media_file = filename
+        
+        nuevo = Drill(title=title, description=desc, is_public=is_public, user_id=current_user.id, media_type=content_type)
+
+        # 1. GESTIÓN DEL CONTENIDO PRINCIPAL
+        if content_type == 'link':
+            nuevo.external_link = external_link
+        
+        elif content_type in ['image', 'pdf', 'video_file']:
+            file = request.files.get('archivo')
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                
+                # IMAGEN: Compresión
+                if content_type == 'image':
+                    ext = filename.split('.')[-1].lower()
+                    if ext in ['jpg', 'jpeg', 'png', 'webp']:
+                        filename = f"{int(datetime.now().timestamp())}_{filename.rsplit('.', 1)[0]}.jpg"
+                        compressed_file = compress_image(file)
+                        with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'wb') as f:
+                            f.write(compressed_file.getbuffer())
+                        nuevo.media_file = filename
+                    else:
+                        flash('Formato de imagen no válido.')
+                        return redirect(request.url)
+
+                # PDF: Límite 5MB
+                elif content_type == 'pdf':
+                    if filename.lower().endswith('.pdf'):
+                        file.seek(0, os.SEEK_END)
+                        size = file.tell()
+                        file.seek(0)
+                        if size > 5 * 1024 * 1024:
+                            flash('El PDF es demasiado grande (Máx 5MB).')
+                            return redirect(request.url)
+                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                        nuevo.media_file = filename
+                
+                # VÍDEO ADMIN: Sin límite estricto (ya limitado por config global)
+                elif content_type == 'video_file' and current_user.is_admin:
+                    ext = filename.split('.')[-1].lower()
+                    if ext in ['mp4', 'mov', 'avi']:
+                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                        nuevo.media_file = filename
+
+        # 2. GESTIÓN DE LA PORTADA (COVER)
+        cover_option = request.form.get('cover_option') # 'default' o 'custom'
+        if cover_option == 'custom':
+            cover_file = request.files.get('custom_cover_file')
+            if cover_file and cover_file.filename != '':
+                c_filename = secure_filename(cover_file.filename)
+                c_filename = f"cover_{int(datetime.now().timestamp())}.jpg"
+                c_comp = compress_image(cover_file)
+                with open(os.path.join(app.config['UPLOAD_FOLDER'], c_filename), 'wb') as f:
+                    f.write(c_comp.getbuffer())
+                nuevo.cover_image = c_filename
+
         ids_p = request.form.getlist('primary_tags')
         for t_id in ids_p:
             tag = Tag.query.get(int(t_id))
@@ -222,36 +270,50 @@ def create():
 def edit_drill(id):
     drill = Drill.query.get_or_404(id)
     if drill.user_id != current_user.id and not current_user.is_admin:
-        flash('No tienes permiso para editar este ejercicio.')
         return redirect('/')
     tags = Tag.query.order_by(Tag.name).all()
     if request.method == 'POST':
         drill.title = request.form['titulo']
         drill.description = request.form['descripcion']
         drill.is_public = 'is_public' in request.form
-        drill.external_link = request.form.get('external_link', '').strip()
+        
+        # En edición, permitimos cambiar etiquetas y textos. 
+        # Si quieren cambiar el archivo, por ahora recomendamos borrar y crear nuevo (Fase 1).
+        
         drill.primary_tags = [] 
         ids_p = request.form.getlist('primary_tags')
         for t_id in ids_p:
             tag = Tag.query.get(int(t_id))
             if tag: drill.primary_tags.append(tag)
-        file = request.files.get('archivo')
-        pasted_image = request.form.get('pasted_image')
-        if file and file.filename != '':
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            drill.media_file = filename
-        elif pasted_image:
-            header, encoded = pasted_image.split(",", 1)
-            data = base64.b64decode(encoded)
-            filename = f"pasted_{int(datetime.now().timestamp())}.png"
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            with open(path, "wb") as f: f.write(data)
-            drill.media_file = filename
         db.session.commit()
         return redirect('/')
     return render_template('edit_drill.html', drill=drill, etiquetas=tags)
 
+@app.route('/check_link', methods=['POST'])
+def check_link():
+    url = request.json.get('url')
+    if not url: return {'status': 'error'}
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'} 
+        response = requests.head(url, headers=headers, timeout=5, allow_redirects=True)
+        if response.status_code < 400: return {'status': 'ok'}
+        response = requests.get(url, headers=headers, timeout=5)
+        if response.status_code < 400: return {'status': 'ok'}
+        return {'status': 'error'}
+    except:
+        return {'status': 'error'}
+
+@app.route('/delete/<int:id>')
+@login_required
+def delete_drill(id):
+    drill = Drill.query.get(id)
+    if drill and (drill.user_id == current_user.id or current_user.is_admin):
+        db.session.delete(drill)
+        db.session.commit()
+    # Redirigir a la página anterior o a home
+    return redirect(request.referrer or '/')
+
+# --- RUTAS DE PLANES ---
 @app.route('/create_plan', methods=['GET', 'POST'])
 @login_required
 def create_plan():
@@ -270,13 +332,11 @@ def create_plan():
         )
         db.session.add(new_plan)
         db.session.commit()
-        return redirect(url_for('view_plan', id=new_plan.id)) # AHORA REDIRIGE AL PLAN
-
+        return redirect(url_for('view_plan', id=new_plan.id))
     user_blocks = current_user.last_blocks_config if current_user.last_blocks_config else STANDARD_BLOCKS
     blocks_list = user_blocks.split(',')
     return render_template('create_plan.html', blocks=blocks_list, standard_blocks=STANDARD_BLOCKS)
 
-# --- NUEVAS RUTAS BLOQUE 2 (VER PLAN Y GESTION) ---
 @app.route('/my_plans')
 @login_required
 def my_plans():
@@ -289,12 +349,9 @@ def view_plan(id):
     plan = TrainingPlan.query.get_or_404(id)
     if plan.user_id != current_user.id and not plan.is_public:
         return redirect('/')
-    
-    # Preparar datos para el modal (Todos los drills disponibles)
     base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
     all_drills = Drill.query.filter(base_condition).order_by(Drill.date_posted.desc()).all()
     tags = Tag.query.order_by(Tag.name).all()
-
     return render_template('view_plan.html', plan=plan, all_drills=all_drills, tags=tags)
 
 @app.route('/add_item_to_plan', methods=['POST'])
@@ -303,10 +360,8 @@ def add_item_to_plan():
     plan_id = request.form.get('plan_id')
     drill_id = request.form.get('drill_id')
     block_name = request.form.get('block_name')
-    
     plan = TrainingPlan.query.get(plan_id)
     if not plan or plan.user_id != current_user.id: return "Error", 403
-
     item = TrainingItem(training_plan_id=plan.id, drill_id=drill_id, block_name=block_name)
     db.session.add(item)
     db.session.commit()
@@ -323,28 +378,19 @@ def delete_plan_item(id):
         return redirect(url_for('view_plan', id=plan_id))
     return redirect('/')
 
+# --- VISTA DRILL (MODAL) ---
 @app.route('/drill/<int:id>')
 def view_drill(id):
     drill = Drill.query.get_or_404(id)
     if not drill.is_public:
-        if not current_user.is_authenticated or drill.user_id != current_user.id:
-            return redirect('/')
+        if not current_user.is_authenticated or drill.user_id != current_user.id: return redirect('/')
     user_ip = request.remote_addr
     existing_view = DrillView.query.filter_by(drill_id=id, ip_address=user_ip).first()
     if not existing_view:
         drill.views += 1
-        new_view = DrillView(drill_id=id, ip_address=user_ip)
-        db.session.add(new_view)
+        db.session.add(DrillView(drill_id=id, ip_address=user_ip))
         db.session.commit()
-    media_type = 'none'
-    if drill.media_file:
-        ext = drill.media_file.split('.')[-1].lower()
-        if ext in ['mp4', 'mov', 'avi']: media_type = 'video_file'
-        else: media_type = 'image_file'
-    elif drill.external_link:
-        if 'youtu' in drill.external_link: media_type = 'youtube'
-        else: media_type = 'link'
-    return render_template('view_drill_modal.html', drill=drill, media_type=media_type)
+    return render_template('view_drill_modal.html', drill=drill)
 
 @app.route('/toggle_fav/<int:id>')
 @login_required
@@ -356,44 +402,17 @@ def toggle_fav(id):
         db.session.commit()
     return redirect(request.referrer)
 
-@app.route('/toggle_practice/<int:id>')
-@login_required
-def toggle_practice(id):
-    drill = Drill.query.get(id)
-    if drill:
-        if drill in current_user.mochila: current_user.mochila.remove(drill)
-        else: current_user.mochila.append(drill)
-        db.session.commit()
-    return redirect(request.referrer)
-
-@app.route('/clear_practice')
-@login_required
-def clear_practice():
-    current_user.mochila = []
-    db.session.commit()
-    return redirect('/')
-
-@app.route('/delete/<int:id>')
-@login_required
-def delete_drill(id):
-    drill = Drill.query.get(id)
-    if drill and (drill.user_id == current_user.id or current_user.is_admin):
-        db.session.delete(drill)
-        db.session.commit()
-    return redirect('/')
-
+# --- AUTH ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
     if request.method == 'POST':
         email = request.form['email']
-        password = request.form['password']
-        name = request.form['name']
         if User.query.filter_by(email=email).first():
-            flash('Ese email ya existe')
+            flash('Email ya existe')
             return redirect('/register')
-        new_user = User(email=email, name=name)
-        new_user.set_password(password)
+        new_user = User(email=email, name=request.form['name'])
+        new_user.set_password(request.form['password'])
         if email.lower() == 'jcaplliure@gmail.com': new_user.is_admin = True
         db.session.add(new_user)
         db.session.commit()
@@ -405,13 +424,11 @@ def register():
 def login():
     if current_user.is_authenticated: return redirect('/')
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        user = User.query.filter_by(email=email).first()
-        if user and user.check_password(password):
+        user = User.query.filter_by(email=request.form['email']).first()
+        if user and user.check_password(request.form['password']):
             login_user(user)
             return redirect('/')
-        else: flash('Email o contraseña incorrectos')
+        else: flash('Error login')
     return render_template('login.html')
 
 @app.route('/login/google')
@@ -422,13 +439,11 @@ def google_login():
 @app.route('/auth/callback')
 def google_auth():
     token = google.authorize_access_token()
-    user_info = token['userinfo']
-    email = user_info['email']
-    name = user_info.get('name', email.split('@')[0])
+    email = token['userinfo']['email']
     user = User.query.filter_by(email=email).first()
     if not user:
         is_admin = (email.lower() == 'jcaplliure@gmail.com')
-        user = User(email=email, name=name, is_admin=is_admin)
+        user = User(email=email, name=token['userinfo'].get('name', email.split('@')[0]), is_admin=is_admin)
         db.session.add(user)
         db.session.commit()
     login_user(user)
@@ -440,24 +455,15 @@ def logout():
     logout_user()
     return redirect('/login')
 
-@app.route('/admin', methods=['GET'])
-@login_required
-def admin_panel():
-    if not current_user.is_admin: return redirect('/')
-    return redirect('/admin/tags')
-
 @app.route('/admin/tags', methods=['GET', 'POST'])
 @login_required
 def manage_tags():
     if not current_user.is_admin: return redirect('/')
     if request.method == 'POST':
         tag_name = request.form.get('tag_name').strip()
-        if tag_name:
-            existing = Tag.query.filter_by(name=tag_name).first()
-            if not existing:
-                db.session.add(Tag(name=tag_name))
-                db.session.commit()
-            else: flash('Esa etiqueta ya existe.')
+        if tag_name and not Tag.query.filter_by(name=tag_name).first():
+            db.session.add(Tag(name=tag_name))
+            db.session.commit()
     tags = Tag.query.order_by(Tag.name).all()
     return render_template('admin_tags.html', tags=tags)
 
@@ -470,19 +476,6 @@ def delete_tag(id):
         db.session.delete(tag)
         db.session.commit()
     return redirect('/admin/tags')
-
-@app.route('/admin/config', methods=['GET', 'POST'])
-@login_required
-def admin_config():
-    if not current_user.is_admin: return redirect('/')
-    if request.method == 'POST':
-        file = request.files.get('default_image')
-        if file:
-            filename = 'default_link_image.jpg'
-            path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(path)
-            return redirect(url_for('admin_config', updated=datetime.now().timestamp()))
-    return render_template('admin_config.html')
 
 def crear_datos_prueba():
     if Tag.query.count() == 0:

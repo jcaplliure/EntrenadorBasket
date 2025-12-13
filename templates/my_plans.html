@@ -24,15 +24,17 @@
 
         <div class="list-group shadow-sm">
             {% for plan in plans %}
-            <a href="/plan/{{ plan.id }}" class="list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-1 fw-bold">{{ plan.name }}</h5>
-                    <p class="mb-0 text-muted small">
-                        <i class="bi bi-calendar3"></i> {{ plan.date.strftime('%d/%m/%Y') }}
-                        {% if plan.team_name %} • <i class="bi bi-people"></i> {{ plan.team_name }}{% endif %}
-                    </p>
+            <a href="/plan/{{ plan.id }}" class="list-group-item list-group-item-action p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1 fw-bold">{{ plan.name }}</h5>
+                        <p class="mb-0 text-muted small">
+                            <i class="bi bi-calendar3"></i> {{ plan.date.strftime('%d/%m/%Y') }}
+                            {% if plan.team_name %} • <span class="badge bg-secondary">{{ plan.team_name }}</span>{% endif %}
+                        </p>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
                 </div>
-                <i class="bi bi-chevron-right text-muted"></i>
             </a>
             {% else %}
             <div class="text-center py-5">
