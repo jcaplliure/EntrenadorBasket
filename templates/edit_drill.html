@@ -81,7 +81,7 @@
                     <label class="fw-bold">Imagen de Portada</label>
                     <div class="row g-3 mb-4 cover-selector">
                         <div class="col-6">
-                            <input type="radio" class="btn-check" name="cover_option" id="cover_default" value="default" {% if not drill.cover_image %}checked{% endif %} onchange="toggleCoverInput()">
+                            <input type="radio" class="btn-check" name="cover_option" id="cover_default" value="default" {% if not drill.cover_image %}checked{% endif %} onchange="toggleCoverInput(false)">
                             <label class="card h-100 cursor-pointer" for="cover_default">
                                 <div class="card-body p-2 text-center">
                                     <div class="preview-box mb-2">
@@ -93,7 +93,7 @@
                             </label>
                         </div>
                         <div class="col-6">
-                            <input type="radio" class="btn-check" name="cover_option" id="cover_custom" value="custom" {% if drill.cover_image %}checked{% endif %} onchange="toggleCoverInput()">
+                            <input type="radio" class="btn-check" name="cover_option" id="cover_custom" value="custom" {% if drill.cover_image %}checked{% endif %} onchange="toggleCoverInput(true)">
                             <label class="card h-100 cursor-pointer" for="cover_custom">
                                 <div class="card-body p-2 text-center">
                                     <div class="preview-box mb-2 bg-white border">
@@ -111,7 +111,7 @@
 
                     <div id="customCoverInput" class="mb-4" style="display:none;">
                         <label class="small text-muted">Cambiar portada personalizada:</label>
-                        <input type="file" name="custom_cover_file" class="form-control" accept="image/*">
+                        <input type="file" name="custom_cover_file" id="customCoverFileField" class="form-control" accept="image/*">
                     </div>
 
                     <hr class="my-4">
@@ -155,8 +155,8 @@
         };
 
         document.addEventListener("DOMContentLoaded", function() {
-            toggleContent(false); // False = No abrir fichero al cargar
-            toggleCoverInput();
+            toggleContent(false); 
+            toggleCoverInput(false);
             
             const type = document.querySelector('input[name="content_type"]:checked').value;
             if (type === 'link') detectLink();
@@ -188,9 +188,8 @@
                     fileField.accept = "video/mp4"; 
                 }
 
-                // TRUCO UX
                 if (autoOpen) {
-                     setTimeout(() => fileField.click(), 100);
+                    setTimeout(() => fileField.click(), 100);
                 }
             }
         }
@@ -219,9 +218,17 @@
             img.src = src; img.style.display = 'block'; icon.style.display = 'none';
         }
 
-        function toggleCoverInput() {
+        // Modificado para Portada también con autoOpen
+        function toggleCoverInput(autoOpen = false) {
             const isCustom = document.getElementById('cover_custom').checked;
-            document.getElementById('customCoverInput').style.display = isCustom ? 'block' : 'none';
+            const coverContainer = document.getElementById('customCoverInput');
+            const coverField = document.getElementById('customCoverFileField');
+            
+            coverContainer.style.display = isCustom ? 'block' : 'none';
+
+            if (isCustom && autoOpen) {
+                setTimeout(() => coverField.click(), 100);
+            }
         }
         
         function testLink() {
