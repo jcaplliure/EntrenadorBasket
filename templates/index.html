@@ -54,7 +54,13 @@
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="ms-auto d-flex align-items-center">
+                    
                     {% if current_user.is_authenticated %}
+                        
+                        {% if current_user.is_admin %}
+                            <a href="/admin/tags" class="btn btn-warning btn-sm me-2 fw-bold text-dark"><i class="bi bi-gear-fill"></i> Admin</a>
+                        {% endif %}
+
                         <a href="/my_plans" class="btn btn-outline-light btn-sm me-2">Mis Planes</a>
                         <a href="/create" class="btn btn-primary btn-sm fw-bold me-2">+ Nuevo</a>
                         <a href="/logout" class="btn btn-outline-light btn-sm">Salir</a>
@@ -94,8 +100,8 @@
 
                 <div class="col-md-3">
                      <select name="sort_by" class="form-select form-select-sm h-100" onchange="this.form.submit()">
-                        <option value="favs_desc">❤️ Populares</option>
-                        <option value="date_desc">📅 Recientes</option>
+                        <option value="favs_desc" {% if request.args.get('sort_by') == 'favs_desc' %}selected{% endif %}>❤️ Populares</option>
+                        <option value="date_desc" {% if request.args.get('sort_by') == 'date_desc' %}selected{% endif %}>📅 Recientes</option>
                     </select>
                 </div>
             </div>
@@ -135,7 +141,7 @@
                         {% if drill.user_id == current_user.id or current_user.is_admin %}
                         <div class="owner-actions" onclick="event.stopPropagation()">
                             <a href="/edit/{{ drill.id }}" class="owner-btn"><i class="bi bi-pencil-fill small"></i></a>
-                            <a href="/delete/{{ drill.id }}" class="owner-btn bg-danger" onclick="return confirm('¿Borrar?')"><i class="bi bi-trash-fill small"></i></a>
+                            <a href="/delete/{{ drill.id }}" class="owner-btn bg-danger" onclick="return confirm('¿Borrar este ejercicio?')"><i class="bi bi-trash-fill small"></i></a>
                         </div>
                         {% endif %}
                         {% endif %}
@@ -147,10 +153,21 @@
                             {% for tag in drill.primary_tags[:3] %}
                                 <span class="badge bg-light text-dark border me-1">{{ tag.name }}</span>
                             {% endfor %}
+                            {% if drill.primary_tags|length > 3 %}
+                                <span class="badge bg-light text-muted border">+{{ drill.primary_tags|length - 3 }}</span>
+                            {% endif %}
                         </div>
                     </div>
 
                 </div>
+            </div>
+            {% else %}
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-basket display-1 text-muted opacity-25"></i>
+                <p class="mt-3 text-muted">No se han encontrado ejercicios.</p>
+                {% if not current_user.is_authenticated %}
+                    <a href="/login" class="btn btn-outline-primary">Inicia sesión</a>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -160,6 +177,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Lógica del Modal
         const drillModal = document.getElementById('drillModal')
         drillModal.addEventListener('show.bs.modal', event => {
             const button = event.relatedTarget
@@ -173,9 +191,4 @@
         function handleMediaClick(type, file, link) {
             if (type === 'link') window.open(link, '_blank');
             else if (type === 'pdf') window.open('/static/uploads/' + file, '_blank');
-            else if (type === 'image') window.open('/static/uploads/' + file, '_blank'); // Simple zoom for Phase 1
-            else if (type === 'video_file') window.open('/static/uploads/' + file, '_blank');
-        }
-    </script>
-</body>
-</html>
+            else if (type === 'image') window.open('/static
