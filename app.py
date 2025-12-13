@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'ba
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'clave_secreta_super_segura'
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Límite global seguro (50MB) para permitir subidas de admin
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 app.config['GOOGLE_CLIENT_ID'] = '706704268052-lhvlruk0fjs8hhma8bk76bv711a4k7ct.apps.googleusercontent.com'
 app.config['GOOGLE_CLIENT_SECRET'] = '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'
@@ -55,6 +55,10 @@ drill_secondary_tags = db.Table('drill_secondary_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
 )
 
+class SiteConfig(db.Model):
+    key = db.Column(db.String(50), primary_key=True) # ej: 'tiktok_bg', 'play_icon'
+    value = db.Column(db.String(255), nullable=False) # ej: 'tiktok_banana.jpg'
+
 class DrillView(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
@@ -83,14 +87,10 @@ class Drill(db.Model):
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
     date_posted = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    media_type = db.Column(db.String(20), default='link') # 'link', 'image', 'pdf', 'video_file'
-    media_file = db.Column(db.String(120), nullable=True) # El archivo principal
+    media_type = db.Column(db.String(20), default='link') 
+    media_file = db.Column(db.String(120), nullable=True) 
     external_link = db.Column(db.String(500), nullable=True) 
-    
-    # NUEVO: Imagen de portada personalizada
     cover_image = db.Column(db.String(120), nullable=True) 
-
     is_public = db.Column(db.Boolean, default=True)
     views = db.Column(db.Integer, default=0)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -119,6 +119,22 @@ class TrainingItem(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id): return User.query.get(int(user_id))
+
+# --- CONTEXT PROCESSOR (DISPONIBLE EN TODAS LAS VISTAS) ---
+@app.context_processor
+def inject_config():
+    # Carga la configuración en un diccionario para usar en templates
+    configs = SiteConfig.query.all()
+    site_config = {c.key: c.value for c in configs}
+    
+    # Helper para obtener URL completa (si es http usa esa, si no busca en uploads)
+    def get_config_url(key):
+        val = site_config.get(key, '')
+        if val.startswith('http'): return val
+        if val: return url_for('static', filename='uploads/' + val)
+        return '' # Fallback vacío
+        
+    return dict(site_config=site_config, get_config_url=get_config_url)
 
 # --- HELPERS ---
 def compress_image(file):
@@ -150,8 +166,7 @@ def get_youtube_id(url):
 @app.route('/')
 def home():
     query = request.args.get('q', '').strip()
-    # Soporte para múltiples etiquetas (Checkbox)
-    primary_ids = request.args.getlist('primary') # Recibe una lista
+    primary_ids = request.args.getlist('primary')
     filter_type = request.args.getlist('filter_type')
     sort_by = request.args.get('sort_by', 'favs_desc') 
     
@@ -172,11 +187,7 @@ def home():
         if conditions: drills_query = drills_query.filter(or_(*conditions))
 
     if query: drills_query = drills_query.filter(or_(Drill.title.ilike(f'%{query}%'), Drill.description.ilike(f'%{query}%')))
-    
-    # Lógica OR para etiquetas (si tiene alguna de las seleccionadas)
-    if primary_ids:
-        # Filtra ejercicios que tengan AL MENOS UNA de las etiquetas seleccionadas
-        drills_query = drills_query.filter(Drill.primary_tags.any(Tag.id.in_(primary_ids)))
+    if primary_ids: drills_query = drills_query.filter(Drill.primary_tags.any(Tag.id.in_(primary_ids)))
 
     if sort_by == 'views_desc': drills_query = drills_query.order_by(Drill.views.desc())
     elif sort_by == 'favs_desc': drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
@@ -196,23 +207,17 @@ def create():
         title = request.form['titulo']
         desc = request.form['descripcion']
         is_public = 'is_public' in request.form
-        
-        # Tipo de contenido
         content_type = request.form.get('content_type') 
         external_link = request.form.get('external_link', '').strip()
         
         nuevo = Drill(title=title, description=desc, is_public=is_public, user_id=current_user.id, media_type=content_type)
 
-        # 1. GESTIÓN DEL CONTENIDO PRINCIPAL
         if content_type == 'link':
             nuevo.external_link = external_link
-        
         elif content_type in ['image', 'pdf', 'video_file']:
             file = request.files.get('archivo')
             if file and file.filename != '':
                 filename = secure_filename(file.filename)
-                
-                # IMAGEN: Compresión
                 if content_type == 'image':
                     ext = filename.split('.')[-1].lower()
                     if ext in ['jpg', 'jpeg', 'png', 'webp']:
@@ -222,34 +227,25 @@ def create():
                             f.write(compressed_file.getbuffer())
                         nuevo.media_file = filename
                     else:
-                        flash('Formato de imagen no válido.')
+                        flash('Formato no válido')
                         return redirect(request.url)
-
-                # PDF: Límite 5MB
                 elif content_type == 'pdf':
                     if filename.lower().endswith('.pdf'):
                         file.seek(0, os.SEEK_END)
-                        size = file.tell()
-                        file.seek(0)
-                        if size > 5 * 1024 * 1024:
-                            flash('El PDF es demasiado grande (Máx 5MB).')
+                        if file.tell() > 5 * 1024 * 1024:
+                            flash('PDF muy grande (Máx 5MB)')
                             return redirect(request.url)
+                        file.seek(0)
                         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                         nuevo.media_file = filename
-                
-                # VÍDEO ADMIN: Sin límite estricto (ya limitado por config global)
                 elif content_type == 'video_file' and current_user.is_admin:
-                    ext = filename.split('.')[-1].lower()
-                    if ext in ['mp4', 'mov', 'avi']:
-                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                        nuevo.media_file = filename
+                     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                     nuevo.media_file = filename
 
-        # 2. GESTIÓN DE LA PORTADA (COVER)
-        cover_option = request.form.get('cover_option') # 'default' o 'custom'
+        cover_option = request.form.get('cover_option')
         if cover_option == 'custom':
             cover_file = request.files.get('custom_cover_file')
             if cover_file and cover_file.filename != '':
-                c_filename = secure_filename(cover_file.filename)
                 c_filename = f"cover_{int(datetime.now().timestamp())}.jpg"
                 c_comp = compress_image(cover_file)
                 with open(os.path.join(app.config['UPLOAD_FOLDER'], c_filename), 'wb') as f:
@@ -269,17 +265,12 @@ def create():
 @login_required
 def edit_drill(id):
     drill = Drill.query.get_or_404(id)
-    if drill.user_id != current_user.id and not current_user.is_admin:
-        return redirect('/')
+    if drill.user_id != current_user.id and not current_user.is_admin: return redirect('/')
     tags = Tag.query.order_by(Tag.name).all()
     if request.method == 'POST':
         drill.title = request.form['titulo']
         drill.description = request.form['descripcion']
         drill.is_public = 'is_public' in request.form
-        
-        # En edición, permitimos cambiar etiquetas y textos. 
-        # Si quieren cambiar el archivo, por ahora recomendamos borrar y crear nuevo (Fase 1).
-        
         drill.primary_tags = [] 
         ids_p = request.form.getlist('primary_tags')
         for t_id in ids_p:
@@ -300,8 +291,7 @@ def check_link():
         response = requests.get(url, headers=headers, timeout=5)
         if response.status_code < 400: return {'status': 'ok'}
         return {'status': 'error'}
-    except:
-        return {'status': 'error'}
+    except: return {'status': 'error'}
 
 @app.route('/delete/<int:id>')
 @login_required
@@ -310,7 +300,6 @@ def delete_drill(id):
     if drill and (drill.user_id == current_user.id or current_user.is_admin):
         db.session.delete(drill)
         db.session.commit()
-    # Redirigir a la página anterior o a home
     return redirect(request.referrer or '/')
 
 # --- RUTAS DE PLANES ---
@@ -347,8 +336,7 @@ def my_plans():
 @login_required
 def view_plan(id):
     plan = TrainingPlan.query.get_or_404(id)
-    if plan.user_id != current_user.id and not plan.is_public:
-        return redirect('/')
+    if plan.user_id != current_user.id and not plan.is_public: return redirect('/')
     base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
     all_drills = Drill.query.filter(base_condition).order_by(Drill.date_posted.desc()).all()
     tags = Tag.query.order_by(Tag.name).all()
@@ -378,7 +366,6 @@ def delete_plan_item(id):
         return redirect(url_for('view_plan', id=plan_id))
     return redirect('/')
 
-# --- VISTA DRILL (MODAL) ---
 @app.route('/drill/<int:id>')
 def view_drill(id):
     drill = Drill.query.get_or_404(id)
@@ -402,7 +389,7 @@ def toggle_fav(id):
         db.session.commit()
     return redirect(request.referrer)
 
-# --- AUTH ---
+# --- AUTH & ADMIN ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
@@ -477,10 +464,68 @@ def delete_tag(id):
         db.session.commit()
     return redirect('/admin/tags')
 
+# --- NUEVA RUTA: CONFIGURACIÓN VISUAL ---
+@app.route('/admin/config', methods=['GET', 'POST'])
+@login_required
+def admin_config():
+    if not current_user.is_admin: return redirect('/')
+    
+    if request.method == 'POST':
+        key = request.form.get('key')
+        file = request.files.get('file')
+        if key and file and file.filename != '':
+            # Guardamos el archivo
+            filename = f"config_{key}_{int(datetime.now().timestamp())}.png"
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            
+            # Actualizamos la DB
+            conf = SiteConfig.query.get(key)
+            if not conf:
+                conf = SiteConfig(key=key, value=filename)
+                db.session.add(conf)
+            else:
+                conf.value = filename
+            db.session.commit()
+            flash(f'Configuración {key} actualizada.')
+    
+    # Cargamos config actual para mostrar
+    configs = SiteConfig.query.all()
+    config_dict = {c.key: c.value for c in configs}
+    
+    # Lista de claves configurables
+    keys_needed = [
+        ('tiktok_bg', 'Fondo TikTok'),
+        ('instagram_bg', 'Fondo Instagram'),
+        ('facebook_bg', 'Fondo Facebook'),
+        ('pdf_bg', 'Fondo PDF'),
+        ('generic_bg', 'Fondo Link Web'),
+        ('youtube_overlay', 'Icono Hover YouTube'),
+        ('image_overlay', 'Icono Hover Imagen'),
+        ('pdf_overlay', 'Icono Hover PDF'),
+        ('tiktok_overlay', 'Icono Hover TikTok'),
+        ('instagram_overlay', 'Icono Hover Instagram'),
+        ('facebook_overlay', 'Icono Hover Facebook'),
+        ('generic_overlay', 'Icono Hover Link Web')
+    ]
+    
+    return render_template('admin_config.html', config_dict=config_dict, keys_needed=keys_needed)
+
 def crear_datos_prueba():
     if Tag.query.count() == 0:
         lista = ["Tiro", "Entrada", "Pase", "Bote", "Defensa", "Rebote", "Físico", "Táctica"]
         for n in lista: db.session.add(Tag(name=n))
+        
+        # Datos iniciales de configuración (Placeholders para no romper la web)
+        defaults = {
+            'tiktok_bg': 'https://placehold.co/600x400/000000/FFF?text=TikTok',
+            'instagram_bg': 'https://placehold.co/600x400/E1306C/FFF?text=Instagram',
+            'facebook_bg': 'https://placehold.co/600x400/1877F2/FFF?text=Facebook',
+            'pdf_bg': 'https://placehold.co/600x400/dc3545/FFF?text=PDF',
+            'generic_bg': 'https://placehold.co/600x400/eee/999?text=Enlace',
+        }
+        for k, v in defaults.items():
+            if not SiteConfig.query.get(k): db.session.add(SiteConfig(key=k, value=v))
+            
         db.session.commit()
 
 if __name__ == '__main__':
