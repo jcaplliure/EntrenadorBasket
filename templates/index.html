@@ -103,7 +103,7 @@
                         
                         {% if drill.cover_image %}
                             <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}">
-                        {% elif drill.media_type == 'image' %}
+                        {% elif drill.media_type == 'image' and drill.media_file %}
                             <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}">
                         {% elif drill.external_link and 'youtu' in drill.external_link %}
                             <img src="{{ drill.external_link|youtube_thumb }}">
