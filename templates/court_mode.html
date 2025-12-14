@@ -3,46 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Modo Pista - {{ plan.name }}</title>
+    <title>Modo Pista Pro - {{ plan.name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #121212; color: #ffffff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .drill-container { flex-grow: 1; display: none; flex-direction: column; padding: 20px; overflow-y: auto; text-align: center; }
+        body { background-color: #000; color: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
+        
+        /* OVERLAYS (INICIO Y FIN) */
+        .fullscreen-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+            padding: 20px; overflow-y: auto;
+        }
+        
+        /* BOTÓN START */
+        .big-start-btn {
+            width: 150px; height: 150px; border-radius: 50%; font-size: 1.5rem;
+            background: #28a745; color: white; border: none; box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
+            animation: pulse 2s infinite; margin-bottom: 30px;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* TABLA RESUMEN FIN */
+        .summary-table { width: 100%; max-width: 500px; margin-bottom: 20px; text-align: left; font-size: 0.9rem; }
+        .summary-table th { color: #888; border-bottom: 1px solid #444; padding: 5px; }
+        .summary-table td { border-bottom: 1px solid #222; padding: 8px 5px; }
+        .time-diff-good { color: #28a745; } /* Ahorro tiempo */
+        .time-diff-bad { color: #dc3545; }  /* Me pasé */
+
+        /* DASHBOARD SUPERIOR */
+        .dashboard-bar {
+            background: #1a1a1a; border-bottom: 1px solid #333; padding: 10px;
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; text-align: center;
+            font-size: 0.8rem;
+        }
+        .dash-item { display: flex; flex-direction: column; }
+        .dash-label { color: #888; font-size: 0.7rem; text-transform: uppercase; }
+        .dash-value { font-weight: bold; font-size: 1.1rem; font-family: monospace; }
+        .text-lag-good { color: #28a745; } 
+        .text-lag-bad { color: #dc3545; }   
+
+        /* CONTENIDO CENTRAL */
+        .drill-container { flex-grow: 1; display: none; flex-direction: column; padding: 15px; overflow-y: auto; text-align: center; }
         .drill-container.active { display: flex; }
         
-        /* Cronómetro */
-        .timer-display { font-size: 4rem; font-weight: bold; font-family: monospace; color: #0d6efd; margin: 10px 0; }
-        .timer-controls button { width: 60px; height: 60px; border-radius: 50%; font-size: 1.5rem; margin: 0 10px; }
+        /* CRONÓMETRO */
+        .timer-section { margin: 15px 0; background: #111; padding: 15px; border-radius: 15px; border: 1px solid #333; }
+        .timer-display { font-size: 3.5rem; font-weight: bold; font-family: monospace; color: #0d6efd; line-height: 1; }
+        .timer-controls button { width: 50px; height: 50px; border-radius: 50%; font-size: 1.2rem; margin: 5px; }
         
-        /* Imagen grande */
+        /* MEDIA */
         .media-box { 
-            width: 100%; height: 250px; background: #222; margin-bottom: 20px; border-radius: 12px; 
+            width: 100%; height: 220px; background: #222; margin-bottom: 15px; border-radius: 12px; 
             display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
         }
         .media-box img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
-        .play-overlay { position: absolute; font-size: 4rem; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .play-overlay { position: absolute; font-size: 4rem; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.5); pointer-events: none; }
 
-        /* Botones navegación */
-        .nav-bar { background: #1e1e1e; padding: 15px; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid #333; }
+        /* FOOTER */
+        .nav-bar { background: #1a1a1a; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #333; }
         .nav-btn { flex-grow: 1; height: 50px; font-weight: bold; font-size: 1.1rem; border-radius: 8px; }
     </style>
 </head>
 <body>
 
-    <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary bg-dark">
-        <h5 class="mb-0 text-truncate" style="max-width: 80%;">{{ plan.name }}</h5>
-        <a href="/plan/{{ plan.id }}" class="btn btn-outline-light btn-sm"><i class="bi bi-x-lg"></i></a>
+    <div id="start-overlay" class="fullscreen-overlay">
+        <h1 class="mb-4 fw-bold">Modo Pista</h1>
+        <button class="big-start-btn fw-bold" onclick="startSession()">
+            <i class="bi bi-play-fill display-3"></i><br>START
+        </button>
+        <a href="/plan/{{ plan.id }}" class="text-white text-decoration-none border-bottom">Salir / Cancelar</a>
     </div>
 
+    <div id="finish-overlay" class="fullscreen-overlay" style="display: none;">
+        <h2 class="mb-3 text-success fw-bold">¡Entrenamiento Finalizado! 🎉</h2>
+        <div class="mb-4">
+            <span class="text-muted">Tiempo Total Real:</span>
+            <h1 class="fw-bold" id="finalTotalTime">00:00</h1>
+        </div>
+
+        <h5 class="text-start w-100 max-width-500 mb-2">Resumen por Ejercicio</h5>
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th>Ejercicio</th>
+                    <th>Plan</th>
+                    <th>Real</th>
+                </tr>
+            </thead>
+            <tbody id="summaryTableBody">
+                </tbody>
+        </table>
+
+        <button class="btn btn-primary btn-lg w-100 mb-3 fw-bold" onclick="saveAndExit()">
+            <i class="bi bi-save"></i> Guardar Tiempos y Salir
+        </button>
+        <a href="/plan/{{ plan.id }}" class="text-muted text-decoration-none">Salir sin guardar cambios</a>
+    </div>
+
+    <div class="dashboard-bar">
+        <div class="dash-item">
+            <span class="dash-label">⏱️ Total</span>
+            <span class="dash-value" id="totalSessionTime">00:00</span>
+        </div>
+        <div class="dash-item">
+            <span class="dash-label">⚠️ Desfase</span>
+            <span class="dash-value text-muted" id="lagTime">--:--</span>
+        </div>
+        <div class="dash-item">
+            <span class="dash-label">🏁 Fin Plan</span>
+            <span class="dash-value text-primary" id="nextFinishTime">--:--</span>
+        </div>
+    </div>
+
+    {% set ns = namespace(cumulative=0) %}
+    
     {% for item in plan.items %}
-    <div class="drill-container {% if loop.first %}active{% endif %}" id="drill-{{ loop.index0 }}" data-duration="{{ item.duration }}">
+    <div class="drill-container {% if loop.first %}active{% endif %}" 
+         id="drill-{{ loop.index0 }}" 
+         data-item-id="{{ item.id }}"
+         data-title="{{ item.drill.title }}"
+         data-duration="{{ item.duration }}"
+         data-planned-start="{{ ns.cumulative }}">
         
-        <div class="text-secondary small text-uppercase fw-bold mb-2">
-            BLOQUE: {{ item.block_name }} • Ejercicio {{ loop.index }} de {{ plan.items|length }}
+        <div class="d-flex justify-content-between text-secondary small text-uppercase fw-bold mb-1">
+            <span>{{ item.block_name }}</span>
+            <span>{{ loop.index }} / {{ plan.items|length }}</span>
         </div>
         
-        <h2 class="fw-bold mb-3">{{ item.drill.title }}</h2>
+        <h3 class="fw-bold mb-2 text-warning">{{ item.drill.title }}</h3>
 
         <div class="media-box" onclick="openMedia('{{ item.drill.media_type }}', '{{ item.drill.media_file }}', '{{ item.drill.external_link }}')">
             {% if item.drill.media_type == 'image' and item.drill.media_file %}
@@ -58,62 +148,201 @@
         </div>
 
         <div class="timer-section">
-            <div class="timer-display" id="timer-{{ loop.index0 }}">
-                {{ "%02d" % item.duration }}:00
-            </div>
-            <div class="timer-controls">
+            <div class="text-muted small mb-1">TIEMPO EJERCICIO ({{ item.duration }}')</div>
+            <div class="timer-display" id="timer-{{ loop.index0 }}">{{ "%02d" % item.duration }}:00</div>
+            <div class="timer-controls mt-2">
                 <button class="btn btn-success" onclick="startTimer({{ loop.index0 }})"><i class="bi bi-play-fill"></i></button>
                 <button class="btn btn-warning" onclick="pauseTimer({{ loop.index0 }})"><i class="bi bi-pause-fill"></i></button>
                 <button class="btn btn-danger" onclick="resetTimer({{ loop.index0 }}, {{ item.duration }})"><i class="bi bi-arrow-counterclockwise"></i></button>
             </div>
         </div>
 
-        <p class="mt-4 text-start text-light opacity-75" style="white-space: pre-wrap;">{{ item.drill.description }}</p>
+        <p class="mt-3 text-start text-light opacity-75 small" style="white-space: pre-wrap;">{{ item.drill.description }}</p>
     </div>
-    {% else %}
-    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-        <h3>Plan vacío</h3>
-    </div>
+    
+    {% set ns.cumulative = ns.cumulative + item.duration %}
     {% endfor %}
 
     <div class="nav-bar">
         <button class="btn btn-secondary nav-btn" onclick="prevDrill()"><i class="bi bi-chevron-left"></i> Anterior</button>
-        <button class="btn btn-primary nav-btn" onclick="nextDrill()">Siguiente <i class="bi bi-chevron-right"></i></button>
+        <button class="btn btn-primary nav-btn" id="nextBtn" onclick="nextDrill()">Siguiente <i class="bi bi-chevron-right"></i></button>
     </div>
 
     <script>
         let currentIdx = 0;
         const totalDrills = {{ plan.items|length }};
-        let timers = {}; // Guardar intervalos
+        let sessionStartTime = null;
+        let drillStartTime = null; // Para medir tiempo real del ejercicio actual
+        let timers = {}; 
+        let intervalGlobal = null;
+        
+        // Almacén de tiempos reales
+        let sessionLog = []; 
+
+        const drillsData = [
+            {% for item in plan.items %}
+            { duration: {{ item.duration }} },
+            {% endfor %}
+        ];
+
+        function startSession() {
+            sessionStartTime = new Date();
+            drillStartTime = new Date(); // Empieza el primer ejercicio
+            document.getElementById('start-overlay').style.display = 'none';
+            intervalGlobal = setInterval(updateDashboard, 1000);
+            startTimer(0);
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            if (!sessionStartTime) return;
+            const now = new Date();
+            const elapsedSecs = Math.floor((now - sessionStartTime) / 1000);
+
+            const h = Math.floor(elapsedSecs / 3600);
+            const m = Math.floor((elapsedSecs % 3600) / 60);
+            const s = elapsedSecs % 60;
+            document.getElementById('totalSessionTime').innerText = 
+                `${h>0?h+':':''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+
+            const currentEl = document.getElementById('drill-' + currentIdx);
+            const plannedStartMin = parseInt(currentEl.getAttribute('data-planned-start'));
+            const plannedStartSecs = plannedStartMin * 60;
+            const lagSecs = elapsedSecs - plannedStartSecs;
+            const lagEl = document.getElementById('lagTime');
+            const lagM = Math.floor(Math.abs(lagSecs) / 60);
+            
+            if (lagSecs > 60) { 
+                lagEl.innerText = `+${lagM} min`;
+                lagEl.className = "dash-value text-lag-bad";
+            } else if (lagSecs < -60) {
+                lagEl.innerText = `-${lagM} min`;
+                lagEl.className = "dash-value text-lag-good";
+            } else {
+                lagEl.innerText = "En hora";
+                lagEl.className = "dash-value text-white";
+            }
+
+            // Hora fin estimada del PLAN completo
+            let totalPlanMins = 0;
+            drillsData.forEach(d => totalPlanMins += d.duration);
+            
+            // Si vamos con retraso (lagSecs > 0), sumamos ese retraso a la hora fin
+            // Hora Fin = Hora Inicio + Duración Plan + Retraso Actual
+            const estimatedEndTime = new Date(sessionStartTime.getTime() + (totalPlanMins * 60000) + (lagSecs > 0 ? lagSecs * 1000 : 0));
+            
+            const endH = estimatedEndTime.getHours();
+            const endM = estimatedEndTime.getMinutes();
+            document.getElementById('nextFinishTime').innerText = `${endH}:${endM.toString().padStart(2,'0')}`;
+        }
+
+        function logDrillTime() {
+            if (!drillStartTime) return;
+            const now = new Date();
+            const actualMinutes = Math.round((now - drillStartTime) / 60000); // Redondeado a minutos
+            const container = document.getElementById('drill-' + currentIdx);
+            
+            // Guardamos datos
+            sessionLog[currentIdx] = {
+                id: container.getAttribute('data-item-id'),
+                title: container.getAttribute('data-title'),
+                planned: parseInt(container.getAttribute('data-duration')),
+                actual: actualMinutes < 1 ? 1 : actualMinutes // Mínimo 1 min
+            };
+            
+            drillStartTime = new Date(); // Reiniciar reloj para siguiente drill
+        }
 
         function showDrill(idx) {
             document.querySelectorAll('.drill-container').forEach(el => el.classList.remove('active'));
             document.getElementById('drill-' + idx).classList.add('active');
+            
+            // Actualizar botón si es el último
+            const nextBtn = document.getElementById('nextBtn');
+            if (idx === totalDrills - 1) {
+                nextBtn.innerHTML = 'Finalizar <i class="bi bi-flag-fill"></i>';
+                nextBtn.classList.remove('btn-primary');
+                nextBtn.classList.add('btn-success');
+            } else {
+                nextBtn.innerHTML = 'Siguiente <i class="bi bi-chevron-right"></i>';
+                nextBtn.classList.add('btn-primary');
+                nextBtn.classList.remove('btn-success');
+            }
         }
 
         function nextDrill() {
+            // Guardar tiempo del actual antes de cambiar
+            logDrillTime();
+            
             if (currentIdx < totalDrills - 1) {
+                pauseTimer(currentIdx);
                 currentIdx++;
                 showDrill(currentIdx);
+            } else {
+                // FIN DEL ENTRENAMIENTO
+                showFinishScreen();
             }
         }
 
         function prevDrill() {
             if (currentIdx > 0) {
+                pauseTimer(currentIdx);
                 currentIdx--;
                 showDrill(currentIdx);
+                drillStartTime = new Date(); // Reset reloj parcial
             }
         }
 
-        // Lógica del Cronómetro
-        function startTimer(idx) {
-            if (timers[idx]) return; // Ya corre
+        function showFinishScreen() {
+            const overlay = document.getElementById('finish-overlay');
+            overlay.style.display = 'flex';
+            document.getElementById('finalTotalTime').innerText = document.getElementById('totalSessionTime').innerText;
             
-            const display = document.getElementById('timer-' + idx);
-            let [mins, secs] = display.innerText.split(':').map(Number);
-            let totalSeconds = mins * 60 + secs;
+            const tbody = document.getElementById('summaryTableBody');
+            tbody.innerHTML = '';
+            
+            sessionLog.forEach(log => {
+                const diff = log.actual - log.planned;
+                let diffClass = '';
+                if (diff > 0) diffClass = 'time-diff-bad'; // Tarde
+                else if (diff < 0) diffClass = 'time-diff-good'; // Ahorro
+                
+                const html = `
+                    <tr>
+                        <td class="text-truncate" style="max-width: 150px;">${log.title}</td>
+                        <td>${log.planned}'</td>
+                        <td class="${diffClass}">${log.actual}'</td>
+                    </tr>
+                `;
+                tbody.innerHTML += html;
+            });
+        }
 
+        async function saveAndExit() {
+            const btn = document.querySelector('#finish-overlay .btn-primary');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+            
+            // Enviamos actualizaciones una a una (simple y robusto)
+            for (const log of sessionLog) {
+                if (log && log.actual > 0) {
+                    await fetch('/update_item_duration', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({item_id: log.id, duration: log.actual})
+                    });
+                }
+            }
+            
+            window.location.href = "/plan/{{ plan.id }}";
+        }
+
+        // TIMER FUNCTIONS (Igual que antes)
+        function startTimer(idx) {
+            if (timers[idx]) return;
+            const display = document.getElementById('timer-' + idx);
             timers[idx] = setInterval(() => {
+                let [mins, secs] = display.innerText.split(':').map(Number);
+                let totalSeconds = mins * 60 + secs;
                 if (totalSeconds > 0) {
                     totalSeconds--;
                     const m = Math.floor(totalSeconds / 60);
@@ -122,23 +351,16 @@
                 } else {
                     clearInterval(timers[idx]);
                     timers[idx] = null;
-                    // Alarma visual (rojo)
                     display.style.color = '#dc3545';
                 }
             }, 1000);
         }
-
-        function pauseTimer(idx) {
-            clearInterval(timers[idx]);
-            timers[idx] = null;
-        }
-
+        function pauseTimer(idx) { clearInterval(timers[idx]); timers[idx] = null; }
         function resetTimer(idx, originalMins) {
             pauseTimer(idx);
             document.getElementById('timer-' + idx).innerText = `${originalMins.toString().padStart(2, '0')}:00`;
             document.getElementById('timer-' + idx).style.color = '#0d6efd';
         }
-
         function openMedia(type, file, link) {
             if (type === 'link') window.open(link, '_blank');
             else if (type === 'pdf' || type === 'image') window.open('/static/uploads/' + file, '_blank');
