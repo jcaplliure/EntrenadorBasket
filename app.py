@@ -157,7 +157,7 @@ def get_youtube_id(url):
     if 'youtube.com' in url and 'v=' in url: return url.split('v=')[1].split('&')[0]
     return None
 
-# --- RUTAS ---
+# --- RUTAS PRINCIPALES ---
 @app.route('/')
 def home():
     query = request.args.get('q', '').strip()
@@ -283,6 +283,7 @@ def delete_drill(id):
         db.session.commit()
     return redirect(request.referrer or '/')
 
+# --- RUTAS DE PLANES ---
 @app.route('/create_plan', methods=['GET', 'POST'])
 @login_required
 def create_plan():
@@ -386,6 +387,38 @@ def duplicate_plan(id):
     flash('Plan duplicado')
     return redirect('/my_plans')
 
+# --- RUTAS DE GESTIÓN Y BORRADO DE PLANES ---
+@app.route('/delete_plan/<int:id>')
+@login_required
+def delete_plan(id):
+    plan = TrainingPlan.query.get_or_404(id)
+    if plan.user_id == current_user.id:
+        db.session.delete(plan)
+        db.session.commit()
+        flash('Plan eliminado correctamente')
+    return redirect('/my_plans')
+
+@app.route('/edit_plan/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_plan(id):
+    plan = TrainingPlan.query.get_or_404(id)
+    if plan.user_id != current_user.id: return redirect('/my_plans')
+    
+    if request.method == 'POST':
+        plan.name = request.form.get('name')
+        plan.team_name = request.form.get('team')
+        date_str = request.form.get('date')
+        if date_str:
+            plan.date = datetime.strptime(date_str, '%Y-%m-%d')
+        plan.notes = request.form.get('notes')
+        plan.structure = request.form.get('blocks_csv')
+        current_user.last_blocks_config = plan.structure
+        db.session.commit()
+        flash('Plan actualizado correctamente')
+        return redirect(url_for('view_plan', id=plan.id))
+        
+    return render_template('edit_plan.html', plan=plan)
+
 @app.route('/drill/<int:id>')
 def view_drill(id):
     drill = Drill.query.get_or_404(id)
@@ -403,6 +436,7 @@ def toggle_fav(id):
         db.session.commit()
     return redirect(request.referrer)
 
+# --- AUTH & ADMIN ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
@@ -503,13 +537,12 @@ def admin_config():
     ]
     return render_template('admin_config.html', config_dict=config_dict, keys_needed=keys_needed)
 
-# --- NUEVA RUTA MODO PISTA ---
+# --- MODO PISTA ---
 @app.route('/court_mode/<int:id>')
 @login_required
 def court_mode(id):
     plan = TrainingPlan.query.get_or_404(id)
     if plan.user_id != current_user.id: return redirect('/')
-    
     return render_template('court_mode.html', plan=plan)
 
 # --- AUTO GEN ICONOS ---

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Editar Plan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/">Entrenador Basket</a>
+            <a href="/my_plans" class="btn btn-outline-light btn-sm">Cancelar</a>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 700px;">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0 fw-bold"><i class="bi bi-pencil-square"></i> Editar Plan</h4>
+            </div>
+            <div class="card-body p-4">
+                
+                <form action="/edit_plan/{{ plan.id }}" method="POST">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Nombre del Entrenamiento</label>
+                            <input type="text" name="name" class="form-control" value="{{ plan.name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Equipo / Categoría</label>
+                            <input type="text" name="team" class="form-control" value="{{ plan.team_name or '' }}">
+                        </div>
+                        
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Fecha</label>
+                            <input type="date" name="date" class="form-control" value="{{ plan.date.strftime('%Y-%m-%d') }}">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Estructura (Bloques)</label>
+                            <div class="alert alert-info small mb-2">
+                                <i class="bi bi-info-circle"></i> Escribe los bloques separados por comas. <br>
+                                <em>Si borras un bloque que tenía ejercicios, esos ejercicios dejarán de verse (pero no se borran).</em>
+                            </div>
+                            <textarea name="blocks_csv" class="form-control" rows="2" required>{{ plan.structure }}</textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Notas / Objetivos</label>
+                            <textarea name="notes" class="form-control" rows="3">{{ plan.notes }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-warning btn-lg fw-bold">Guardar Cambios</button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

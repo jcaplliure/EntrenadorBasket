@@ -38,9 +38,19 @@
                         {% if plan.team_name %} • <span class="badge bg-secondary">{{ plan.team_name }}</span>{% endif %}
                     </p>
                 </a>
-                <a href="/duplicate_plan/{{ plan.id }}" class="btn btn-outline-primary btn-sm rounded-pill" title="Duplicar Plan">
-                    <i class="bi bi-files"></i>
-                </a>
+                
+                <div class="d-flex gap-2">
+                    <a href="/duplicate_plan/{{ plan.id }}" class="btn btn-outline-primary btn-sm rounded-pill" title="Duplicar">
+                        <i class="bi bi-files"></i>
+                    </a>
+                    <a href="/edit_plan/{{ plan.id }}" class="btn btn-outline-warning btn-sm rounded-pill" title="Editar Bloques/Info">
+                        <i class="bi bi-pencil-fill"></i>
+                    </a>
+                    <a href="/delete_plan/{{ plan.id }}" class="btn btn-outline-danger btn-sm rounded-pill" onclick="return confirm('¿Seguro que quieres borrar este plan entero?')" title="Borrar">
+                        <i class="bi bi-trash-fill"></i>
+                    </a>
+                </div>
+
             </div>
             {% else %}
             <div class="text-center py-5">
