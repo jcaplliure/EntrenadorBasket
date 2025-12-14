@@ -27,7 +27,10 @@
                         • <span class="badge bg-primary fs-6">⏱️ <span id="totalTime">{{ total_minutes }}</span> min</span>
                     </p>
                 </div>
-                <div class="no-print">
+                <div class="no-print d-flex gap-2">
+                    <a href="/court_mode/{{ plan.id }}" class="btn btn-purple fw-bold text-white shadow-sm" style="background-color: #6f42c1;">
+                        <i class="bi bi-phone-fill"></i> Modo Pista
+                    </a>
                     <button class="btn btn-outline-dark btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
                 </div>
             </div>
@@ -153,17 +156,13 @@
 
         function filterDrills() {
             const txt = document.getElementById('searchInput').value.toLowerCase();
-            // Obtener etiquetas seleccionadas
             const selectedTags = Array.from(document.querySelectorAll('.tag-filter:checked')).map(cb => cb.value);
 
             document.querySelectorAll('.drill-item').forEach(el => {
                 const title = el.getAttribute('data-title');
                 const drillTags = el.getAttribute('data-tags').split(',');
-                
-                // Lógica de filtrado: Coincide texto Y (si hay tags seleccionados, coincide al menos uno)
                 const matchText = title.includes(txt);
                 const matchTags = selectedTags.length === 0 || selectedTags.some(t => drillTags.includes(t));
-
                 el.style.display = (matchText && matchTags) ? 'block' : 'none';
             });
         }
@@ -178,7 +177,7 @@
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({item_id: itemId, duration: newDuration})
-            }).then(() => location.reload()); // Recargar para actualizar total
+            }).then(() => location.reload()); 
         }
     </script>
 </body>
