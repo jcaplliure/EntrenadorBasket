@@ -143,21 +143,24 @@ def compress_image(file):
     output.seek(0)
     return output
 
-@app.template_filter('youtube_thumb')
-def youtube_thumb(url):
+# --- MEJORA INTELIGENTE DE YOUTUBE ---
+def extract_youtube_id(url):
     if not url: return None
     vid_id = None
-    if 'youtu.be' in url: vid_id = url.split('/')[-1]
-    elif 'v=' in url: vid_id = url.split('v=')[1].split('&')[0]
+    if '/shorts/' in url: return url.split('/shorts/')[-1].split('?')[0]
+    if 'youtu.be/' in url: return url.split('youtu.be/')[-1].split('?')[0]
+    if 'v=' in url: return url.split('v=')[1].split('&')[0]
+    return None
+
+@app.template_filter('youtube_thumb')
+def youtube_thumb(url):
+    vid_id = extract_youtube_id(url)
     if vid_id: return f"https://img.youtube.com/vi/{vid_id}/mqdefault.jpg"
     return None
 
 @app.template_filter('get_youtube_id')
 def get_youtube_id(url):
-    if not url: return None
-    if 'youtu.be' in url: return url.split('/')[-1]
-    if 'youtube.com' in url and 'v=' in url: return url.split('v=')[1].split('&')[0]
-    return None
+    return extract_youtube_id(url)
 
 # --- RUTAS PRINCIPALES ---
 @app.route('/')
@@ -533,7 +536,7 @@ def admin_config():
     ]
     return render_template('admin_config.html', config_dict=config_dict, keys_needed=keys_needed)
 
-# --- NUEVA RUTA: IMPORTADOR CSV (AÑADIDO AL FINAL) ---
+# --- NUEVA RUTA: IMPORTADOR CSV MEJORADO (BUSCA POR LINK) ---
 @app.route('/admin/import_drills', methods=['POST'])
 @login_required
 def import_drills():
@@ -545,47 +548,58 @@ def import_drills():
         return redirect('/admin/config')
 
     try:
-        # Leemos el CSV en memoria
         stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
         csv_input = csv.reader(stream)
-        
         count_success = 0
+        count_updated = 0
         
         for row in csv_input:
-            # Asumimos formato: Col 0=Link, Col 1=Titulo, Col 2=Etiqueta
             if len(row) < 3: continue 
-            
             link = row[0].strip()
             title = row[1].strip()
-            tag_name = row[2].strip()
+            tags_string = row[2].strip()
+            tags_list_raw = tags_string.split(',') 
             
-            # 1. Evitar duplicados por título
-            if Drill.query.filter_by(title=title).first():
-                continue
+            # --- 1. BUSCAR SI YA EXISTE (SOLO POR LINK) ---
+            existing_drill = Drill.query.filter_by(external_link=link).first()
+            
+            target_drill = None
+            
+            if existing_drill:
+                # Si existe el Link, actualizamos ese
+                target_drill = existing_drill
+                count_updated += 1
+            else:
+                # Si no existe el Link, creamos uno nuevo
+                target_drill = Drill(
+                    title=title,
+                    description="Importado automáticamente",
+                    external_link=link,
+                    media_type='link',
+                    user_id=current_user.id,
+                    is_public=True
+                )
+                db.session.add(target_drill)
+                count_success += 1
+            
+            # --- 2. PROCESAR Y AÑADIR ETIQUETAS (Sin duplicar) ---
+            for t_raw in tags_list_raw:
+                t_clean = t_raw.strip().capitalize()
+                if not t_clean: continue
                 
-            # 2. Gestionar etiqueta
-            tag = Tag.query.filter_by(name=tag_name).first()
-            if not tag and tag_name:
-                tag = Tag(name=tag_name)
-                db.session.add(tag)
-                db.session.commit() # Guardar tag para usarlo ya
-            
-            # 3. Crear Drill
-            new_drill = Drill(
-                title=title,
-                description="Importado automáticamente",
-                external_link=link,
-                media_type='link', # Asumimos link por defecto
-                user_id=current_user.id,
-                is_public=True
-            )
-            
-            if tag: new_drill.primary_tags.append(tag)
-            db.session.add(new_drill)
-            count_success += 1
+                # Buscar o Crear etiqueta en DB
+                tag = Tag.query.filter_by(name=t_clean).first()
+                if not tag:
+                    tag = Tag(name=t_clean)
+                    db.session.add(tag)
+                    db.session.commit()
+                
+                # Añadir al drill si no la tiene ya
+                if tag not in target_drill.primary_tags:
+                    target_drill.primary_tags.append(tag)
             
         db.session.commit()
-        flash(f'✅ Importación completada: {count_success} ejercicios nuevos.')
+        flash(f'✅ Importación: {count_success} nuevos, {count_updated} actualizados.')
         
     except Exception as e:
         flash(f'❌ Error al importar: {str(e)}')
@@ -599,7 +613,6 @@ def court_mode(id):
     if plan.user_id != current_user.id: return redirect('/')
     return render_template('court_mode.html', plan=plan)
 
-# --- AUTO GEN ICONOS ---
 def generar_icono_banana(nombre, simbolo):
     path = os.path.join(app.config['UPLOAD_FOLDER'], nombre)
     if os.path.exists(path): return 
@@ -615,6 +628,7 @@ def generar_icono_banana(nombre, simbolo):
         draw.rectangle((60, 40, 140, 160), outline=(255, 255, 255, 230), width=8)
         draw.line((80, 70, 120, 70), fill=(255, 255, 255, 180), width=4)
         draw.line((80, 100, 120, 100), fill=(255, 255, 255, 180), width=4)
+        draw.line((80, 130, 120, 130), fill=(255, 255, 255, 180), width=4)
     elif simbolo == 'social':
         draw.ellipse((50, 50, 150, 150), outline=(255, 255, 255, 230), width=8)
         draw.text((85, 80), "App", fill=(255, 255, 255, 255))

@@ -9,6 +9,8 @@
     <style>
         .cover-selector input:checked + label { border-color: #0d6efd; background-color: #f8f9fa; box-shadow: 0 0 0 2px #0d6efd; }
         .preview-box { height: 120px; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; }
+        .paste-zone { transition: all 0.3s; }
+        .paste-zone:hover { border-color: #0d6efd !important; background: #e9ecef; }
     </style>
 </head>
 <body class="bg-light">
@@ -31,7 +33,7 @@
             </div>
             <div class="card-body p-4">
                 
-                <form action="/create" method="POST" enctype="multipart/form-data">
+                <form action="/create" method="POST" enctype="multipart/form-data" id="mainForm">
                     
                     <div class="mb-3">
                         <label class="fw-bold">Título</label>
@@ -71,6 +73,7 @@
                             <label class="small text-muted">Pega el enlace (YouTube, TikTok, Instagram...)</label>
                             <div class="input-group mb-2">
                                 <input type="url" name="external_link" id="linkField" class="form-control" placeholder="https://..." oninput="detectLink()">
+                                <a id="btnPreviewLink" href="#" target="_blank" class="btn btn-warning" style="display:none;" title="Abrir para capturar"><i class="bi bi-eye-fill"></i></a>
                                 <button type="button" class="btn btn-outline-secondary" onclick="testLink()">Testear</button>
                             </div>
                             <div id="linkFeedback" class="small mb-2"></div>
@@ -99,22 +102,27 @@
                         </div>
                         <div class="col-6">
                             <input type="radio" class="btn-check" name="cover_option" id="cover_custom" value="custom" onchange="toggleCoverInput(true)">
-                            <label class="card h-100 cursor-pointer" for="cover_custom">
+                            <label class="card h-100 cursor-pointer paste-zone" for="cover_custom" id="pasteZoneLabel">
                                 <div class="card-body p-2 text-center">
-                                    <div class="preview-box mb-2 bg-white border"><i class="bi bi-cloud-upload display-4 text-primary"></i></div>
-                                    <small class="fw-bold d-block">Subir Propia</small>
+                                    <div class="preview-box mb-2 bg-white border">
+                                        <img id="customPreviewImg" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+                                        <i id="customIcon" class="bi bi-cloud-upload display-4 text-primary"></i>
+                                    </div>
+                                    <small class="fw-bold d-block">Click o Pega (Ctrl+V)</small>
                                 </div>
                             </label>
                         </div>
                     </div>
+                    
                     <div id="customCoverInput" class="mb-4" style="display:none;">
-                        <input type="file" name="custom_cover_file" id="customCoverFileField" class="form-control" accept="image/*">
+                        <input type="file" name="custom_cover_file" id="customCoverFileField" class="form-control" accept="image/*" onchange="previewCustomFile(this)">
+                        <div class="form-text small text-success" id="pasteMsg" style="display:none;">¡Imagen pegada del portapapeles!</div>
                     </div>
 
                     <hr class="my-4">
 
                     <div class="mb-3">
-                        <label class="fw-bold">Etiquetas</label>
+                        <label class="fw-bold">Etiquetas (Máx 3)</label>
                         <div class="d-flex flex-wrap gap-2">
                             {% for tag in etiquetas %}
                             <div>
@@ -140,7 +148,6 @@
     </div>
 
     <script>
-        // Configuración BANANA
         const BANANA_IMGS = {
             tiktok: "{{ get_config_url('tiktok_bg') }}",
             instagram: "{{ get_config_url('instagram_bg') }}",
@@ -161,7 +168,6 @@
                 detectLink();
             } else {
                 secLink.style.display = 'none'; secFile.style.display = 'block';
-                
                 if(type === 'image') {
                     fileField.accept = "image/*";
                     document.getElementById('fileHelp').innerText = "Se comprimirá automáticamente.";
@@ -173,17 +179,22 @@
                 } else { 
                     fileField.accept = "video/mp4"; 
                 }
-
-                if (autoOpen) {
-                    setTimeout(() => fileField.click(), 100);
-                }
+                if (autoOpen) setTimeout(() => fileField.click(), 100);
             }
         }
 
         function detectLink() {
             const url = document.getElementById('linkField').value;
-            let finalSrc = BANANA_IMGS.generic;
+            const btnPreview = document.getElementById('btnPreviewLink');
+            
+            if (url) {
+                btnPreview.href = url;
+                btnPreview.style.display = 'inline-block';
+            } else {
+                btnPreview.style.display = 'none';
+            }
 
+            let finalSrc = BANANA_IMGS.generic;
             if (url.includes('youtu')) {
                 let vidId = url.split('v=')[1];
                 if(!vidId && url.includes('youtu.be/')) vidId = url.split('youtu.be/')[1];
@@ -204,17 +215,10 @@
             img.src = src; img.style.display = 'block'; icon.style.display = 'none';
         }
 
-        // Nueva función para auto-abrir portada
         function toggleCoverInput(autoOpen = false) {
             const isCustom = document.getElementById('cover_custom').checked;
-            const coverContainer = document.getElementById('customCoverInput');
-            const coverField = document.getElementById('customCoverFileField');
-            
-            coverContainer.style.display = isCustom ? 'block' : 'none';
-
-            if (isCustom && autoOpen) {
-                setTimeout(() => coverField.click(), 100);
-            }
+            document.getElementById('customCoverInput').style.display = isCustom ? 'block' : 'none';
+            if (isCustom && autoOpen) setTimeout(() => document.getElementById('customCoverFileField').click(), 100);
         }
         
         function testLink() {
@@ -233,6 +237,52 @@
                 else feedback.innerHTML = '<span class="text-danger fw-bold">❌ No accesible (puede ser privado)</span>';
             });
         }
+
+        // --- PEGADO MÁGICO ---
+        document.addEventListener('paste', function(event) {
+            const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.includes('image')) {
+                    const blob = item.getAsFile();
+                    const fileInput = document.getElementById('customCoverFileField');
+                    const file = new File([blob], "pasted_image.png", { type: "image/png" });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    fileInput.files = dataTransfer.files;
+
+                    document.getElementById('cover_custom').checked = true;
+                    toggleCoverInput(false);
+                    previewCustomFile(fileInput);
+                    
+                    document.getElementById('pasteMsg').style.display = 'block';
+                    setTimeout(() => document.getElementById('pasteMsg').style.display = 'none', 3000);
+                }
+            }
+        });
+
+        function previewCustomFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('customPreviewImg').src = e.target.result;
+                    document.getElementById('customPreviewImg').style.display = 'block';
+                    document.getElementById('customIcon').style.display = 'none';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // LÍMITE DE 3 ETIQUETAS
+        document.querySelectorAll('input[name="primary_tags"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const checked = document.querySelectorAll('input[name="primary_tags"]:checked');
+                if (checked.length > 3) {
+                    this.checked = false;
+                    alert("⚠️ Solo puedes seleccionar un máximo de 3 etiquetas.");
+                }
+            });
+        });
     </script>
 </body>
 </html>
