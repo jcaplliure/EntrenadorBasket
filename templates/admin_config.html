@@ -20,7 +20,27 @@
     </nav>
 
     <div class="container pb-5">
-        <h2 class="mb-4">🎨 Personalización de Tarjetas</h2>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-info mb-4">{{ messages[0] }}</div>
+            {% endif %}
+        {% endwith %}
+
+        <h3 class="mb-3 text-warning border-bottom border-secondary pb-2">📂 Gestión de Datos</h3>
+        <div class="card bg-secondary text-white mb-5 border-0 shadow">
+            <div class="card-body">
+                <h5 class="card-title fw-bold"><i class="bi bi-file-earmark-spreadsheet"></i> Importar Ejercicios desde CSV</h5>
+                <p class="small text-light">Sube un archivo CSV con 3 columnas (sin cabecera): <strong>Link, Título, Etiqueta</strong>.</p>
+                
+                <form action="/admin/import_drills" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
+                    <input type="file" name="file" class="form-control" accept=".csv" required>
+                    <button class="btn btn-success fw-bold" type="submit">Importar</button>
+                </form>
+            </div>
+        </div>
+
+        <h3 class="mb-3 text-warning border-bottom border-secondary pb-2">🎨 Personalización de Tarjetas</h3>
         
         <div class="row row-cols-1 row-cols-md-3 g-4">
             {% for key, label in keys_needed %}

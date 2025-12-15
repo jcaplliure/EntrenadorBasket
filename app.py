@@ -1,6 +1,8 @@
 import os
 import requests
 import json
+import csv
+import io
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -283,7 +285,6 @@ def delete_drill(id):
         db.session.commit()
     return redirect(request.referrer or '/')
 
-# --- RUTAS DE PLANES ---
 @app.route('/create_plan', methods=['GET', 'POST'])
 @login_required
 def create_plan():
@@ -387,7 +388,6 @@ def duplicate_plan(id):
     flash('Plan duplicado')
     return redirect('/my_plans')
 
-# --- RUTAS DE GESTIÓN Y BORRADO DE PLANES ---
 @app.route('/delete_plan/<int:id>')
 @login_required
 def delete_plan(id):
@@ -403,20 +403,17 @@ def delete_plan(id):
 def edit_plan(id):
     plan = TrainingPlan.query.get_or_404(id)
     if plan.user_id != current_user.id: return redirect('/my_plans')
-    
     if request.method == 'POST':
         plan.name = request.form.get('name')
         plan.team_name = request.form.get('team')
         date_str = request.form.get('date')
-        if date_str:
-            plan.date = datetime.strptime(date_str, '%Y-%m-%d')
+        if date_str: plan.date = datetime.strptime(date_str, '%Y-%m-%d')
         plan.notes = request.form.get('notes')
         plan.structure = request.form.get('blocks_csv')
         current_user.last_blocks_config = plan.structure
         db.session.commit()
         flash('Plan actualizado correctamente')
         return redirect(url_for('view_plan', id=plan.id))
-        
     return render_template('edit_plan.html', plan=plan)
 
 @app.route('/drill/<int:id>')
@@ -436,7 +433,6 @@ def toggle_fav(id):
         db.session.commit()
     return redirect(request.referrer)
 
-# --- AUTH & ADMIN ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
@@ -537,7 +533,65 @@ def admin_config():
     ]
     return render_template('admin_config.html', config_dict=config_dict, keys_needed=keys_needed)
 
-# --- MODO PISTA ---
+# --- NUEVA RUTA: IMPORTADOR CSV (AÑADIDO AL FINAL) ---
+@app.route('/admin/import_drills', methods=['POST'])
+@login_required
+def import_drills():
+    if not current_user.is_admin: return redirect('/')
+    
+    file = request.files['file']
+    if not file or file.filename == '':
+        flash('No has seleccionado ningún archivo')
+        return redirect('/admin/config')
+
+    try:
+        # Leemos el CSV en memoria
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_input = csv.reader(stream)
+        
+        count_success = 0
+        
+        for row in csv_input:
+            # Asumimos formato: Col 0=Link, Col 1=Titulo, Col 2=Etiqueta
+            if len(row) < 3: continue 
+            
+            link = row[0].strip()
+            title = row[1].strip()
+            tag_name = row[2].strip()
+            
+            # 1. Evitar duplicados por título
+            if Drill.query.filter_by(title=title).first():
+                continue
+                
+            # 2. Gestionar etiqueta
+            tag = Tag.query.filter_by(name=tag_name).first()
+            if not tag and tag_name:
+                tag = Tag(name=tag_name)
+                db.session.add(tag)
+                db.session.commit() # Guardar tag para usarlo ya
+            
+            # 3. Crear Drill
+            new_drill = Drill(
+                title=title,
+                description="Importado automáticamente",
+                external_link=link,
+                media_type='link', # Asumimos link por defecto
+                user_id=current_user.id,
+                is_public=True
+            )
+            
+            if tag: new_drill.primary_tags.append(tag)
+            db.session.add(new_drill)
+            count_success += 1
+            
+        db.session.commit()
+        flash(f'✅ Importación completada: {count_success} ejercicios nuevos.')
+        
+    except Exception as e:
+        flash(f'❌ Error al importar: {str(e)}')
+        
+    return redirect('/admin/config')
+
 @app.route('/court_mode/<int:id>')
 @login_required
 def court_mode(id):
@@ -561,7 +615,6 @@ def generar_icono_banana(nombre, simbolo):
         draw.rectangle((60, 40, 140, 160), outline=(255, 255, 255, 230), width=8)
         draw.line((80, 70, 120, 70), fill=(255, 255, 255, 180), width=4)
         draw.line((80, 100, 120, 100), fill=(255, 255, 255, 180), width=4)
-        draw.line((80, 130, 120, 130), fill=(255, 255, 255, 180), width=4)
     elif simbolo == 'social':
         draw.ellipse((50, 50, 150, 150), outline=(255, 255, 255, 230), width=8)
         draw.text((85, 80), "App", fill=(255, 255, 255, 255))
