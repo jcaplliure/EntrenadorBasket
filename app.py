@@ -162,33 +162,45 @@ def youtube_thumb(url):
 def get_youtube_id(url):
     return extract_youtube_id(url)
 
-# --- RUTAS PRINCIPALES ---
+# --- RUTAS PRINCIPALES (MODIFICADO PARA GUEST) ---
 @app.route('/')
 def home():
+    # 1. Recogemos filtros (funcionan para todos)
     query = request.args.get('q', '').strip()
     primary_ids = request.args.getlist('primary')
     filter_type = request.args.getlist('filter_type')
     sort_by = request.args.get('sort_by', 'favs_desc') 
     
-    if current_user.is_authenticated: base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
-    else: base_condition = (Drill.is_public == True)
+    # 2. Lógica de Seguridad (Guest vs User)
+    if current_user.is_authenticated:
+        # Si estás logueado: Ves lo público + lo tuyo privado
+        base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
+    else:
+        # Si eres invitado: SOLO ves lo público
+        base_condition = (Drill.is_public == True)
 
     drills_query = Drill.query.filter(base_condition)
     
+    # 3. Aplicar Filtros (si existen)
     if filter_type:
         conditions = []
         if current_user.is_authenticated:
+            # Filtros avanzados solo para usuarios
             if 'my_private' in filter_type: conditions.append(and_(Drill.user_id == current_user.id, Drill.is_public == False))
             if 'my_public' in filter_type: conditions.append(and_(Drill.user_id == current_user.id, Drill.is_public == True))
             if 'others' in filter_type: conditions.append(and_(Drill.user_id != current_user.id, Drill.is_public == True))
             if 'favorites' in filter_type:
                 fav_ids = [d.id for d in current_user.favoritos]
                 conditions.append(Drill.id.in_(fav_ids) if fav_ids else Drill.id == -1)
+        # Si un invitado intenta filtrar "Mis privados", simplemente no añadimos esa condición y no rompe nada.
+        
         if conditions: drills_query = drills_query.filter(or_(*conditions))
 
+    # 4. Buscador y Etiquetas (Para todos)
     if query: drills_query = drills_query.filter(or_(Drill.title.ilike(f'%{query}%'), Drill.description.ilike(f'%{query}%')))
     if primary_ids: drills_query = drills_query.filter(Drill.primary_tags.any(Tag.id.in_(primary_ids)))
 
+    # 5. Ordenación
     if sort_by == 'views_desc': drills_query = drills_query.order_by(Drill.views.desc())
     elif sort_by == 'favs_desc': drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
     elif sort_by == 'name_asc': drills_query = drills_query.order_by(Drill.title.asc())
@@ -422,8 +434,10 @@ def edit_plan(id):
 @app.route('/drill/<int:id>')
 def view_drill(id):
     drill = Drill.query.get_or_404(id)
+    # Si NO es público, exigimos login y ser dueño
     if not drill.is_public:
         if not current_user.is_authenticated or drill.user_id != current_user.id: return redirect('/')
+    # Si ES público, cualquier invitado puede verlo
     return render_template('view_drill_modal.html', drill=drill)
 
 @app.route('/toggle_fav/<int:id>')
@@ -436,6 +450,7 @@ def toggle_fav(id):
         db.session.commit()
     return redirect(request.referrer)
 
+# --- AUTH & ADMIN ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
