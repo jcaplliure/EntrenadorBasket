@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ team.name }} - Plantilla</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .player-card { transition: transform 0.2s; }
+        .player-card:hover { transform: translateY(-3px); }
+        .dorsal-badge { 
+            position: absolute; top: 10px; right: 10px; 
+            background: #fd7e14; color: white; width: 35px; height: 35px; 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
+        <div class="container">
+            <span class="navbar-brand fw-bold">{{ team.name }}</span>
+            <a href="/my_teams" class="btn btn-light btn-sm text-primary fw-bold">Volver</a>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+
+        <div class="card border-0 shadow-sm mb-4 p-3">
+            <h6 class="fw-bold text-muted mb-3"><i class="bi bi-person-plus-fill"></i> Añadir Jugador</h6>
+            <form method="POST" enctype="multipart/form-data" class="row g-2 align-items-end">
+                <div class="col-3 col-md-2">
+                    <label class="small text-muted">Dorsal</label>
+                    <input type="number" name="dorsal" class="form-control" placeholder="#" required>
+                </div>
+                <div class="col-9 col-md-5">
+                    <label class="small text-muted">Nombre</label>
+                    <input type="text" name="name" class="form-control" placeholder="Nombre del jugador" required>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="small text-muted">Foto (Opcional)</label>
+                    <input type="file" name="photo" class="form-control" accept="image/*">
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">Añadir</button>
+                </div>
+            </form>
+        </div>
+
+        <h5 class="mb-3 text-muted">Plantilla ({{ team.players|length }} Jugadores)</h5>
+
+        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3">
+            {% for player in team.players|sort(attribute='dorsal') %}
+            <div class="col">
+                <div class="card h-100 border-0 shadow-sm player-card overflow-hidden">
+                    <div class="dorsal-badge">{{ player.dorsal }}</div>
+                    
+                    <div style="height: 150px; background: #e9ecef; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        {% if player.photo_file %}
+                            <img src="{{ url_for('static', filename='uploads/' + player.photo_file) }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <i class="bi bi-person-fill fs-1 text-secondary opacity-50"></i>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-body p-2 text-center">
+                        <h6 class="card-title fw-bold text-truncate mb-0">{{ player.name }}</h6>
+                    </div>
+                    <div class="card-footer bg-white border-0 p-1 text-center">
+                        <a href="/delete_player/{{ player.id }}" class="text-danger small text-decoration-none" onclick="return confirm('¿Eliminar jugador?')">Eliminar</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</body>
+</html>

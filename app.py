@@ -571,10 +571,7 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user)
-        
-        # --- CARGAR CONFIG DEFAULT ---
         create_default_game_config(new_user.id)
-        
         return redirect('/')
     return render_template('register.html')
 
@@ -585,6 +582,8 @@ def login():
         user = User.query.filter_by(email=request.form['email']).first()
         if user and user.check_password(request.form['password']):
             login_user(user)
+            # Aseguramos que tenga config si es un usuario antiguo
+            if not user.actions_config: create_default_game_config(user.id)
             return redirect('/')
         else: flash('Error login')
     return render_template('login.html')
@@ -604,10 +603,10 @@ def google_auth():
         user = User(email=email, name=token['userinfo'].get('name', email.split('@')[0]), is_admin=is_admin)
         db.session.add(user)
         db.session.commit()
-        # --- CARGAR CONFIG DEFAULT ---
         create_default_game_config(user.id)
-        
     login_user(user)
+    # Aseguramos config para logins existentes
+    if not user.actions_config: create_default_game_config(user.id)
     return redirect('/')
 
 @app.route('/logout')
@@ -715,6 +714,86 @@ def court_mode(id):
     plan = TrainingPlan.query.get_or_404(id)
     if plan.user_id != current_user.id: return redirect('/')
     return render_template('court_mode.html', plan=plan)
+
+# --- RUTAS GAME TRACKER (FASE 2: EQUIPOS Y JUGADORES) ---
+
+@app.route('/my_teams', methods=['GET', 'POST'])
+@login_required
+def my_teams():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        category = request.form.get('category')
+        # Logo opcional
+        logo_filename = None
+        file = request.files.get('logo')
+        if file and file.filename != '':
+            logo_filename = f"team_{int(datetime.now().timestamp())}.jpg"
+            comp = compress_image(file)
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], logo_filename), 'wb') as f: 
+                f.write(comp.getbuffer())
+        
+        new_team = Team(name=name, category=category, logo_file=logo_filename, user_id=current_user.id)
+        db.session.add(new_team)
+        db.session.commit()
+        return redirect('/my_teams')
+    
+    teams = Team.query.filter_by(user_id=current_user.id).all()
+    return render_template('my_teams.html', teams=teams)
+
+@app.route('/team/<int:id>', methods=['GET', 'POST'])
+@login_required
+def view_team(id):
+    team = Team.query.get_or_404(id)
+    if team.user_id != current_user.id: return redirect('/')
+    
+    if request.method == 'POST': # Añadir jugador
+        name = request.form.get('name')
+        dorsal = request.form.get('dorsal')
+        
+        photo_filename = None
+        file = request.files.get('photo')
+        if file and file.filename != '':
+            photo_filename = f"player_{int(datetime.now().timestamp())}.jpg"
+            comp = compress_image(file)
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], photo_filename), 'wb') as f: 
+                f.write(comp.getbuffer())
+                
+        new_player = Player(name=name, dorsal=int(dorsal), photo_file=photo_filename, team_id=team.id)
+        db.session.add(new_player)
+        db.session.commit()
+        return redirect(url_for('view_team', id=team.id))
+
+    return render_template('view_team.html', team=team)
+
+@app.route('/delete_player/<int:id>')
+@login_required
+def delete_player(id):
+    player = Player.query.get_or_404(id)
+    if player.team.user_id == current_user.id:
+        team_id = player.team.id
+        db.session.delete(player)
+        db.session.commit()
+        return redirect(url_for('view_team', id=team_id))
+    return redirect('/')
+
+@app.route('/delete_team/<int:id>')
+@login_required
+def delete_team(id):
+    team = Team.query.get_or_404(id)
+    if team.user_id == current_user.id:
+        db.session.delete(team)
+        db.session.commit()
+    return redirect('/my_teams')
+
+@app.route('/game_config', methods=['GET', 'POST'])
+@login_required
+def game_config():
+    # Dejamos la ruta lista pero vacía por ahora para que no de error si el usuario la busca
+    if request.method == 'POST':
+        pass
+    actions = ActionDefinition.query.filter_by(user_id=current_user.id).order_by(ActionDefinition.is_positive.desc()).all()
+    rankings = RankingDefinition.query.filter_by(user_id=current_user.id).all()
+    return render_template('game_config.html', actions=actions, rankings=rankings)
 
 def generar_icono_banana(nombre, simbolo):
     path = os.path.join(app.config['UPLOAD_FOLDER'], nombre)

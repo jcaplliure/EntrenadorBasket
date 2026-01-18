@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mis Equipos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1"><i class="bi bi-people-fill text-warning"></i> Mis Equipos</span>
+            <a href="/" class="btn btn-outline-light btn-sm">Volver al Inicio</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        
+        <div class="d-grid gap-2 mb-4">
+            <button class="btn btn-primary fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#newTeamForm">
+                <i class="bi bi-plus-circle"></i> Crear Nuevo Equipo
+            </button>
+        </div>
+
+        <div class="collapse mb-4" id="newTeamForm">
+            <div class="card card-body shadow-sm border-0">
+                <h5 class="mb-3">Nuevo Equipo</h5>
+                <form action="/my_teams" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre del Equipo</label>
+                        <input type="text" name="name" class="form-control" placeholder="Ej: Cadete A, Los Bulls..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Categoría / Temporada</label>
+                        <input type="text" name="category" class="form-control" placeholder="Ej: 2023-2024 Preferente">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Escudo / Logo (Opcional)</label>
+                        <input type="file" name="logo" class="form-control" accept="image/*">
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Guardar Equipo</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for team in teams %}
+            <div class="col">
+                <div class="card h-100 shadow-sm border-0 text-center p-3">
+                    <div class="mx-auto mb-3" style="width: 80px; height: 80px; background: #eee; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        {% if team.logo_file %}
+                            <img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <i class="bi bi-shield-shaded fs-1 text-secondary"></i>
+                        {% endif %}
+                    </div>
+                    <h4 class="fw-bold mb-1">{{ team.name }}</h4>
+                    <p class="text-muted small mb-3">{{ team.category }}</p>
+                    <div class="d-grid gap-2">
+                        <a href="/team/{{ team.id }}" class="btn btn-outline-primary"><i class="bi bi-person-lines-fill"></i> Gestionar Plantilla</a>
+                        <a href="/delete_team/{{ team.id }}" class="btn btn-sm btn-link text-danger text-decoration-none" onclick="return confirm('¿Borrar equipo y jugadores?')">Eliminar</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not teams %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-basket display-1 opacity-25"></i>
+            <p class="mt-3">Aún no tienes equipos creados.</p>
+        </div>
+        {% endif %}
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
