@@ -56,12 +56,10 @@ drill_secondary_tags = db.Table('drill_secondary_tags',
     db.Column('drill_id', db.Integer, db.ForeignKey('drill.id'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
 )
-# Tabla para saber qué acciones componen un Ranking (ej: Ranking Defensor = Robo + Tapon)
 ranking_ingredients = db.Table('ranking_ingredients',
     db.Column('ranking_id', db.Integer, db.ForeignKey('ranking_definition.id'), primary_key=True),
     db.Column('action_id', db.Integer, db.ForeignKey('action_definition.id'), primary_key=True)
 )
-# Tabla para saber qué jugadores fueron convocados a un partido
 match_roster = db.Table('match_roster',
     db.Column('match_id', db.Integer, db.ForeignKey('match.id'), primary_key=True),
     db.Column('player_id', db.Integer, db.ForeignKey('player.id'), primary_key=True)
@@ -107,18 +105,16 @@ class Player(db.Model):
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
 
 class ActionDefinition(db.Model):
-    """Acciones configurables: Rebote, Asistencia, etc."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
-    value = db.Column(db.Float, nullable=False) # Puede ser 1.0, 0.5, -0.25...
-    is_positive = db.Column(db.Boolean, default=True) # Para pintar verde o rojo
+    value = db.Column(db.Float, nullable=False) 
+    is_positive = db.Column(db.Boolean, default=True) 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 class RankingDefinition(db.Model):
-    """Rankings configurables: El Pulpo, El Muro..."""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
-    icon = db.Column(db.String(50), default="trophy") # nombre de icono o archivo
+    icon = db.Column(db.String(50), default="trophy") 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     ingredients = db.relationship('ActionDefinition', secondary=ranking_ingredients, backref='used_in_rankings')
 
@@ -130,21 +126,20 @@ class Match(db.Model):
     result_us = db.Column(db.Integer, default=0)
     result_them = db.Column(db.Integer, default=0)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False) # Qué equipo nuestro jugó
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False) 
     
     roster = db.relationship('Player', secondary=match_roster, backref='matches_played')
     events = db.relationship('MatchEvent', backref='match', lazy=True, cascade="all, delete-orphan")
 
 class MatchEvent(db.Model):
-    """El registro de cada click durante el partido"""
     id = db.Column(db.Integer, primary_key=True)
     match_id = db.Column(db.Integer, db.ForeignKey('match.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     action_id = db.Column(db.Integer, db.ForeignKey('action_definition.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    game_minute = db.Column(db.Integer, default=0) # Minuto de juego aproximado
+    game_minute = db.Column(db.Integer, default=0) 
 
-# --- MODELOS ENTRENAMIENTO (ANTIGUOS) ---
+# --- MODELOS ENTRENAMIENTO ---
 class SiteConfig(db.Model):
     key = db.Column(db.String(50), primary_key=True) 
     value = db.Column(db.String(255), nullable=False) 
@@ -237,53 +232,37 @@ def get_youtube_id(url):
 
 # --- FUNCION MÁGICA: BATTERY INCLUDED ---
 def create_default_game_config(user_id):
-    """Crea las acciones y rankings por defecto para un usuario nuevo"""
-    # 1. ACCIONES
     defaults = [
-        # (Nombre, Valor, EsPositivo)
-        ("Rebote Ataque", 1.0, True),
-        ("Rebote Defensa", 1.0, True),
-        ("Asistencia", 1.0, True),
-        ("Tapón", 1.0, True),
-        ("Robo", 1.0, True),
-        ("Provocar Pérdida", 1.0, True),
-        ("Gritar Presión", 1.0, True),
-        ("Canasta Fallada", -0.25, False),
-        ("Balón Perdido", -0.5, False),
-        ("Recibo Tapón/Robo", -0.5, False)
+        ("Rebote Ataque", 1.0, True), ("Rebote Defensa", 1.0, True),
+        ("Asistencia", 1.0, True), ("Tapón", 1.0, True),
+        ("Robo", 1.0, True), ("Provocar Pérdida", 1.0, True),
+        ("Gritar Presión", 1.0, True), ("Canasta Fallada", -0.25, False),
+        ("Balón Perdido", -0.5, False), ("Recibo Tapón/Robo", -0.5, False)
     ]
-    
     created_actions = {}
     for name, val, is_pos in defaults:
         act = ActionDefinition(name=name, value=val, is_positive=is_pos, user_id=user_id)
         db.session.add(act)
         created_actions[name] = act
+    db.session.commit() 
     
-    db.session.commit() # Guardamos para tener IDs
-    
-    # 2. RANKINGS POR DEFECTO
-    # MVP: Todas las acciones
     all_actions = list(created_actions.values())
     r_mvp = RankingDefinition(name="MVP (Valoración)", icon="star", user_id=user_id)
     r_mvp.ingredients.extend(all_actions)
     
-    # El Pulpo (Rebotes)
     r_pulpo = RankingDefinition(name="El Pulpo", icon="octopus", user_id=user_id)
     for k in ["Rebote Ataque", "Rebote Defensa"]:
         if k in created_actions: r_pulpo.ingredients.append(created_actions[k])
 
-    # El Muro (Defensa)
     r_muro = RankingDefinition(name="El Muro", icon="shield", user_id=user_id)
     for k in ["Tapón", "Robo", "Provocar Pérdida", "Gritar Presión"]:
         if k in created_actions: r_muro.ingredients.append(created_actions[k])
 
-    # El Mago (Asistencias)
     r_mago = RankingDefinition(name="El Mago", icon="magic", user_id=user_id)
     if "Asistencia" in created_actions: r_mago.ingredients.append(created_actions["Asistencia"])
     
     db.session.add_all([r_mvp, r_pulpo, r_muro, r_mago])
     db.session.commit()
-
 
 # --- RUTAS ---
 @app.route('/')
@@ -558,7 +537,7 @@ def toggle_fav(id):
         db.session.commit()
     return redirect(request.referrer)
 
-# --- AUTH (CON CARGA DE DATOS GAME TRACKER) ---
+# --- AUTH ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
@@ -582,7 +561,6 @@ def login():
         user = User.query.filter_by(email=request.form['email']).first()
         if user and user.check_password(request.form['password']):
             login_user(user)
-            # Aseguramos que tenga config si es un usuario antiguo
             if not user.actions_config: create_default_game_config(user.id)
             return redirect('/')
         else: flash('Error login')
@@ -605,7 +583,6 @@ def google_auth():
         db.session.commit()
         create_default_game_config(user.id)
     login_user(user)
-    # Aseguramos config para logins existentes
     if not user.actions_config: create_default_game_config(user.id)
     return redirect('/')
 
@@ -715,28 +692,24 @@ def court_mode(id):
     if plan.user_id != current_user.id: return redirect('/')
     return render_template('court_mode.html', plan=plan)
 
-# --- RUTAS GAME TRACKER (FASE 2: EQUIPOS Y JUGADORES) ---
-
+# --- RUTAS GAME TRACKER (FASE 2: EQUIPOS) ---
 @app.route('/my_teams', methods=['GET', 'POST'])
 @login_required
 def my_teams():
     if request.method == 'POST':
         name = request.form.get('name')
         category = request.form.get('category')
-        # Logo opcional
         logo_filename = None
         file = request.files.get('logo')
         if file and file.filename != '':
             logo_filename = f"team_{int(datetime.now().timestamp())}.jpg"
             comp = compress_image(file)
-            with open(os.path.join(app.config['UPLOAD_FOLDER'], logo_filename), 'wb') as f: 
-                f.write(comp.getbuffer())
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], logo_filename), 'wb') as f: f.write(comp.getbuffer())
         
         new_team = Team(name=name, category=category, logo_file=logo_filename, user_id=current_user.id)
         db.session.add(new_team)
         db.session.commit()
         return redirect('/my_teams')
-    
     teams = Team.query.filter_by(user_id=current_user.id).all()
     return render_template('my_teams.html', teams=teams)
 
@@ -745,24 +718,19 @@ def my_teams():
 def view_team(id):
     team = Team.query.get_or_404(id)
     if team.user_id != current_user.id: return redirect('/')
-    
-    if request.method == 'POST': # Añadir jugador
+    if request.method == 'POST':
         name = request.form.get('name')
         dorsal = request.form.get('dorsal')
-        
         photo_filename = None
         file = request.files.get('photo')
         if file and file.filename != '':
             photo_filename = f"player_{int(datetime.now().timestamp())}.jpg"
             comp = compress_image(file)
-            with open(os.path.join(app.config['UPLOAD_FOLDER'], photo_filename), 'wb') as f: 
-                f.write(comp.getbuffer())
-                
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], photo_filename), 'wb') as f: f.write(comp.getbuffer())
         new_player = Player(name=name, dorsal=int(dorsal), photo_file=photo_filename, team_id=team.id)
         db.session.add(new_player)
         db.session.commit()
         return redirect(url_for('view_team', id=team.id))
-
     return render_template('view_team.html', team=team)
 
 @app.route('/delete_player/<int:id>')
@@ -788,13 +756,68 @@ def delete_team(id):
 @app.route('/game_config', methods=['GET', 'POST'])
 @login_required
 def game_config():
-    # Dejamos la ruta lista pero vacía por ahora para que no de error si el usuario la busca
-    if request.method == 'POST':
-        pass
+    if request.method == 'POST': pass
     actions = ActionDefinition.query.filter_by(user_id=current_user.id).order_by(ActionDefinition.is_positive.desc()).all()
     rankings = RankingDefinition.query.filter_by(user_id=current_user.id).all()
     return render_template('game_config.html', actions=actions, rankings=rankings)
 
+# --- RUTAS GAME TRACKER (FASE 3: PARTIDO EN VIVO) ---
+
+@app.route('/new_match', methods=['GET', 'POST'])
+@login_required
+def new_match():
+    if request.method == 'POST':
+        team_id = request.form.get('team_id')
+        opponent = request.form.get('opponent')
+        player_ids = request.form.getlist('roster') 
+        match = Match(opponent=opponent, team_id=team_id, user_id=current_user.id)
+        db.session.add(match)
+        db.session.commit()
+        for pid in player_ids:
+            player = Player.query.get(int(pid))
+            if player: match.roster.append(player)
+        db.session.commit()
+        return redirect(url_for('match_tracker', id=match.id))
+    teams = Team.query.filter_by(user_id=current_user.id).all()
+    if not teams: return redirect('/my_teams')
+    return render_template('new_match.html', teams=teams)
+
+@app.route('/match/<int:id>')
+@login_required
+def match_tracker(id):
+    match = Match.query.get_or_404(id)
+    if match.user_id != current_user.id: return redirect('/')
+    actions = ActionDefinition.query.filter_by(user_id=current_user.id).order_by(ActionDefinition.is_positive.desc()).all()
+    return render_template('tracker.html', match=match, actions=actions)
+
+@app.route('/api/add_event', methods=['POST'])
+@login_required
+def api_add_event():
+    data = request.json
+    match_id = data.get('match_id')
+    player_id = data.get('player_id')
+    action_id = data.get('action_id')
+    game_minute = data.get('game_minute', 0)
+    match = Match.query.get(match_id)
+    if not match or match.user_id != current_user.id: return jsonify({'error': 'Unauthorized'}), 403
+    event = MatchEvent(match_id=match_id, player_id=player_id, action_id=action_id, game_minute=game_minute)
+    db.session.add(event)
+    db.session.commit()
+    return jsonify({'status': 'ok', 'event_id': event.id})
+
+@app.route('/api/undo_event', methods=['POST'])
+@login_required
+def api_undo_event():
+    data = request.json
+    event_id = data.get('event_id')
+    event = MatchEvent.query.get(event_id)
+    if event and event.match.user_id == current_user.id:
+        db.session.delete(event)
+        db.session.commit()
+        return jsonify({'status': 'ok'})
+    return jsonify({'error': 'Error'}), 400
+
+# --- INICIO ---
 def generar_icono_banana(nombre, simbolo):
     path = os.path.join(app.config['UPLOAD_FOLDER'], nombre)
     if os.path.exists(path): return 
@@ -821,17 +844,14 @@ def crear_datos_prueba():
         lista = ["Tiro", "Entrada", "Pase", "Bote", "Defensa", "Rebote", "Físico", "Táctica"]
         for n in lista: db.session.add(Tag(name=n))
         db.session.commit()
-
     play_icon = "banana_play.png"
     lupa_icon = "banana_search.png"
     doc_icon = "banana_doc.png"
     social_icon = "banana_social.png"
-    
     generar_icono_banana(play_icon, 'play')
     generar_icono_banana(lupa_icon, 'search')
     generar_icono_banana(doc_icon, 'doc')
     generar_icono_banana(social_icon, 'social')
-
     defaults = {
         'tiktok_bg': 'https://placehold.co/600x400/000000/FFF?text=TikTok',
         'instagram_bg': 'https://placehold.co/600x400/E1306C/FFF?text=Instagram',
@@ -847,9 +867,7 @@ def crear_datos_prueba():
         'generic_overlay': lupa_icon
     }
     for k, v in defaults.items():
-        if not SiteConfig.query.get(k): 
-            db.session.add(SiteConfig(key=k, value=v))
-            
+        if not SiteConfig.query.get(k): db.session.add(SiteConfig(key=k, value=v))
     db.session.commit()
 
 if __name__ == '__main__':
