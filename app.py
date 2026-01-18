@@ -43,7 +43,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- MODELOS ---
+# --- TABLAS DE RELACIÓN (Muchos a Muchos) ---
 favorites = db.Table('favorites',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('drill_id', db.Integer, db.ForeignKey('drill.id'), primary_key=True)
@@ -56,16 +56,18 @@ drill_secondary_tags = db.Table('drill_secondary_tags',
     db.Column('drill_id', db.Integer, db.ForeignKey('drill.id'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
 )
+# Tabla para saber qué acciones componen un Ranking (ej: Ranking Defensor = Robo + Tapon)
+ranking_ingredients = db.Table('ranking_ingredients',
+    db.Column('ranking_id', db.Integer, db.ForeignKey('ranking_definition.id'), primary_key=True),
+    db.Column('action_id', db.Integer, db.ForeignKey('action_definition.id'), primary_key=True)
+)
+# Tabla para saber qué jugadores fueron convocados a un partido
+match_roster = db.Table('match_roster',
+    db.Column('match_id', db.Integer, db.ForeignKey('match.id'), primary_key=True),
+    db.Column('player_id', db.Integer, db.ForeignKey('player.id'), primary_key=True)
+)
 
-class SiteConfig(db.Model):
-    key = db.Column(db.String(50), primary_key=True) 
-    value = db.Column(db.String(255), nullable=False) 
-
-class DrillView(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
-    ip_address = db.Column(db.String(50), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+# --- MODELOS ---
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -75,10 +77,83 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     last_blocks_config = db.Column(db.String(500), nullable=True, default="Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma")
     favoritos = db.relationship('Drill', secondary=favorites, backref=db.backref('favorited_by', lazy='dynamic'))
+    
+    # Relaciones Game Tracker
+    teams = db.relationship('Team', backref='coach', lazy=True)
+    actions_config = db.relationship('ActionDefinition', backref='owner', lazy=True)
+    rankings_config = db.relationship('RankingDefinition', backref='owner', lazy=True)
+    matches = db.relationship('Match', backref='coach', lazy=True)
+
     def set_password(self, password): self.password_hash = generate_password_hash(password)
     def check_password(self, password):
         if not self.password_hash: return False
         return check_password_hash(self.password_hash, password)
+
+# --- MODELOS GAME TRACKER ---
+
+class Team(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50), nullable=True)
+    logo_file = db.Column(db.String(120), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    players = db.relationship('Player', backref='team', lazy=True, cascade="all, delete-orphan")
+
+class Player(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    dorsal = db.Column(db.Integer, nullable=False)
+    photo_file = db.Column(db.String(120), nullable=True)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
+
+class ActionDefinition(db.Model):
+    """Acciones configurables: Rebote, Asistencia, etc."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    value = db.Column(db.Float, nullable=False) # Puede ser 1.0, 0.5, -0.25...
+    is_positive = db.Column(db.Boolean, default=True) # Para pintar verde o rojo
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+class RankingDefinition(db.Model):
+    """Rankings configurables: El Pulpo, El Muro..."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    icon = db.Column(db.String(50), default="trophy") # nombre de icono o archivo
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    ingredients = db.relationship('ActionDefinition', secondary=ranking_ingredients, backref='used_in_rankings')
+
+class Match(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    opponent = db.Column(db.String(100), nullable=False)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    is_home = db.Column(db.Boolean, default=True)
+    result_us = db.Column(db.Integer, default=0)
+    result_them = db.Column(db.Integer, default=0)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False) # Qué equipo nuestro jugó
+    
+    roster = db.relationship('Player', secondary=match_roster, backref='matches_played')
+    events = db.relationship('MatchEvent', backref='match', lazy=True, cascade="all, delete-orphan")
+
+class MatchEvent(db.Model):
+    """El registro de cada click durante el partido"""
+    id = db.Column(db.Integer, primary_key=True)
+    match_id = db.Column(db.Integer, db.ForeignKey('match.id'), nullable=False)
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    action_id = db.Column(db.Integer, db.ForeignKey('action_definition.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    game_minute = db.Column(db.Integer, default=0) # Minuto de juego aproximado
+
+# --- MODELOS ENTRENAMIENTO (ANTIGUOS) ---
+class SiteConfig(db.Model):
+    key = db.Column(db.String(50), primary_key=True) 
+    value = db.Column(db.String(255), nullable=False) 
+
+class DrillView(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
+    ip_address = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -143,10 +218,8 @@ def compress_image(file):
     output.seek(0)
     return output
 
-# --- MEJORA INTELIGENTE DE YOUTUBE ---
 def extract_youtube_id(url):
     if not url: return None
-    vid_id = None
     if '/shorts/' in url: return url.split('/shorts/')[-1].split('?')[0]
     if 'youtu.be/' in url: return url.split('youtu.be/')[-1].split('?')[0]
     if 'v=' in url: return url.split('v=')[1].split('&')[0]
@@ -162,24 +235,69 @@ def youtube_thumb(url):
 def get_youtube_id(url):
     return extract_youtube_id(url)
 
-# --- RUTAS PRINCIPALES (CORREGIDO PARA FILTROS E INVITADOS) ---
+# --- FUNCION MÁGICA: BATTERY INCLUDED ---
+def create_default_game_config(user_id):
+    """Crea las acciones y rankings por defecto para un usuario nuevo"""
+    # 1. ACCIONES
+    defaults = [
+        # (Nombre, Valor, EsPositivo)
+        ("Rebote Ataque", 1.0, True),
+        ("Rebote Defensa", 1.0, True),
+        ("Asistencia", 1.0, True),
+        ("Tapón", 1.0, True),
+        ("Robo", 1.0, True),
+        ("Provocar Pérdida", 1.0, True),
+        ("Gritar Presión", 1.0, True),
+        ("Canasta Fallada", -0.25, False),
+        ("Balón Perdido", -0.5, False),
+        ("Recibo Tapón/Robo", -0.5, False)
+    ]
+    
+    created_actions = {}
+    for name, val, is_pos in defaults:
+        act = ActionDefinition(name=name, value=val, is_positive=is_pos, user_id=user_id)
+        db.session.add(act)
+        created_actions[name] = act
+    
+    db.session.commit() # Guardamos para tener IDs
+    
+    # 2. RANKINGS POR DEFECTO
+    # MVP: Todas las acciones
+    all_actions = list(created_actions.values())
+    r_mvp = RankingDefinition(name="MVP (Valoración)", icon="star", user_id=user_id)
+    r_mvp.ingredients.extend(all_actions)
+    
+    # El Pulpo (Rebotes)
+    r_pulpo = RankingDefinition(name="El Pulpo", icon="octopus", user_id=user_id)
+    for k in ["Rebote Ataque", "Rebote Defensa"]:
+        if k in created_actions: r_pulpo.ingredients.append(created_actions[k])
+
+    # El Muro (Defensa)
+    r_muro = RankingDefinition(name="El Muro", icon="shield", user_id=user_id)
+    for k in ["Tapón", "Robo", "Provocar Pérdida", "Gritar Presión"]:
+        if k in created_actions: r_muro.ingredients.append(created_actions[k])
+
+    # El Mago (Asistencias)
+    r_mago = RankingDefinition(name="El Mago", icon="magic", user_id=user_id)
+    if "Asistencia" in created_actions: r_mago.ingredients.append(created_actions["Asistencia"])
+    
+    db.session.add_all([r_mvp, r_pulpo, r_muro, r_mago])
+    db.session.commit()
+
+
+# --- RUTAS ---
 @app.route('/')
 def home():
-    # 1. Recogemos parámetros
     query = request.args.get('q', '').strip()
-    primary_ids_raw = request.args.getlist('primary') # Lista de strings ['1', '2']
+    primary_ids_raw = request.args.getlist('primary')
     filter_type = request.args.getlist('filter_type')
     sort_by = request.args.get('sort_by', 'favs_desc') 
     
-    # 2. Seguridad Base: Invitados solo ven público
-    if current_user.is_authenticated:
-        base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
-    else:
-        base_condition = (Drill.is_public == True)
+    if current_user.is_authenticated: base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
+    else: base_condition = (Drill.is_public == True)
 
     drills_query = Drill.query.filter(base_condition)
     
-    # 3. Filtros Avanzados (Solo logueados)
     if filter_type and current_user.is_authenticated:
         conditions = []
         if 'my_private' in filter_type: conditions.append(and_(Drill.user_id == current_user.id, Drill.is_public == False))
@@ -188,24 +306,18 @@ def home():
         if 'favorites' in filter_type:
             fav_ids = [d.id for d in current_user.favoritos]
             conditions.append(Drill.id.in_(fav_ids) if fav_ids else Drill.id == -1)
-        
         if conditions: drills_query = drills_query.filter(or_(*conditions))
 
-    # 4. Buscador de Texto
     if query:
         search_term = f"%{query}%"
         drills_query = drills_query.filter(or_(Drill.title.ilike(search_term), Drill.description.ilike(search_term)))
     
-    # 5. Filtro por Etiquetas (CORREGIDO: Convertir a int)
     if primary_ids_raw:
         try:
-            # Convertimos ['1', '2'] a [1, 2] para SQL
             primary_ids = [int(x) for x in primary_ids_raw]
             drills_query = drills_query.filter(Drill.primary_tags.any(Tag.id.in_(primary_ids)))
-        except ValueError:
-            pass # Ignorar si vienen datos raros
+        except ValueError: pass
 
-    # 6. Ordenación
     if sort_by == 'views_desc': drills_query = drills_query.order_by(Drill.views.desc())
     elif sort_by == 'favs_desc': drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
     elif sort_by == 'name_asc': drills_query = drills_query.order_by(Drill.title.asc())
@@ -226,9 +338,7 @@ def create():
         is_public = 'is_public' in request.form
         content_type = request.form.get('content_type') 
         external_link = request.form.get('external_link', '').strip()
-        
         nuevo = Drill(title=title, description=desc, is_public=is_public, user_id=current_user.id, media_type=content_type)
-
         if content_type == 'link': nuevo.external_link = external_link
         elif content_type in ['image', 'pdf', 'video_file']:
             file = request.files.get('archivo')
@@ -248,7 +358,6 @@ def create():
                 elif content_type == 'video_file' and current_user.is_admin:
                      file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                      nuevo.media_file = filename
-
         cover_option = request.form.get('cover_option')
         if cover_option == 'custom':
             cover_file = request.files.get('custom_cover_file')
@@ -257,7 +366,6 @@ def create():
                 c_comp = compress_image(cover_file)
                 with open(os.path.join(app.config['UPLOAD_FOLDER'], c_filename), 'wb') as f: f.write(c_comp.getbuffer())
                 nuevo.cover_image = c_filename
-
         ids_p = request.form.getlist('primary_tags')
         for t_id in ids_p:
             tag = Tag.query.get(int(t_id))
@@ -317,10 +425,7 @@ def create_plan():
         blocks_csv = request.form.get('blocks_csv')
         current_user.last_blocks_config = blocks_csv
         plan_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str else datetime.utcnow()
-        new_plan = TrainingPlan(
-            name=name, team_name=team, date=plan_date, notes=notes,
-            structure=blocks_csv, user_id=current_user.id, is_public=False
-        )
+        new_plan = TrainingPlan(name=name, team_name=team, date=plan_date, notes=notes, structure=blocks_csv, user_id=current_user.id, is_public=False)
         db.session.add(new_plan)
         db.session.commit()
         return redirect(url_for('view_plan', id=new_plan.id))
@@ -453,7 +558,7 @@ def toggle_fav(id):
         db.session.commit()
     return redirect(request.referrer)
 
-# --- AUTH & ADMIN ---
+# --- AUTH (CON CARGA DE DATOS GAME TRACKER) ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated: return redirect('/')
@@ -466,6 +571,10 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user)
+        
+        # --- CARGAR CONFIG DEFAULT ---
+        create_default_game_config(new_user.id)
+        
         return redirect('/')
     return render_template('register.html')
 
@@ -495,6 +604,9 @@ def google_auth():
         user = User(email=email, name=token['userinfo'].get('name', email.split('@')[0]), is_admin=is_admin)
         db.session.add(user)
         db.session.commit()
+        # --- CARGAR CONFIG DEFAULT ---
+        create_default_game_config(user.id)
+        
     login_user(user)
     return redirect('/')
 
@@ -554,12 +666,10 @@ def admin_config():
     ]
     return render_template('admin_config.html', config_dict=config_dict, keys_needed=keys_needed)
 
-# --- NUEVA RUTA: IMPORTADOR CSV MEJORADO (BUSCA POR LINK) ---
 @app.route('/admin/import_drills', methods=['POST'])
 @login_required
 def import_drills():
     if not current_user.is_admin: return redirect('/')
-    
     file = request.files['file']
     if not file or file.filename == '':
         flash('No has seleccionado ningún archivo')
@@ -570,56 +680,33 @@ def import_drills():
         csv_input = csv.reader(stream)
         count_success = 0
         count_updated = 0
-        
         for row in csv_input:
             if len(row) < 3: continue 
             link = row[0].strip()
             title = row[1].strip()
             tags_string = row[2].strip()
             tags_list_raw = tags_string.split(',') 
-            
-            # --- 1. BUSCAR SI YA EXISTE (SOLO POR LINK) ---
             existing_drill = Drill.query.filter_by(external_link=link).first()
-            
             target_drill = None
-            
             if existing_drill:
                 target_drill = existing_drill
                 count_updated += 1
             else:
-                target_drill = Drill(
-                    title=title,
-                    description="Importado automáticamente",
-                    external_link=link,
-                    media_type='link',
-                    user_id=current_user.id,
-                    is_public=True
-                )
+                target_drill = Drill(title=title, description="Importado automáticamente", external_link=link, media_type='link', user_id=current_user.id, is_public=True)
                 db.session.add(target_drill)
                 count_success += 1
-            
-            # --- 2. PROCESAR Y AÑADIR ETIQUETAS (Sin duplicar) ---
             for t_raw in tags_list_raw:
                 t_clean = t_raw.strip().capitalize()
                 if not t_clean: continue
-                
-                # Buscar o Crear etiqueta en DB
                 tag = Tag.query.filter_by(name=t_clean).first()
                 if not tag:
                     tag = Tag(name=t_clean)
                     db.session.add(tag)
                     db.session.commit()
-                
-                # Añadir al drill si no la tiene ya
-                if tag not in target_drill.primary_tags:
-                    target_drill.primary_tags.append(tag)
-            
+                if tag not in target_drill.primary_tags: target_drill.primary_tags.append(tag)
         db.session.commit()
         flash(f'✅ Importación: {count_success} nuevos, {count_updated} actualizados.')
-        
-    except Exception as e:
-        flash(f'❌ Error al importar: {str(e)}')
-        
+    except Exception as e: flash(f'❌ Error al importar: {str(e)}')
     return redirect('/admin/config')
 
 @app.route('/court_mode/<int:id>')
