@@ -721,6 +721,30 @@ def delete_player(id):
         return redirect(url_for('view_team', id=team_id))
     return redirect('/')
 
+# --- RUTA NUEVA: EDITAR JUGADOR ---
+@app.route('/edit_player/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_player(id):
+    player = Player.query.get_or_404(id)
+    if player.team.user_id != current_user.id: return redirect('/')
+    
+    if request.method == 'POST':
+        player.name = request.form.get('name')
+        player.dorsal = int(request.form.get('dorsal'))
+        
+        file = request.files.get('photo')
+        if file and file.filename != '':
+            photo_filename = f"player_{int(datetime.now().timestamp())}.jpg"
+            comp = compress_image(file)
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], photo_filename), 'wb') as f: 
+                f.write(comp.getbuffer())
+            player.photo_file = photo_filename
+            
+        db.session.commit()
+        return redirect(url_for('view_team', id=player.team.id))
+        
+    return render_template('edit_player.html', player=player)
+
 @app.route('/delete_team/<int:id>')
 @login_required
 def delete_team(id):
@@ -799,40 +823,23 @@ def api_undo_event():
 def match_stats(id):
     match = Match.query.get_or_404(id)
     if match.user_id != current_user.id: return redirect('/')
-    
-    # 1. Preparar estructura de datos
     stats = {}
-    
-    # Inicializar a 0 para todos los convocados
     for player in match.roster:
-        stats[player.id] = {
-            'name': player.name,
-            'dorsal': player.dorsal,
-            'photo': player.photo_file,
-            'total_val': 0.0,
-            'actions': {} 
-        }
-
-    # 2. Procesar todos los eventos del partido
+        stats[player.id] = { 'name': player.name, 'dorsal': player.dorsal, 'photo': player.photo_file, 'total_val': 0.0, 'actions': {} }
     for event in match.events:
         pid = event.player_id
         aid = event.action_id
         action_def = ActionDefinition.query.get(aid)
-        
         if pid in stats and action_def:
             current_count = stats[pid]['actions'].get(action_def.name, 0)
             stats[pid]['actions'][action_def.name] = current_count + 1
             stats[pid]['total_val'] += action_def.value
-
-    # 3. Obtener lista de acciones posibles
     action_names = [a.name for a in ActionDefinition.query.filter_by(user_id=current_user.id).order_by(ActionDefinition.is_positive.desc()).all()]
-
     return render_template('match_stats.html', match=match, stats=stats, action_names=action_names)
 
 @app.route('/matches')
 @login_required
 def matches_list():
-    """Historial de partidos jugados"""
     matches = Match.query.filter_by(user_id=current_user.id).order_by(Match.date.desc()).all()
     return render_template('matches_list.html', matches=matches)
 

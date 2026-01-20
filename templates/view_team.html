@@ -68,7 +68,9 @@
                     <div class="card-body p-2 text-center">
                         <h6 class="card-title fw-bold text-truncate mb-0">{{ player.name }}</h6>
                     </div>
-                    <div class="card-footer bg-white border-0 p-1 text-center">
+                    <div class="card-footer bg-white border-0 p-1 text-center d-flex justify-content-center gap-2">
+                        <a href="/edit_player/{{ player.id }}" class="text-primary small text-decoration-none fw-bold">Editar</a>
+                        <span class="text-muted small">|</span>
                         <a href="/delete_player/{{ player.id }}" class="text-danger small text-decoration-none" onclick="return confirm('¿Eliminar jugador?')">Eliminar</a>
                     </div>
                 </div>
