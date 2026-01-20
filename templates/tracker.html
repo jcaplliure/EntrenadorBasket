@@ -45,7 +45,7 @@
     <div class="d-flex justify-content-between align-items-center p-2 bg-black border-bottom border-secondary">
         <div class="fw-bold text-warning">{{ match.opponent }}</div>
         <div class="fs-4 font-monospace" id="game-timer" onclick="toggleTimer()">00:00</div>
-        <a href="/" class="btn btn-sm btn-outline-light">Salir</a>
+        <a href="/match_stats/{{ match.id }}" class="btn btn-sm btn-danger fw-bold" onclick="return confirm('¿Seguro que quieres terminar el partido e ir a las estadísticas?')">Terminar</a>
     </div>
 
     <div class="player-scroll" id="roster-list">

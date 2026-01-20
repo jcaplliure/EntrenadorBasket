@@ -43,7 +43,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- TABLAS DE RELACIÓN (Muchos a Muchos) ---
+# --- TABLAS DE RELACIÓN ---
 favorites = db.Table('favorites',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('drill_id', db.Integer, db.ForeignKey('drill.id'), primary_key=True)
@@ -66,7 +66,6 @@ match_roster = db.Table('match_roster',
 )
 
 # --- MODELOS ---
-
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -75,8 +74,6 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     last_blocks_config = db.Column(db.String(500), nullable=True, default="Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma")
     favoritos = db.relationship('Drill', secondary=favorites, backref=db.backref('favorited_by', lazy='dynamic'))
-    
-    # Relaciones Game Tracker
     teams = db.relationship('Team', backref='coach', lazy=True)
     actions_config = db.relationship('ActionDefinition', backref='owner', lazy=True)
     rankings_config = db.relationship('RankingDefinition', backref='owner', lazy=True)
@@ -86,8 +83,6 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         if not self.password_hash: return False
         return check_password_hash(self.password_hash, password)
-
-# --- MODELOS GAME TRACKER ---
 
 class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -127,7 +122,6 @@ class Match(db.Model):
     result_them = db.Column(db.Integer, default=0)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False) 
-    
     roster = db.relationship('Player', secondary=match_roster, backref='matches_played')
     events = db.relationship('MatchEvent', backref='match', lazy=True, cascade="all, delete-orphan")
 
@@ -139,7 +133,6 @@ class MatchEvent(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     game_minute = db.Column(db.Integer, default=0) 
 
-# --- MODELOS ENTRENAMIENTO ---
 class SiteConfig(db.Model):
     key = db.Column(db.String(50), primary_key=True) 
     value = db.Column(db.String(255), nullable=False) 
@@ -230,7 +223,6 @@ def youtube_thumb(url):
 def get_youtube_id(url):
     return extract_youtube_id(url)
 
-# --- FUNCION MÁGICA: BATTERY INCLUDED ---
 def create_default_game_config(user_id):
     defaults = [
         ("Rebote Ataque", 1.0, True), ("Rebote Defensa", 1.0, True),
@@ -245,22 +237,17 @@ def create_default_game_config(user_id):
         db.session.add(act)
         created_actions[name] = act
     db.session.commit() 
-    
     all_actions = list(created_actions.values())
     r_mvp = RankingDefinition(name="MVP (Valoración)", icon="star", user_id=user_id)
     r_mvp.ingredients.extend(all_actions)
-    
     r_pulpo = RankingDefinition(name="El Pulpo", icon="octopus", user_id=user_id)
     for k in ["Rebote Ataque", "Rebote Defensa"]:
         if k in created_actions: r_pulpo.ingredients.append(created_actions[k])
-
     r_muro = RankingDefinition(name="El Muro", icon="shield", user_id=user_id)
     for k in ["Tapón", "Robo", "Provocar Pérdida", "Gritar Presión"]:
         if k in created_actions: r_muro.ingredients.append(created_actions[k])
-
     r_mago = RankingDefinition(name="El Mago", icon="magic", user_id=user_id)
     if "Asistencia" in created_actions: r_mago.ingredients.append(created_actions["Asistencia"])
-    
     db.session.add_all([r_mvp, r_pulpo, r_muro, r_mago])
     db.session.commit()
 
@@ -271,12 +258,9 @@ def home():
     primary_ids_raw = request.args.getlist('primary')
     filter_type = request.args.getlist('filter_type')
     sort_by = request.args.get('sort_by', 'favs_desc') 
-    
     if current_user.is_authenticated: base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
     else: base_condition = (Drill.is_public == True)
-
     drills_query = Drill.query.filter(base_condition)
-    
     if filter_type and current_user.is_authenticated:
         conditions = []
         if 'my_private' in filter_type: conditions.append(and_(Drill.user_id == current_user.id, Drill.is_public == False))
@@ -286,23 +270,19 @@ def home():
             fav_ids = [d.id for d in current_user.favoritos]
             conditions.append(Drill.id.in_(fav_ids) if fav_ids else Drill.id == -1)
         if conditions: drills_query = drills_query.filter(or_(*conditions))
-
     if query:
         search_term = f"%{query}%"
         drills_query = drills_query.filter(or_(Drill.title.ilike(search_term), Drill.description.ilike(search_term)))
-    
     if primary_ids_raw:
         try:
             primary_ids = [int(x) for x in primary_ids_raw]
             drills_query = drills_query.filter(Drill.primary_tags.any(Tag.id.in_(primary_ids)))
         except ValueError: pass
-
     if sort_by == 'views_desc': drills_query = drills_query.order_by(Drill.views.desc())
     elif sort_by == 'favs_desc': drills_query = drills_query.outerjoin(favorites).group_by(Drill.id).order_by(func.count(favorites.c.user_id).desc())
     elif sort_by == 'name_asc': drills_query = drills_query.order_by(Drill.title.asc())
     elif sort_by == 'date_asc': drills_query = drills_query.order_by(Drill.date_posted.asc())
     else: drills_query = drills_query.order_by(Drill.date_posted.desc())
-
     drills = drills_query.all()
     tags = Tag.query.order_by(Tag.name).all()
     return render_template('index.html', drills=drills, tags=tags)
@@ -629,7 +609,6 @@ def admin_config():
             else: conf.value = filename
             db.session.commit()
             flash('Configuración actualizada')
-    
     configs = SiteConfig.query.all()
     config_dict = {c.key: c.value for c in configs}
     keys_needed = [
@@ -650,7 +629,6 @@ def import_drills():
     if not file or file.filename == '':
         flash('No has seleccionado ningún archivo')
         return redirect('/admin/config')
-
     try:
         stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
         csv_input = csv.reader(stream)
@@ -705,7 +683,6 @@ def my_teams():
             logo_filename = f"team_{int(datetime.now().timestamp())}.jpg"
             comp = compress_image(file)
             with open(os.path.join(app.config['UPLOAD_FOLDER'], logo_filename), 'wb') as f: f.write(comp.getbuffer())
-        
         new_team = Team(name=name, category=category, logo_file=logo_filename, user_id=current_user.id)
         db.session.add(new_team)
         db.session.commit()
@@ -762,7 +739,6 @@ def game_config():
     return render_template('game_config.html', actions=actions, rankings=rankings)
 
 # --- RUTAS GAME TRACKER (FASE 3: PARTIDO EN VIVO) ---
-
 @app.route('/new_match', methods=['GET', 'POST'])
 @login_required
 def new_match():
@@ -816,6 +792,49 @@ def api_undo_event():
         db.session.commit()
         return jsonify({'status': 'ok'})
     return jsonify({'error': 'Error'}), 400
+
+# --- RUTAS GAME TRACKER (FASE 4: RESULTADOS) ---
+@app.route('/match_stats/<int:id>')
+@login_required
+def match_stats(id):
+    match = Match.query.get_or_404(id)
+    if match.user_id != current_user.id: return redirect('/')
+    
+    # 1. Preparar estructura de datos
+    stats = {}
+    
+    # Inicializar a 0 para todos los convocados
+    for player in match.roster:
+        stats[player.id] = {
+            'name': player.name,
+            'dorsal': player.dorsal,
+            'photo': player.photo_file,
+            'total_val': 0.0,
+            'actions': {} 
+        }
+
+    # 2. Procesar todos los eventos del partido
+    for event in match.events:
+        pid = event.player_id
+        aid = event.action_id
+        action_def = ActionDefinition.query.get(aid)
+        
+        if pid in stats and action_def:
+            current_count = stats[pid]['actions'].get(action_def.name, 0)
+            stats[pid]['actions'][action_def.name] = current_count + 1
+            stats[pid]['total_val'] += action_def.value
+
+    # 3. Obtener lista de acciones posibles
+    action_names = [a.name for a in ActionDefinition.query.filter_by(user_id=current_user.id).order_by(ActionDefinition.is_positive.desc()).all()]
+
+    return render_template('match_stats.html', match=match, stats=stats, action_names=action_names)
+
+@app.route('/matches')
+@login_required
+def matches_list():
+    """Historial de partidos jugados"""
+    matches = Match.query.filter_by(user_id=current_user.id).order_by(Match.date.desc()).all()
+    return render_template('matches_list.html', matches=matches)
 
 # --- INICIO ---
 def generar_icono_banana(nombre, simbolo):
