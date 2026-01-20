@@ -1,21 +1,3 @@
-Comenzamos la **Fase 5**. Esta es la actualización más grande que hemos hecho hasta ahora porque cambiamos los cimientos del edificio (la Base de Datos) para permitir todo lo que has pedido: varios entrenadores, sesiones reales, gamificación y rankings.
-
-⚠️ **AVISO IMPORTANTE ANTES DE EMPEZAR:**
-Como vamos a cambiar la estructura de la base de datos (añadir tablas de Staff, Sesiones, Puntuaciones, etc.), cuando subas este archivo **tendrás que borrar la base de datos antigua (`rm basket.db`)** y crearla de nuevo, tal como hicimos la última vez. Si no lo haces, dará error porque no encontrará los sitios nuevos donde guardar los datos.
-
-Aquí tienes el **Archivo 1 de 5: `app.py` Completo**.
-
-### 1. Archivo Completo: `app.py`
-
-Incluye:
-
-* **Base de Datos Nueva:** Tablas `TeamStaff`, `TrainingSession`, `SessionAttendance`, `SessionScore`.
-* **Lógica Multi-Entrenador:** Rutas para invitar, aceptar y gestionar permisos.
-* **Gestión de Equipos:** Ahora puedes editar nombre, logo y configuración de ranking.
-* **Gamificación:** Toda la lógica para calcular puntos (15, 14, 13...) y gestionar sesiones.
-* **Portal Público:** Ruta para que los jugadores vean el ranking sin login.
-
-```python
 import os
 import requests
 import json
