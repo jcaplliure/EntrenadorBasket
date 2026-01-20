@@ -1238,5 +1238,3 @@ if __name__ == '__main__':
         db.create_all()
         crear_datos_prueba()
     app.run(debug=True)
-
-```
