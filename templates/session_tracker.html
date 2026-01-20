@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Sesión en Pista</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; padding-bottom: 80px; }
+        .nav-pills .nav-link.active { background-color: #fd7e14; color: white; font-weight: bold; }
+        .nav-pills .nav-link { color: #495057; }
+        .drill-card { border-left: 5px solid #0d6efd; transition: transform 0.1s; }
+        .drill-card:active { transform: scale(0.98); }
+        .attendance-card { transition: all 0.2s; border: 2px solid transparent; }
+        .attendance-card.absent { opacity: 0.5; filter: grayscale(1); }
+        .attendance-card.present { border-color: #198754; background-color: #d1e7dd; }
+        .floating-add { 
+            position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; 
+            border-radius: 50%; font-size: 24px; display: flex; align-items: center; justify-content: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000; 
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm px-3 justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <a href="/my_teams" class="text-white text-decoration-none"><i class="bi bi-arrow-left"></i></a>
+            <span class="fw-bold text-white text-truncate" style="max-width: 200px;">
+                {% if plan %}{{ plan.name }}{% else %}Entreno Libre{% endif %}
+            </span>
+        </div>
+        <a href="/finish_session/{{ session.id }}" class="btn btn-danger btn-sm fw-bold" onclick="return confirm('¿Terminar entrenamiento?')">Finalizar</a>
+    </nav>
+
+    <div class="container mt-3">
+        
+        <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="pills-att-tab" data-bs-toggle="pill" data-bs-target="#pills-att" type="button">🙋‍♂️ Asistencia</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="pills-track-tab" data-bs-toggle="pill" data-bs-target="#pills-track" type="button">🏀 Ejercicios</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="pills-tabContent">
+            
+            <div class="tab-pane fade show active" id="pills-att">
+                <p class="text-muted small text-center mb-3">Toca para marcar Ausente/Presente. Solo los presentes puntúan.</p>
+                
+                <div class="row g-2" id="attendance-list">
+                    {% for att in session.attendance %}
+                    {% set p = att.player %}
+                    <div class="col-6 col-md-4">
+                        <div class="card p-2 text-center attendance-card {% if att.is_present %}present{% else %}absent{% endif %}" 
+                             onclick="toggleAttendance(this, {{ session.id }}, {{ p.id }})">
+                            <h5 class="mb-0 fw-bold">{{ p.name }}</h5>
+                            <small class="text-muted">#{{ p.dorsal }}</small>
+                            <div class="status-icon mt-1">
+                                {% if att.is_present %}
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                {% else %}
+                                    <i class="bi bi-x-circle-fill text-danger"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <button class="btn btn-warning floating-add fw-bold" data-bs-toggle="modal" data-bs-target="#latePlayerModal">
+                    <i class="bi bi-person-plus-fill"></i>
+                </button>
+            </div>
+
+            <div class="tab-pane fade" id="pills-track">
+                {% if plan %}
+                    {% for item in plan.items|sort(attribute='order') %}
+                    <div class="card shadow-sm mb-3 drill-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title fw-bold mb-1">{{ item.drill.title }}</h5>
+                                    <span class="badge bg-secondary">{{ item.block_name }}</span>
+                                    <span class="text-muted small ms-2">⏱️ {{ item.duration }}'</span>
+                                </div>
+                                <button class="btn btn-outline-warning btn-sm fw-bold" 
+                                        onclick="openGamification({{ item.drill.id }}, '{{ item.drill.title }}')">
+                                    <i class="bi bi-trophy-fill"></i> Gamificar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <p>Sesión sin plan vinculado.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    <div class="modal fade" id="gameModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold" id="gameDrillTitle">...</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-2 rounded shadow-sm">
+                        <span class="small fw-bold text-muted">CRITERIO DE VICTORIA:</span>
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="criteria" id="crit-high" value="high" checked>
+                            <label class="btn btn-outline-success btn-sm" for="crit-high">Mayor (Pts)</label>
+
+                            <input type="radio" class="btn-check" name="criteria" id="crit-low" value="low">
+                            <label class="btn btn-outline-danger btn-sm" for="crit-low">Menor (Tiempo)</label>
+                        </div>
+                    </div>
+
+                    <p class="small text-muted mb-2 text-center">Introduce el resultado real. La app asignará puntos (15, 14, 13...).</p>
+
+                    <form id="gameForm">
+                        <input type="hidden" id="currentDrillId">
+                        <div id="playersInputs" class="d-flex flex-column gap-2">
+                            </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary w-100 fw-bold" onclick="saveGamification()">💾 Guardar Resultados</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="latePlayerModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">🕐 Jugador Tardío</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label>Nombre</label>
+                        <input type="text" id="lateName" class="form-control">
+                    </div>
+                    <div class="mb-2">
+                        <label>Dorsal</label>
+                        <input type="number" id="lateDorsal" class="form-control">
+                    </div>
+                    <button class="btn btn-warning w-100 fw-bold mt-3" onclick="addLatePlayer()">Añadir y Marcar Presente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Datos de asistencia cargados desde servidor
+        const attendanceMap = {{ attendance_map|tojson }};
+        // Lista completa de jugadores (para saber nombres/fotos en JS)
+        const allPlayers = [
+            {% for att in session.attendance %}
+            { id: {{ att.player.id }}, name: "{{ att.player.name }}", dorsal: {{ att.player.dorsal }} },
+            {% endfor %}
+        ];
+
+        function toggleAttendance(card, sessionId, playerId) {
+            const isPresent = !card.classList.contains('present');
+            
+            // UI Optimista
+            if (isPresent) {
+                card.classList.remove('absent'); card.classList.add('present');
+                card.querySelector('.status-icon').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+            } else {
+                card.classList.remove('present'); card.classList.add('absent');
+                card.querySelector('.status-icon').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+            }
+            
+            // Guardar en servidor
+            fetch('/api/save_attendance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ session_id: sessionId, player_id: playerId, is_present: isPresent })
+            }).then(r => {
+                if(r.ok) attendanceMap[playerId.toString()] = isPresent;
+            });
+        }
+
+        function openGamification(drillId, drillTitle) {
+            document.getElementById('gameDrillTitle').innerText = drillTitle;
+            document.getElementById('currentDrillId').value = drillId;
+            
+            const container = document.getElementById('playersInputs');
+            container.innerHTML = '';
+            
+            // Solo mostramos jugadores presentes
+            let count = 0;
+            allPlayers.forEach(p => {
+                // Comprobar asistencia en tiempo real
+                if (attendanceMap[p.id.toString()] === true) {
+                    const html = `
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-secondary" style="width:35px">#${p.dorsal}</span>
+                            <span class="fw-bold text-truncate" style="flex:1">${p.name}</span>
+                            <input type="number" step="0.1" class="form-control form-control-sm text-center player-score-input" 
+                                   data-pid="${p.id}" placeholder="-" style="width: 80px;">
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', html);
+                    count++;
+                }
+            });
+            
+            if(count === 0) container.innerHTML = '<div class="alert alert-warning">⚠️ No hay jugadores marcados como presentes. Ve a la pestaña Asistencia.</div>';
+            
+            new bootstrap.Modal(document.getElementById('gameModal')).show();
+        }
+
+        function saveGamification() {
+            const drillId = document.getElementById('currentDrillId').value;
+            const criteria = document.querySelector('input[name="criteria"]:checked').value;
+            const inputs = document.querySelectorAll('.player-score-input');
+            
+            const results = [];
+            inputs.forEach(inp => {
+                if (inp.value !== '') {
+                    results.push({ player_id: parseInt(inp.dataset.pid), raw_score: parseFloat(inp.value) });
+                }
+            });
+            
+            if (results.length === 0) return; // Nada que guardar
+
+            fetch('/api/save_gamification', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: {{ session.id }},
+                    drill_id: drillId,
+                    results: results,
+                    criteria: criteria
+                })
+            }).then(r => r.json()).then(data => {
+                if(data.status === 'ok') {
+                    alert('✅ Resultados guardados y puntos asignados.');
+                    bootstrap.Modal.getInstance(document.getElementById('gameModal')).hide();
+                }
+            });
+        }
+
+        function addLatePlayer() {
+            const name = document.getElementById('lateName').value;
+            const dorsal = document.getElementById('lateDorsal').value;
+            if(!name || !dorsal) return alert("Rellena los datos");
+
+            fetch('/api/add_late_player', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ session_id: {{ session.id }}, name: name, dorsal: dorsal })
+            }).then(r => r.json()).then(data => {
+                if(data.status === 'ok') {
+                    location.reload(); // Recargar para actualizar la lista
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ranking - {{ team.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); min-height: 100vh; color: white; }
+        .podium-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 15px; backdrop-filter: blur(5px); }
+        .rank-1 { border: 2px solid #ffd700; background: linear-gradient(to bottom, rgba(255, 215, 0, 0.2), rgba(0,0,0,0)); transform: scale(1.05); }
+        .rank-2 { border: 2px solid #c0c0c0; }
+        .rank-3 { border: 2px solid #cd7f32; }
+        .player-img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid white; background: #333; }
+        .rank-badge { 
+            width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .bg-gold { background: #ffd700; color: black; }
+        .bg-silver { background: #c0c0c0; color: black; }
+        .bg-bronze { background: #cd7f32; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        
+        <div class="text-center mb-4">
+            {% if team.logo_file %}
+                <img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" width="80" class="rounded-circle mb-2 shadow">
+            {% endif %}
+            <h2 class="fw-bold">{{ team.name }}</h2>
+            <p class="opacity-75">🏆 Clasificación de Entrenamiento</p>
+        </div>
+
+        <div class="row g-3 justify-content-center">
+            {% for p in ranking %}
+            <div class="col-12 col-md-8">
+                <div class="d-flex align-items-center p-3 podium-card 
+                    {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% endif %}">
+                    
+                    <div class="position-relative me-3">
+                        {% if p.photo %}
+                            <img src="{{ url_for('static', filename='uploads/' + p.photo) }}" class="player-img">
+                        {% else %}
+                            <div class="player-img d-flex align-items-center justify-content-center fw-bold text-white small">
+                                {{ p.dorsal }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="rank-badge 
+                            {% if loop.index == 1 %}bg-gold{% elif loop.index == 2 %}bg-silver{% elif loop.index == 3 %}bg-bronze{% else %}bg-dark text-white border border-light{% endif %}">
+                            {{ loop.index }}
+                        </div>
+                    </div>
+
+                    <div class="flex-grow-1">
+                        <h5 class="mb-0 fw-bold">{{ p.name }}</h5>
+                        <small class="opacity-75">Dorsal #{{ p.dorsal }}</small>
+                    </div>
+
+                    <div class="text-end">
+                        <span class="fs-4 fw-bold">{{ p.points|int }}</span>
+                        <small class="d-block opacity-75" style="font-size: 0.7rem;">PTS</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% if not ranking %}
+            <div class="text-center opacity-50 mt-5">
+                <p>Aún no hay datos registrados.</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="text-center mt-5 opacity-50 small">
+            <p>EntrenadorBasket App</p>
+        </div>
+
+    </div>
+</body>
+</html>

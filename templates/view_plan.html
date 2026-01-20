@@ -6,179 +6,115 @@
     <title>{{ plan.name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        .drill-row { cursor: pointer; transition: background 0.2s; }
-        .drill-row:hover { background-color: #f8f9fa; }
-        .time-input { width: 60px; border: 1px solid #ced4da; text-align: center; border-radius: 4px; }
-        @media print { .no-print, .btn, .modal { display: none !important; } body { background: white; } }
-    </style>
 </head>
-<body class="bg-light pb-5">
+<body class="bg-light">
 
-    <div class="bg-white shadow-sm mb-4 border-bottom">
-        <div class="container py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <a href="/my_plans" class="text-decoration-none text-muted small no-print"><i class="bi bi-arrow-left"></i> Volver</a>
-                    <h2 class="fw-bold mb-0">{{ plan.name }}</h2>
-                    <p class="text-muted mb-0">
-                        {{ plan.date.strftime('%d/%m/%Y') }} 
-                        {% if plan.team_name %} • {{ plan.team_name }}{% endif %}
-                        • <span class="badge bg-primary fs-6">⏱️ <span id="totalTime">{{ total_minutes }}</span> min</span>
-                    </p>
-                </div>
-                <div class="no-print d-flex gap-2">
-                    <a href="/court_mode/{{ plan.id }}" class="btn btn-purple fw-bold text-white shadow-sm" style="background-color: #6f42c1;">
-                        <i class="bi bi-phone-fill"></i> Modo Pista
-                    </a>
-                    <button class="btn btn-outline-dark btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <span class="navbar-brand fw-bold text-truncate" style="max-width: 200px;">{{ plan.name }}</span>
+            <div>
+                <a href="/court_mode/{{ plan.id }}" class="btn btn-outline-warning btn-sm me-1" target="_blank"><i class="bi bi-phone-landscape"></i> Modo Pista (Solo ver)</a>
+                <a href="/my_plans" class="btn btn-outline-light btn-sm">Volver</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        
+        <div class="card shadow-sm border-primary mb-4">
+            <div class="card-body bg-white">
+                <div class="row align-items-center">
+                    <div class="col-md-7">
+                        <h4 class="fw-bold text-primary mb-1">🚀 Ejecutar este Plan</h4>
+                        <p class="text-muted small mb-0">Convierte este diseño en una sesión real, controla asistencia y gamifica.</p>
+                    </div>
+                    <div class="col-md-5 mt-3 mt-md-0">
+                        <form action="/start_session" method="POST" class="d-flex gap-2">
+                            <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                            <select name="team_id" class="form-select fw-bold" required>
+                                <option value="" disabled selected>Elige Equipo...</option>
+                                {% for t in teams %}
+                                <option value="{{ t.id }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-primary fw-bold text-nowrap">Empezar</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="container" style="max-width: 900px;">
-        {% set blocks = plan.structure.split(',') %}
-        {% for block in blocks %}
-        <div class="card mb-4 shadow-sm border-0">
-            <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between">
-                <span>{{ block }}</span>
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <h6 class="text-muted fw-bold small">DATOS GENERALES</h6>
+                        <hr class="my-2">
+                        <p class="mb-1"><strong>Equipo:</strong> {{ plan.team_name or 'Sin asignar' }}</p>
+                        <p class="mb-1"><strong>Duración:</strong> {{ total_minutes }} min</p>
+                        <p class="mb-0"><strong>Ejercicios:</strong> {{ plan.items|length }}</p>
+                    </div>
+                </div>
+                
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <h6 class="text-muted fw-bold small">NOTAS</h6>
+                        <hr class="my-2">
+                        <p class="small text-muted">{{ plan.notes or 'Sin notas' }}</p>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    {% if plan.user_id == current_user.id %}
+                    <a href="/edit_plan/{{ plan.id }}" class="btn btn-outline-secondary">✏️ Editar Plan</a>
+                    <a href="/duplicate_plan/{{ plan.id }}" class="btn btn-outline-primary">📄 Duplicar Plan</a>
+                    <a href="/delete_plan/{{ plan.id }}" class="btn btn-outline-danger" onclick="return confirm('¿Borrar plan?')">🗑️ Eliminar</a>
+                    {% endif %}
+                </div>
             </div>
-            <div class="list-group list-group-flush">
-                {% for item in plan.items if item.block_name == block %}
-                <div class="list-group-item d-flex align-items-center justify-content-between drill-row" 
-                     onclick="handleMediaClick('{{ item.drill.media_type }}', '{{ item.drill.media_file }}', '{{ item.drill.external_link }}')">
-                    
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="no-print" onclick="event.stopPropagation()">
-                            <input type="number" class="time-input fw-bold" value="{{ item.duration }}" onchange="updateDuration({{ item.id }}, this.value)"> <span class="small text-muted">min</span>
-                        </div>
-                        <div class="d-none d-print-block fw-bold">{{ item.duration }}'</div>
 
-                        <div class="fs-4 text-muted">
-                            {% if item.drill.media_type == 'link' %}<i class="bi bi-play-circle"></i>
-                            {% elif item.drill.media_type == 'pdf' %}<i class="bi bi-file-pdf text-danger"></i>
-                            {% else %}<i class="bi bi-image text-success"></i>{% endif %}
+            <div class="col-lg-8">
+                <h5 class="fw-bold mb-3">Estructura del Entrenamiento</h5>
+                
+                {% for item in plan.items|sort(attribute='order') %}
+                <div class="card mb-3 shadow-sm border-0 position-relative">
+                    <div class="card-body d-flex align-items-center p-3">
+                        <div class="me-3 text-center" style="min-width: 50px;">
+                            <h3 class="fw-bold text-primary mb-0">{{ item.duration }}'</h3>
+                            <small class="text-muted" style="font-size: 0.7rem;">MIN</small>
                         </div>
-                        <div>
-                            <span class="fw-bold d-block">{{ item.drill.title }}</span>
-                            <small class="text-muted">{{ item.drill.description|truncate(80) }}</small>
+                        <div class="flex-grow-1 cursor-pointer" style="cursor: pointer;" 
+                             data-bs-toggle="modal" data-bs-target="#drillModal" data-bs-url="/drill/{{ item.drill.id }}">
+                            <span class="badge bg-secondary mb-1">{{ item.block_name }}</span>
+                            <h5 class="fw-bold mb-0 text-truncate">{{ item.drill.title }}</h5>
                         </div>
                     </div>
-                    
-                    <a href="/delete_plan_item/{{ item.id }}" class="btn btn-sm text-danger no-print" onclick="event.stopPropagation(); return confirm('¿Quitar?')"><i class="bi bi-x-lg"></i></a>
                 </div>
                 {% endfor %}
-                <button class="list-group-item list-group-item-action text-center text-primary fw-bold no-print" 
-                        data-bs-toggle="modal" data-bs-target="#addDrillModal" onclick="setTargetBlock('{{ block }}')">
-                    + Añadir Ejercicio
-                </button>
+
+                {% if plan.user_id == current_user.id %}
+                <div class="text-center mt-4 p-4 border border-dashed rounded bg-white">
+                    <p class="text-muted">Para añadir o quitar ejercicios, usa el botón de "Editar Plan".</p>
+                    <a href="/edit_plan/{{ plan.id }}" class="btn btn-primary btn-sm">Ir a Editar</a>
+                </div>
+                {% endif %}
             </div>
         </div>
-        {% endfor %}
+
     </div>
 
-    <div class="modal fade no-print" id="addDrillModal" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title">Añadir a: <span id="modalBlockName" class="text-warning"></span></h5>
-                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body bg-light">
-                    
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-8">
-                            <input type="text" id="searchInput" class="form-control" placeholder="Buscar por título..." onkeyup="filterDrills()">
-                        </div>
-                        <div class="col-md-4">
-                            <div class="dropdown w-100">
-                                <button class="btn btn-outline-secondary w-100 dropdown-toggle text-start" type="button" data-bs-toggle="dropdown">
-                                    🏷️ Filtrar Etiquetas
-                                </button>
-                                <ul class="dropdown-menu p-2 w-100" style="max-height: 300px; overflow-y: auto;">
-                                    {% for tag in tags %}
-                                    <li class="form-check">
-                                        <input class="form-check-input tag-filter" type="checkbox" value="{{ tag.id }}" id="m_t{{ tag.id }}" onchange="filterDrills()">
-                                        <label class="form-check-label w-100" for="m_t{{ tag.id }}">{{ tag.name }}</label>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row row-cols-1 row-cols-md-2 g-3">
-                        {% for drill in all_drills %}
-                        {% set tag_ids = drill.primary_tags|map(attribute='id')|list|join(',') %}
-                        <div class="col drill-item" data-title="{{ drill.title|lower }}" data-tags="{{ tag_ids }}">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body p-2 d-flex gap-3 align-items-center">
-                                    <div class="d-flex align-items-center gap-3 flex-grow-1 cursor-pointer" style="cursor:zoom-in" 
-                                         onclick="handleMediaClick('{{ drill.media_type }}', '{{ drill.media_file }}', '{{ drill.external_link }}')">
-                                        
-                                        <div style="width:50px; height:50px; background:#eee; border-radius:4px; overflow:hidden; flex-shrink:0;">
-                                            {% if drill.media_type == 'image' %}<img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" style="width:100%; height:100%; object-fit:cover;">
-                                            {% elif 'youtu' in (drill.external_link or '') %}<img src="{{ drill.external_link|youtube_thumb }}" style="width:100%; height:100%; object-fit:cover;">
-                                            {% else %}<div class="d-flex align-items-center justify-content-center h-100"><i class="bi bi-eye text-muted"></i></div>{% endif %}
-                                        </div>
-
-                                        <div>
-                                            <h6 class="mb-0 fw-bold">{{ drill.title }}</h6>
-                                            <small class="text-muted">
-                                                {% for t in drill.primary_tags[:2] %}{{ t.name }}{% if not loop.last %}, {% endif %}{% endfor %}
-                                            </small>
-                                        </div>
-                                    </div>
-
-                                    <form action="/add_item_to_plan" method="POST">
-                                        <input type="hidden" name="plan_id" value="{{ plan.id }}">
-                                        <input type="hidden" name="block_name" id="hiddenBlockInput_{{ drill.id }}">
-                                        <input type="hidden" name="drill_id" value="{{ drill.id }}">
-                                        <button class="btn btn-primary btn-sm rounded-circle" style="width:38px; height:38px;"><i class="bi bi-plus-lg"></i></button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <div class="modal fade" id="drillModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"></div></div></div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function setTargetBlock(name) {
-            document.getElementById('modalBlockName').textContent = name;
-            document.querySelectorAll('[id^="hiddenBlockInput_"]').forEach(i => i.value = name);
-        }
-
-        function filterDrills() {
-            const txt = document.getElementById('searchInput').value.toLowerCase();
-            const selectedTags = Array.from(document.querySelectorAll('.tag-filter:checked')).map(cb => cb.value);
-
-            document.querySelectorAll('.drill-item').forEach(el => {
-                const title = el.getAttribute('data-title');
-                const drillTags = el.getAttribute('data-tags').split(',');
-                const matchText = title.includes(txt);
-                const matchTags = selectedTags.length === 0 || selectedTags.some(t => drillTags.includes(t));
-                el.style.display = (matchText && matchTags) ? 'block' : 'none';
-            });
-        }
-
-        function handleMediaClick(type, file, link) {
-            if (type === 'link') window.open(link, '_blank');
-            else if (type === 'pdf' || type === 'image' || type === 'video_file') window.open('/static/uploads/' + file, '_blank');
-        }
-
-        function updateDuration(itemId, newDuration) {
-            fetch('/update_item_duration', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({item_id: itemId, duration: newDuration})
-            }).then(() => location.reload()); 
-        }
+        const drillModal = document.getElementById('drillModal')
+        drillModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget
+            const url = button.getAttribute('data-bs-url')
+            const modalContent = drillModal.querySelector('.modal-content')
+            modalContent.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>'
+            fetch(url).then(r => r.text()).then(html => { modalContent.innerHTML = html })
+        })
     </script>
 </body>
 </html>
