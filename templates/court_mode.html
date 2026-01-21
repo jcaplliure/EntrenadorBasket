@@ -55,7 +55,7 @@
         
         /* MEDIA */
         .media-box { 
-            width: 100%; height: 220px; background: #222; margin-bottom: 15px; border-radius: 12px; 
+            width: 100%; height: 200px; background: #222; margin-bottom: 10px; border-radius: 12px; 
             display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
         }
         .media-box img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
@@ -119,7 +119,7 @@
 
     {% set ns = namespace(cumulative=0) %}
     
-    {% for item in plan.items %}
+    {% for item in plan.items|sort(attribute='order') %}
     <div class="drill-container {% if loop.first %}active{% endif %}" 
          id="drill-{{ loop.index0 }}" 
          data-item-id="{{ item.id }}"
@@ -157,6 +157,12 @@
             </div>
         </div>
 
+        <div class="mt-2 text-center">
+            <button class="btn btn-outline-warning btn-sm" onclick="openGamificationModal('{{ item.drill.title }}')">
+                <i class="bi bi-trophy-fill"></i> Gamificar
+            </button>
+        </div>
+
         <p class="mt-3 text-start text-light opacity-75 small" style="white-space: pre-wrap;">{{ item.drill.description }}</p>
     </div>
     
@@ -168,26 +174,46 @@
         <button class="btn btn-primary nav-btn" id="nextBtn" onclick="nextDrill()">Siguiente <i class="bi bi-chevron-right"></i></button>
     </div>
 
+    <div class="modal fade text-dark" id="gameModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="gameTitle">Gamificar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning small">
+                        <i class="bi bi-info-circle"></i> Estás en <strong>Modo Pista (Solo Ver)</strong>.
+                        <br>Para guardar puntuaciones reales de jugadores, debes iniciar una sesión desde "Mis Equipos".
+                    </div>
+                    <p class="text-muted text-center">Aquí podrías ver las puntuaciones históricas de este ejercicio si estuvieras en una sesión activa.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentIdx = 0;
         const totalDrills = {{ plan.items|length }};
         let sessionStartTime = null;
-        let drillStartTime = null; // Para medir tiempo real del ejercicio actual
+        let drillStartTime = null; 
         let timers = {}; 
         let intervalGlobal = null;
-        
-        // Almacén de tiempos reales
         let sessionLog = []; 
 
         const drillsData = [
-            {% for item in plan.items %}
+            {% for item in plan.items|sort(attribute='order') %}
             { duration: {{ item.duration }} },
             {% endfor %}
         ];
 
         function startSession() {
             sessionStartTime = new Date();
-            drillStartTime = new Date(); // Empieza el primer ejercicio
+            drillStartTime = new Date();
             document.getElementById('start-overlay').style.display = 'none';
             intervalGlobal = setInterval(updateDashboard, 1000);
             startTimer(0);
@@ -223,12 +249,8 @@
                 lagEl.className = "dash-value text-white";
             }
 
-            // Hora fin estimada del PLAN completo
             let totalPlanMins = 0;
             drillsData.forEach(d => totalPlanMins += d.duration);
-            
-            // Si vamos con retraso (lagSecs > 0), sumamos ese retraso a la hora fin
-            // Hora Fin = Hora Inicio + Duración Plan + Retraso Actual
             const estimatedEndTime = new Date(sessionStartTime.getTime() + (totalPlanMins * 60000) + (lagSecs > 0 ? lagSecs * 1000 : 0));
             
             const endH = estimatedEndTime.getHours();
@@ -239,25 +261,23 @@
         function logDrillTime() {
             if (!drillStartTime) return;
             const now = new Date();
-            const actualMinutes = Math.round((now - drillStartTime) / 60000); // Redondeado a minutos
+            const actualMinutes = Math.round((now - drillStartTime) / 60000); 
             const container = document.getElementById('drill-' + currentIdx);
             
-            // Guardamos datos
             sessionLog[currentIdx] = {
                 id: container.getAttribute('data-item-id'),
                 title: container.getAttribute('data-title'),
                 planned: parseInt(container.getAttribute('data-duration')),
-                actual: actualMinutes < 1 ? 1 : actualMinutes // Mínimo 1 min
+                actual: actualMinutes < 1 ? 1 : actualMinutes 
             };
             
-            drillStartTime = new Date(); // Reiniciar reloj para siguiente drill
+            drillStartTime = new Date(); 
         }
 
         function showDrill(idx) {
             document.querySelectorAll('.drill-container').forEach(el => el.classList.remove('active'));
             document.getElementById('drill-' + idx).classList.add('active');
             
-            // Actualizar botón si es el último
             const nextBtn = document.getElementById('nextBtn');
             if (idx === totalDrills - 1) {
                 nextBtn.innerHTML = 'Finalizar <i class="bi bi-flag-fill"></i>';
@@ -271,15 +291,12 @@
         }
 
         function nextDrill() {
-            // Guardar tiempo del actual antes de cambiar
             logDrillTime();
-            
             if (currentIdx < totalDrills - 1) {
                 pauseTimer(currentIdx);
                 currentIdx++;
                 showDrill(currentIdx);
             } else {
-                // FIN DEL ENTRENAMIENTO
                 showFinishScreen();
             }
         }
@@ -289,7 +306,7 @@
                 pauseTimer(currentIdx);
                 currentIdx--;
                 showDrill(currentIdx);
-                drillStartTime = new Date(); // Reset reloj parcial
+                drillStartTime = new Date(); 
             }
         }
 
@@ -304,8 +321,8 @@
             sessionLog.forEach(log => {
                 const diff = log.actual - log.planned;
                 let diffClass = '';
-                if (diff > 0) diffClass = 'time-diff-bad'; // Tarde
-                else if (diff < 0) diffClass = 'time-diff-good'; // Ahorro
+                if (diff > 0) diffClass = 'time-diff-bad';
+                else if (diff < 0) diffClass = 'time-diff-good';
                 
                 const html = `
                     <tr>
@@ -322,7 +339,6 @@
             const btn = document.querySelector('#finish-overlay .btn-primary');
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
             
-            // Enviamos actualizaciones una a una (simple y robusto)
             for (const log of sessionLog) {
                 if (log && log.actual > 0) {
                     await fetch('/update_item_duration', {
@@ -332,11 +348,9 @@
                     });
                 }
             }
-            
             window.location.href = "/plan/{{ plan.id }}";
         }
 
-        // TIMER FUNCTIONS (Igual que antes)
         function startTimer(idx) {
             if (timers[idx]) return;
             const display = document.getElementById('timer-' + idx);
@@ -364,6 +378,12 @@
         function openMedia(type, file, link) {
             if (type === 'link') window.open(link, '_blank');
             else if (type === 'pdf' || type === 'image') window.open('/static/uploads/' + file, '_blank');
+        }
+        
+        // FUNCIÓN NUEVA
+        function openGamificationModal(title) {
+            document.getElementById('gameTitle').innerText = title;
+            new bootstrap.Modal(document.getElementById('gameModal')).show();
         }
     </script>
 </body>

@@ -26,13 +26,13 @@
                     <div class="d-flex align-items-center gap-3">
                         <span class="badge bg-secondary rounded-pill">Q{{ event.period }}</span>
                         <div>
-                            <div class="fw-bold">{{ event.player.name }}</div>
-                            <small class="text-muted">{{ event.action.name }}</small>
+                            <div class="fw-bold">{{ event.player.name if event.player else 'Jugador Borrado' }}</div>
+                            <small class="text-muted">{{ event.action.name if event.action else 'Acción Borrada' }}</small>
                         </div>
                     </div>
                     
                     <button class="btn btn-outline-secondary btn-sm" 
-                            onclick="openEditModal({{ event.id }}, {{ event.player_id }}, {{ event.action_id }})">
+                            onclick="openEditModal({{ event.id }}, {{ event.player_id or 0 }}, {{ event.action_id or 0 }})">
                         <i class="bi bi-pencil-fill"></i>
                     </button>
                 </li>
@@ -88,8 +88,9 @@
     <script>
         function openEditModal(eventId, playerId, actionId) {
             document.getElementById('editEventId').value = eventId;
-            document.getElementById('editPlayer').value = playerId;
-            document.getElementById('editAction').value = actionId;
+            // Usamos OR 0 para evitar errores si viene nulo
+            if(playerId) document.getElementById('editPlayer').value = playerId;
+            if(actionId) document.getElementById('editAction').value = actionId;
             document.getElementById('deleteCheck').checked = false;
             new bootstrap.Modal(document.getElementById('editModal')).show();
         }

@@ -11,6 +11,7 @@
         .player-head { min-width: 150px; position: sticky; left: 0; background: white; z-index: 10; border-right: 2px solid #dee2e6; }
         .val-col { font-weight: bold; background-color: #f8f9fa; border-left: 2px solid #dee2e6; }
         .action-header { writing-mode: vertical-rl; transform: rotate(180deg); text-align: left; height: 100px; padding-bottom: 5px; }
+        .rank-header { font-size: 0.7rem; color: #666; background: #e9ecef; }
     </style>
 </head>
 <body class="bg-light">
@@ -50,6 +51,9 @@
                             <tr>
                                 <th class="player-head text-start ps-3">Jugador</th>
                                 <th class="val-col bg-dark text-white">VAL</th>
+                                {% for rank in rankings %}
+                                <th class="bg-secondary text-white small" title="{{ rank.name }}">{{ rank.name[:3] }}</th>
+                                {% endfor %}
                                 {% for name in action_names %}
                                 <th class="action-col"><div class="action-header">{{ name }}</div></th>
                                 {% endfor %}
@@ -68,6 +72,10 @@
                                 <td class="val-col fs-6 {% if p_data.total_val >= 10 %}text-success{% elif p_data.total_val < 0 %}text-danger{% endif %}">
                                     {{ p_data.total_val|int }}
                                 </td>
+
+                                {% for rank in rankings %}
+                                <td class="bg-light fw-bold text-primary">{{ p_data.rankings[rank.name] }}</td>
+                                {% endfor %}
 
                                 {% for name in action_names %}
                                 <td class="text-muted">

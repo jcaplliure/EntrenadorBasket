@@ -6,30 +6,30 @@
     <title>Entrenador Basket</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        .dashboard-card { transition: transform 0.2s; border: none; border-radius: 15px; }
-        .dashboard-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .icon-box { font-size: 2.5rem; margin-bottom: 10px; }
+        .dashboard-card { transition: transform 0.2s; border: none; border-radius: 12px; }
+        .dashboard-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .icon-box { font-size: 1.8rem; margin-bottom: 5px; }
         .drill-card { border: none; overflow: hidden; position: relative; border-radius: 12px; }
-        .drill-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; transition: all 0.2s; }
-        .card-img-zone { position: relative; height: 180px; cursor: pointer; background: #000; overflow: hidden; }
-        .card-img-zone img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; transition: opacity 0.2s; }
-        .card-img-zone:hover img { opacity: 0.5; }
-        .overlay-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; opacity: 0.8; pointer-events: none; }
+        .card-img-zone { position: relative; height: 160px; cursor: pointer; background: #000; overflow: hidden; }
+        .card-img-zone img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+        .overlay-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; }
+        .stats-badge { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
         .text-orange { color: #fd7e14; }
+        .select2-container .select2-selection--single { height: 38px; }
     </style>
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm">
+    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm p-1">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/">
-                <i class="bi bi-basket text-orange"></i> Entrenador<span class="text-orange">Basket</span>
+            <a class="navbar-brand fw-bold fs-6" href="/">
+                <i class="bi bi-basket text-orange"></i> Coach<span class="text-orange">App</span>
             </a>
             <div class="d-flex align-items-center">
                 {% if current_user.is_authenticated %}
-                    <span class="text-white me-3 small d-none d-md-inline">Hola, {{ current_user.name }}</span>
-                    <a href="/logout" class="btn btn-outline-secondary btn-sm">Salir</a>
+                    <a href="/logout" class="btn btn-outline-secondary btn-sm" style="font-size: 0.7rem;">Salir</a>
                 {% else %}
                     <a href="/login" class="btn btn-primary btn-sm fw-bold">Entrar</a>
                 {% endif %}
@@ -37,83 +37,76 @@
         </div>
     </nav>
 
-    <div class="container mt-4">
-        
+    <div class="container mt-3">
         {% if current_user.is_authenticated %}
         
-        <div class="row g-3 mb-5">
+        <div class="row g-2 mb-4">
             {% if current_user.is_admin %}
-            <div class="col-6 col-md-3">
-                <a href="/admin/config" class="card dashboard-card bg-dark text-white text-decoration-none h-100 p-3 text-center">
+            <div class="col-6 col-md-3 col-lg-2">
+                <a href="/admin/config" class="card dashboard-card bg-dark text-white text-decoration-none h-100 p-2 text-center">
                     <div class="icon-box text-warning"><i class="bi bi-gear-fill"></i></div>
-                    <h6 class="fw-bold">Administración</h6>
-                    <small class="text-white-50">Diseño y Backups</small>
+                    <small class="fw-bold d-block">Admin</small>
                 </a>
             </div>
             {% endif %}
-
-            <div class="col-6 col-md-3">
-                <a href="/my_teams" class="card dashboard-card bg-white text-dark text-decoration-none h-100 p-3 text-center shadow-sm">
+            <div class="col-6 col-md-3 col-lg-2">
+                <a href="/my_teams" class="card dashboard-card bg-white text-dark text-decoration-none h-100 p-2 text-center shadow-sm">
                     <div class="icon-box text-primary"><i class="bi bi-people-fill"></i></div>
-                    <h6 class="fw-bold">Mis Equipos</h6>
-                    <small class="text-muted">Plantilla y Staff</small>
+                    <small class="fw-bold d-block">Equipos</small>
                 </a>
             </div>
-
-            <div class="col-6 col-md-3">
-                <a href="/my_plans" class="card dashboard-card bg-white text-dark text-decoration-none h-100 p-3 text-center shadow-sm">
+            <div class="col-6 col-md-3 col-lg-2">
+                <a href="/my_plans" class="card dashboard-card bg-white text-dark text-decoration-none h-100 p-2 text-center shadow-sm">
                     <div class="icon-box text-success"><i class="bi bi-clipboard-data-fill"></i></div>
-                    <h6 class="fw-bold">Entrenamiento</h6>
-                    <small class="text-muted">Planes y Sesiones</small>
+                    <small class="fw-bold d-block">Planes</small>
                 </a>
             </div>
-
-            <div class="col-6 col-md-3">
-                <a href="/matches" class="card dashboard-card bg-white text-dark text-decoration-none h-100 p-3 text-center shadow-sm">
+            <div class="col-6 col-md-3 col-lg-2">
+                <a href="/matches" class="card dashboard-card bg-white text-dark text-decoration-none h-100 p-2 text-center shadow-sm">
                     <div class="icon-box text-danger"><i class="bi bi-trophy-fill"></i></div>
-                    <h6 class="fw-bold">Partidos</h6>
-                    <small class="text-muted">Jugar y Estadísticas</small>
+                    <small class="fw-bold d-block">Partidos</small>
                 </a>
             </div>
         </div>
-        
-        <hr class="mb-4 text-muted">
 
         {% if pending_invites %}
-        <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4">
-            <i class="bi bi-envelope-exclamation-fill fs-4 me-3"></i>
-            <div>
-                <strong>Tienes invitaciones pendientes:</strong>
-                <div class="mt-1">
-                    {% for invite in pending_invites %}
-                    <span class="badge bg-white text-dark border me-1">
-                        {{ invite.team.name }} 
-                        <a href="/accept_invite/{{ invite.id }}" class="text-success ms-1"><i class="bi bi-check-circle-fill"></i></a>
-                        <a href="/reject_invite/{{ invite.id }}" class="text-danger ms-1"><i class="bi bi-x-circle-fill"></i></a>
-                    </span>
-                    {% endfor %}
+        <div class="alert alert-info py-2 px-3 small mb-3">
+            <strong>Invitaciones:</strong>
+            {% for invite in pending_invites %}
+                {{ invite.team.name }} <a href="/accept_invite/{{ invite.id }}">✅</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% endif %}
+
+        <form action="/" method="GET" class="card p-2 shadow-sm border-0 mb-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-4">
+                    <input class="form-control form-control-sm" type="search" name="q" placeholder="Buscar texto..." value="{{ request.args.get('q', '') }}">
                 </div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% endif %}
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0"><i class="bi bi-collection-play-fill text-orange"></i> Biblioteca de Ejercicios</h5>
-            {% if current_user.is_authenticated %}
-            <a href="/create" class="btn btn-dark btn-sm rounded-pill px-3">+ Nuevo Ejercicio</a>
-            {% endif %}
-        </div>
-
-        <form action="/" method="GET" class="card p-2 shadow-sm border-0 mb-4 bg-white rounded-pill">
-            <div class="d-flex gap-2">
-                <input class="form-control border-0 bg-transparent ps-3" type="search" name="q" placeholder="Buscar ejercicios..." value="{{ request.args.get('q', '') }}">
-                <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold"><i class="bi bi-search"></i></button>
+                <div class="col-12 col-md-4">
+                    <select class="form-select form-select-sm" name="primary" multiple id="tagSelect">
+                        {% for tag in tags %}
+                        <option value="{{ tag.id }}" {% if tag.id|string in request.args.getlist('primary') %}selected{% endif %}>{{ tag.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-8 col-md-3">
+                    <select name="sort_by" class="form-select form-select-sm">
+                        <option value="smart_order" {% if request.args.get('sort_by') == 'smart_order' %}selected{% endif %}>⭐ Recomendado</option>
+                        <option value="favs_desc" {% if request.args.get('sort_by') == 'favs_desc' %}selected{% endif %}>❤️ Más Favoritos</option>
+                        <option value="views_desc" {% if request.args.get('sort_by') == 'views_desc' %}selected{% endif %}>👁️ Más Vistos</option>
+                        <option value="date_desc" {% if request.args.get('sort_by') == 'date_desc' %}selected{% endif %}>📅 Recientes</option>
+                    </select>
+                </div>
+                <div class="col-4 col-md-1">
+                    <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold"><i class="bi bi-search"></i></button>
+                </div>
             </div>
         </form>
 
-        <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4 pb-5">
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 pb-5">
             {% for drill in drills %}
             <div class="col">
                 <div class="card h-100 drill-card shadow-sm bg-white">
@@ -125,17 +118,42 @@
                         {% elif drill.external_link and 'youtu' in drill.external_link %}
                             <img src="{{ drill.external_link|youtube_thumb }}">
                         {% else %}
-                            <img src="{{ get_config_url('generic_bg') }}">
+                            {% if drill.media_type == 'pdf' %}<img src="{{ get_config_url('pdf_bg') }}">
+                            {% elif 'tiktok' in (drill.external_link or '') %}<img src="{{ get_config_url('tiktok_bg') }}">
+                            {% elif 'instagram' in (drill.external_link or '') %}<img src="{{ get_config_url('instagram_bg') }}">
+                            {% elif 'facebook' in (drill.external_link or '') %}<img src="{{ get_config_url('facebook_bg') }}">
+                            {% else %}<img src="{{ get_config_url('generic_bg') }}">
+                            {% endif %}
                         {% endif %}
-                        <div class="overlay-img bg-white rounded-circle d-flex align-items-center justify-content-center">
-                            <i class="bi bi-play-fill fs-2 text-dark"></i>
+
+                        {% if drill.media_type == 'link' %}
+                            {% if 'youtu' in (drill.external_link or '') %}
+                                <img src="{{ get_config_url('youtube_overlay') }}" class="overlay-img">
+                            {% elif 'facebook' in (drill.external_link or '') %}
+                                <img src="{{ get_config_url('facebook_overlay') }}" class="overlay-img">
+                            {% elif 'tiktok' in (drill.external_link or '') %}
+                                <img src="{{ get_config_url('tiktok_overlay') }}" class="overlay-img">
+                            {% elif 'instagram' in (drill.external_link or '') %}
+                                <img src="{{ get_config_url('instagram_overlay') }}" class="overlay-img">
+                            {% else %}
+                                <img src="{{ get_config_url('generic_overlay') }}" class="overlay-img">
+                            {% endif %}
+                        {% elif drill.media_type == 'pdf' %}
+                            <img src="{{ get_config_url('pdf_overlay') }}" class="overlay-img">
+                        {% else %}
+                            <img src="{{ get_config_url('image_overlay') }}" class="overlay-img">
+                        {% endif %}
+
+                        <div class="stats-badge">
+                            <i class="bi bi-eye-fill"></i> {{ drill.views }}
+                            <i class="bi bi-heart-fill ms-1"></i> {{ drill.favorited_by.count() }}
                         </div>
                     </div>
-                    <div class="card-body p-3">
-                        <h6 class="card-title fw-bold text-truncate mb-1">{{ drill.title }}</h6>
+                    <div class="card-body p-2">
+                        <h6 class="card-title fw-bold text-truncate mb-1" style="font-size: 0.9rem;">{{ drill.title }}</h6>
                         <div>
                             {% for tag in drill.primary_tags[:2] %}
-                                <span class="badge bg-light text-secondary border me-1" style="font-size: 0.65rem;">{{ tag.name }}</span>
+                                <span class="badge bg-light text-secondary border me-1" style="font-size: 0.6rem;">{{ tag.name }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -147,8 +165,18 @@
 
     <div class="modal fade" id="drillModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;"></div></div></div>
     
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
+        $(document).ready(function() {
+            $('#tagSelect').select2({
+                placeholder: "Filtrar Etiquetas",
+                allowClear: true,
+                width: '100%'
+            });
+        });
+
         const drillModal = document.getElementById('drillModal')
         drillModal.addEventListener('show.bs.modal', event => {
             const button = event.relatedTarget
