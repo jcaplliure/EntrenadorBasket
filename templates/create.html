@@ -11,6 +11,9 @@
         .preview-box { height: 120px; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; }
         .paste-zone { transition: all 0.3s; }
         .paste-zone:hover { border-color: #0d6efd !important; background: #e9ecef; }
+        .btn-check:checked + .btn-outline-primary { background-color: #0d6efd; color: white; }
+        .btn-check:checked + .btn-outline-success { background-color: #198754; color: white; }
+        .btn-check:checked + .btn-outline-danger { background-color: #dc3545; color: white; }
     </style>
 </head>
 <body class="bg-light">
@@ -238,7 +241,7 @@
             });
         }
 
-        // --- PEGADO MÁGICO ---
+        // --- PEGADO MÁGICO (CTRL+V) ---
         document.addEventListener('paste', function(event) {
             const items = (event.clipboardData || event.originalEvent.clipboardData).items;
             for (let index in items) {
@@ -283,6 +286,9 @@
                 }
             });
         });
+        
+        // Inicializar
+        detectLink();
     </script>
 </body>
 </html>
