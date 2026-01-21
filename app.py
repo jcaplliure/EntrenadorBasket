@@ -79,11 +79,8 @@ class User(UserMixin, db.Model):
     actions_config = db.relationship('ActionDefinition', backref='owner', lazy=True)
     rankings_config = db.relationship('RankingDefinition', backref='owner', lazy=True)
     matches = db.relationship('Match', backref='coach', lazy=True)
-
     def set_password(self, password): self.password_hash = generate_password_hash(password)
-    def check_password(self, password):
-        if not self.password_hash: return False
-        return check_password_hash(self.password_hash, password)
+    def check_password(self, password): return check_password_hash(self.password_hash, password) if self.password_hash else False
 
 class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -167,12 +164,11 @@ class Match(db.Model):
 class MatchEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     match_id = db.Column(db.Integer, db.ForeignKey('match.id'), nullable=False)
-    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True) # Allow null if player deleted
-    action_id = db.Column(db.Integer, db.ForeignKey('action_definition.id'), nullable=True) # Allow null
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=True)
+    action_id = db.Column(db.Integer, db.ForeignKey('action_definition.id'), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     game_minute = db.Column(db.Integer, default=0)
     period = db.Column(db.Integer, default=1)
-    
     player = db.relationship('Player', backref='events')
     action = db.relationship('ActionDefinition', backref='events')
 
@@ -263,8 +259,7 @@ def youtube_thumb(url):
     return None
 
 @app.template_filter('get_youtube_id')
-def get_youtube_id(url):
-    return extract_youtube_id(url)
+def get_youtube_id(url): return extract_youtube_id(url)
 
 def create_default_game_config(user_id):
     defaults = [
@@ -280,10 +275,8 @@ def create_default_game_config(user_id):
         db.session.add(act)
         created_actions[name] = act
     db.session.commit()
-    # Rankings por defecto
-    all_actions = list(created_actions.values())
-    r_mvp = RankingDefinition(name="MVP (Valoración)", icon="star", user_id=user_id)
-    r_mvp.ingredients.extend(all_actions)
+    r_mvp = RankingDefinition(name="Valoración", icon="star", user_id=user_id)
+    r_mvp.ingredients.extend(list(created_actions.values()))
     db.session.add(r_mvp)
     db.session.commit()
 
@@ -291,53 +284,27 @@ def create_default_game_config(user_id):
 @app.route('/')
 def home():
     query = request.args.get('q', '').strip()
-    primary_ids_raw = request.args.getlist('primary') # Multi-select tags
+    primary_ids_raw = request.args.getlist('primary')
     sort_by = request.args.get('sort_by', 'smart_order') 
-    
-    if current_user.is_authenticated: 
-        base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
-    else: 
-        base_condition = (Drill.is_public == True)
-    
+    base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id) if current_user.is_authenticated else (Drill.is_public == True)
     drills_query = Drill.query.filter(base_condition)
-    
     if query:
         search_term = f"%{query}%"
         drills_query = drills_query.filter(or_(Drill.title.ilike(search_term), Drill.description.ilike(search_term)))
-    
     if primary_ids_raw:
         try:
             primary_ids = [int(x) for x in primary_ids_raw]
-            for pid in primary_ids:
-                drills_query = drills_query.filter(Drill.primary_tags.any(Tag.id == pid))
+            for pid in primary_ids: drills_query = drills_query.filter(Drill.primary_tags.any(Tag.id == pid))
         except ValueError: pass
-
-    # Lógica de Ordenación Compleja
     drills = drills_query.all()
-    
     if current_user.is_authenticated and sort_by == 'smart_order':
         my_fav_ids = [d.id for d in current_user.favoritos]
-        
-        # 1. Mis Favs, 2. Más Favs Globales, 3. Más Vistas
-        def get_sort_key(d):
-            is_my_fav = 1 if d.id in my_fav_ids else 0
-            global_favs = d.favorited_by.count()
-            return (is_my_fav, global_favs, d.views)
-            
-        drills.sort(key=get_sort_key, reverse=True)
-    elif sort_by == 'views_desc':
-        drills.sort(key=lambda x: x.views, reverse=True)
-    elif sort_by == 'favs_desc':
-        drills.sort(key=lambda x: x.favorited_by.count(), reverse=True)
-    elif sort_by == 'date_desc':
-        drills.sort(key=lambda x: x.date_posted, reverse=True)
-
+        drills.sort(key=lambda d: (1 if d.id in my_fav_ids else 0, d.favorited_by.count(), d.views), reverse=True)
+    elif sort_by == 'views_desc': drills.sort(key=lambda x: x.views, reverse=True)
+    elif sort_by == 'favs_desc': drills.sort(key=lambda x: x.favorited_by.count(), reverse=True)
+    elif sort_by == 'date_desc': drills.sort(key=lambda x: x.date_posted, reverse=True)
     tags = Tag.query.order_by(Tag.name).all()
-    
-    pending_invites = []
-    if current_user.is_authenticated:
-        pending_invites = TeamStaff.query.filter_by(email=current_user.email, status='pending').all()
-
+    pending_invites = TeamStaff.query.filter_by(email=current_user.email, status='pending').all() if current_user.is_authenticated else []
     return render_template('index.html', drills=drills, tags=tags, pending_invites=pending_invites)
 
 @app.route('/create', methods=['GET', 'POST'])
@@ -561,7 +528,6 @@ def view_drill(id):
     drill = Drill.query.get_or_404(id)
     if not drill.is_public:
         if not current_user.is_authenticated or drill.user_id != current_user.id: return redirect('/')
-    # View counter logic
     drill.views += 1
     db.session.commit()
     return render_template('view_drill_modal.html', drill=drill)
@@ -760,7 +726,6 @@ def view_team(id):
     is_owner = (team.user_id == current_user.id)
     is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
     if not is_owner and not is_staff: return redirect('/')
-    
     if request.method == 'POST':
         name = request.form.get('name')
         dorsal = request.form.get('dorsal')
@@ -783,7 +748,6 @@ def edit_team_settings(id):
     is_owner = (team.user_id == current_user.id)
     is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
     if not is_owner and not is_staff: return redirect('/')
-
     team.name = request.form.get('name')
     file = request.files.get('logo')
     if file and file.filename != '':
@@ -791,12 +755,10 @@ def edit_team_settings(id):
         comp = compress_image(file)
         with open(os.path.join(app.config['UPLOAD_FOLDER'], logo_filename), 'wb') as f: f.write(comp.getbuffer())
         team.logo_file = logo_filename
-    
     team.visibility_mode = request.form.get('visibility_mode', 'fixed')
     team.visibility_top_x = int(request.form.get('visibility_top_x', 3))
     team.visibility_top_pct = int(request.form.get('visibility_top_pct', 25))
     team.quarters = int(request.form.get('quarters', 4))
-
     db.session.commit()
     flash('Equipo actualizado')
     return redirect(url_for('view_team', id=team.id))
@@ -806,12 +768,10 @@ def edit_team_settings(id):
 def import_players(id):
     team = Team.query.get_or_404(id)
     if team.user_id != current_user.id: return "No autorizado", 403
-    
     file = request.files.get('csv_file')
     if not file or file.filename == '':
         flash('Fichero no válido')
         return redirect(url_for('view_team', id=team.id))
-    
     try:
         stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
         csv_input = csv.reader(stream)
@@ -827,9 +787,7 @@ def import_players(id):
             except: continue
         db.session.commit()
         flash(f'{count} Jugadores importados correctamente')
-    except Exception as e:
-        flash(f'Error al importar: {str(e)}')
-    
+    except Exception as e: flash(f'Error al importar: {str(e)}')
     return redirect(url_for('view_team', id=team.id))
 
 @app.route('/manage_staff/<int:id>', methods=['POST'])
@@ -884,33 +842,20 @@ def reject_invite(id):
 @app.route('/start_session', methods=['POST'])
 @login_required
 def start_session():
-    # Fix 500 Error: Ensure Plan ID and Team ID exist
     plan_id = request.form.get('plan_id')
     team_id = request.form.get('team_id')
-    
-    if not team_id:
-        flash('Error: Debes seleccionar un equipo')
-        return redirect(request.referrer)
-
+    if not team_id: return "Error: Equipo no seleccionado", 400
     team = Team.query.get(team_id)
-    if not team:
-        flash('Equipo no encontrado')
-        return redirect('/')
-
     is_owner = (team.user_id == current_user.id)
     is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
     if not is_owner and not is_staff: return "No autorizado", 403
-    
     new_session = TrainingSession(team_id=team_id, plan_id=plan_id, status='active')
     db.session.add(new_session)
     db.session.commit()
-    
-    # Init Attendance
     for p in team.players:
         att = SessionAttendance(session_id=new_session.id, player_id=p.id, is_present=True)
         db.session.add(att)
     db.session.commit()
-    
     return redirect(url_for('session_tracker', id=new_session.id))
 
 @app.route('/session/<int:id>')
@@ -999,8 +944,7 @@ def public_team_ranking(id):
     ranking_data = []
     for pid, total in scores:
         player = Player.query.get(pid)
-        if player:
-            ranking_data.append({'name': player.name, 'points': total, 'photo': player.photo_file, 'dorsal': player.dorsal})
+        if player: ranking_data.append({'name': player.name, 'points': total, 'photo': player.photo_file, 'dorsal': player.dorsal})
     ranking_data.sort(key=lambda x: x['points'], reverse=True)
     limit = len(ranking_data)
     if team.visibility_mode == 'fixed': limit = team.visibility_top_x
@@ -1053,7 +997,7 @@ def delete_team(id):
         db.session.commit()
     return redirect('/my_teams')
 
-# --- CONFIGURACIÓN PARTIDO Y ACTIONS ---
+# --- CONFIGURACIÓN PARTIDO ---
 
 @app.route('/game_config', methods=['GET', 'POST'])
 @login_required
@@ -1067,7 +1011,6 @@ def game_config():
         flash('Valores actualizados')
         return redirect('/game_config')
     actions = ActionDefinition.query.filter_by(user_id=current_user.id).order_by(ActionDefinition.is_positive.desc()).all()
-    # FASE 7: Load Custom Rankings
     rankings = RankingDefinition.query.filter_by(user_id=current_user.id).all()
     return render_template('game_config.html', actions=actions, rankings=rankings)
 
@@ -1092,7 +1035,6 @@ def game_config_delete(id):
         db.session.commit()
     return redirect('/game_config')
 
-# --- FASE 7: RANKINGS PERSONALIZADOS ---
 @app.route('/ranking_add', methods=['POST'])
 @login_required
 def ranking_add():
@@ -1123,9 +1065,7 @@ def new_match():
         opponent = request.form.get('opponent')
         player_ids = request.form.getlist('roster')
         q_conf = int(request.form.get('quarters', 4))
-        
         team = Team.query.get(team_id)
-        # Crear partido con config de cuartos especifica
         match = Match(opponent=opponent, team_id=team_id, user_id=current_user.id, quarters=q_conf)
         db.session.add(match)
         db.session.commit()
@@ -1134,7 +1074,6 @@ def new_match():
             if player: match.roster.append(player)
         db.session.commit()
         return redirect(url_for('match_tracker', id=match.id))
-        
     owned = Team.query.filter_by(user_id=current_user.id).all()
     staff_teams = [s.team for s in TeamStaff.query.filter_by(user_id=current_user.id, status='accepted').all()]
     all_teams = list(set(owned + staff_teams))
@@ -1162,10 +1101,8 @@ def api_add_event():
     action_id = data.get('action_id')
     game_minute = data.get('game_minute', 0)
     period = data.get('period', 1)
-    
     match = Match.query.get(match_id)
     if not match: return jsonify({'error': 'No match'}), 404
-    
     event = MatchEvent(match_id=match_id, player_id=player_id, action_id=action_id, game_minute=game_minute, period=period)
     db.session.add(event)
     db.session.commit()
@@ -1196,7 +1133,6 @@ def match_stats(id):
         pid = event.player_id
         aid = event.action_id
         if not pid or not aid: continue # Skip if deleted
-
         action_def = ActionDefinition.query.get(aid)
         if pid in stats and action_def:
             current_count = stats[pid]['actions'].get(action_def.name, 0)
@@ -1206,8 +1142,18 @@ def match_stats(id):
     action_names = [a.name for a in ActionDefinition.query.filter_by(user_id=current_user.id).order_by(ActionDefinition.is_positive.desc()).all()]
     if not action_names:
          action_names = [a.name for a in ActionDefinition.query.filter_by(user_id=match.user_id).order_by(ActionDefinition.is_positive.desc()).all()]
+    
+    # RANKING CALCULATION
+    rankings = RankingDefinition.query.filter_by(user_id=current_user.id).all()
+    for pid, p_data in stats.items():
+        p_data['rankings'] = {}
+        for r in rankings:
+            score = 0
+            for ing in r.ingredients:
+                score += p_data['actions'].get(ing.name, 0)
+            p_data['rankings'][r.name] = score
 
-    return render_template('match_stats.html', match=match, stats=stats, action_names=action_names)
+    return render_template('match_stats.html', match=match, stats=stats, action_names=action_names, rankings=rankings)
 
 @app.route('/matches')
 @login_required
@@ -1230,7 +1176,6 @@ def edit_match_event():
     new_player_id = request.form.get('player_id')
     new_action_id = request.form.get('action_id')
     delete_flag = request.form.get('delete')
-    
     event = MatchEvent.query.get(event_id)
     if event:
         if delete_flag == 'yes':
@@ -1245,11 +1190,9 @@ def edit_match_event():
 @login_required
 def court_mode(id):
     plan = TrainingPlan.query.get_or_404(id)
-    # Logic for gamification modal needs teams
     owned = Team.query.filter_by(user_id=current_user.id).all()
     staff_teams = [s.team for s in TeamStaff.query.filter_by(user_id=current_user.id, status='accepted').all()]
     my_teams = list(set(owned + staff_teams))
-    
     return render_template('court_mode.html', plan=plan, teams=my_teams)
 
 def generar_icono_banana(nombre, simbolo):

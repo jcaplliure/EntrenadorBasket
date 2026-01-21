@@ -186,7 +186,14 @@
                         <i class="bi bi-info-circle"></i> Estás en <strong>Modo Pista (Solo Ver)</strong>.
                         <br>Para guardar puntuaciones reales de jugadores, debes iniciar una sesión desde "Mis Equipos".
                     </div>
-                    <p class="text-muted text-center">Aquí podrías ver las puntuaciones históricas de este ejercicio si estuvieras en una sesión activa.</p>
+                    <div class="mt-3 text-center">
+                        <p class="small text-muted">Si estás en una sesión de equipo, puedes ver el ranking aquí:</p>
+                        {% for t in teams %}
+                        <a href="/team/{{ t.id }}/public" target="_blank" class="btn btn-outline-primary btn-sm mb-2 w-100">
+                            <i class="bi bi-trophy"></i> Ver Ranking {{ t.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Cerrar</button>
@@ -380,7 +387,6 @@
             else if (type === 'pdf' || type === 'image') window.open('/static/uploads/' + file, '_blank');
         }
         
-        // FUNCIÓN NUEVA
         function openGamificationModal(title) {
             document.getElementById('gameTitle').innerText = title;
             new bootstrap.Modal(document.getElementById('gameModal')).show();

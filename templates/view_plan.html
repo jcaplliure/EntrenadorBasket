@@ -6,115 +6,158 @@
     <title>{{ plan.name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .select2-container .select2-selection--single { height: 38px; }
+        .block-header { background-color: #e9ecef; padding: 10px; font-weight: bold; border-left: 5px solid #fd7e14; }
+    </style>
 </head>
 <body class="bg-light">
 
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
-            <span class="navbar-brand fw-bold text-truncate" style="max-width: 200px;">{{ plan.name }}</span>
+            <span class="navbar-brand fw-bold text-truncate">{{ plan.name }}</span>
             <div>
-                <a href="/court_mode/{{ plan.id }}" class="btn btn-outline-warning btn-sm me-1" target="_blank"><i class="bi bi-phone-landscape"></i> Modo Pista (Solo ver)</a>
+                <button class="btn btn-success btn-sm fw-bold me-2" data-bs-toggle="modal" data-bs-target="#startSessionModal">
+                    <i class="bi bi-play-circle-fill"></i> Jugar
+                </button>
+                <a href="/court_mode/{{ plan.id }}" target="_blank" class="btn btn-outline-warning btn-sm me-2">
+                    <i class="bi bi-display"></i> Pista
+                </a>
                 <a href="/my_plans" class="btn btn-outline-light btn-sm">Volver</a>
             </div>
         </div>
     </nav>
 
     <div class="container pb-5">
-        
-        <div class="card shadow-sm border-primary mb-4">
-            <div class="card-body bg-white">
-                <div class="row align-items-center">
-                    <div class="col-md-7">
-                        <h4 class="fw-bold text-primary mb-1">🚀 Ejecutar este Plan</h4>
-                        <p class="text-muted small mb-0">Convierte este diseño en una sesión real, controla asistencia y gamifica.</p>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="fw-bold">{{ plan.team_name or 'Sin equipo' }}</h5>
+                        <p class="text-muted mb-0 small">{{ plan.date.strftime('%d/%m/%Y') }} - {{ total_minutes }} min</p>
                     </div>
-                    <div class="col-md-5 mt-3 mt-md-0">
-                        <form action="/start_session" method="POST" class="d-flex gap-2">
-                            <input type="hidden" name="plan_id" value="{{ plan.id }}">
-                            <select name="team_id" class="form-select fw-bold" required>
-                                <option value="" disabled selected>Elige Equipo...</option>
-                                {% for t in teams %}
-                                <option value="{{ t.id }}">{{ t.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <button type="submit" class="btn btn-primary fw-bold text-nowrap">Empezar</button>
-                        </form>
+                    <div>
+                        <a href="/edit_plan/{{ plan.id }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a>
+                        <a href="/duplicate_plan/{{ plan.id }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-files"></i></a>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="card shadow-sm mb-3">
-                    <div class="card-body">
-                        <h6 class="text-muted fw-bold small">DATOS GENERALES</h6>
-                        <hr class="my-2">
-                        <p class="mb-1"><strong>Equipo:</strong> {{ plan.team_name or 'Sin asignar' }}</p>
-                        <p class="mb-1"><strong>Duración:</strong> {{ total_minutes }} min</p>
-                        <p class="mb-0"><strong>Ejercicios:</strong> {{ plan.items|length }}</p>
-                    </div>
-                </div>
-                
-                <div class="card shadow-sm mb-3">
-                    <div class="card-body">
-                        <h6 class="text-muted fw-bold small">NOTAS</h6>
-                        <hr class="my-2">
-                        <p class="small text-muted">{{ plan.notes or 'Sin notas' }}</p>
-                    </div>
-                </div>
-
-                <div class="d-grid gap-2">
-                    {% if plan.user_id == current_user.id %}
-                    <a href="/edit_plan/{{ plan.id }}" class="btn btn-outline-secondary">✏️ Editar Plan</a>
-                    <a href="/duplicate_plan/{{ plan.id }}" class="btn btn-outline-primary">📄 Duplicar Plan</a>
-                    <a href="/delete_plan/{{ plan.id }}" class="btn btn-outline-danger" onclick="return confirm('¿Borrar plan?')">🗑️ Eliminar</a>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="col-lg-8">
-                <h5 class="fw-bold mb-3">Estructura del Entrenamiento</h5>
-                
-                {% for item in plan.items|sort(attribute='order') %}
-                <div class="card mb-3 shadow-sm border-0 position-relative">
-                    <div class="card-body d-flex align-items-center p-3">
-                        <div class="me-3 text-center" style="min-width: 50px;">
-                            <h3 class="fw-bold text-primary mb-0">{{ item.duration }}'</h3>
-                            <small class="text-muted" style="font-size: 0.7rem;">MIN</small>
-                        </div>
-                        <div class="flex-grow-1 cursor-pointer" style="cursor: pointer;" 
-                             data-bs-toggle="modal" data-bs-target="#drillModal" data-bs-url="/drill/{{ item.drill.id }}">
-                            <span class="badge bg-secondary mb-1">{{ item.block_name }}</span>
-                            <h5 class="fw-bold mb-0 text-truncate">{{ item.drill.title }}</h5>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-
-                {% if plan.user_id == current_user.id %}
-                <div class="text-center mt-4 p-4 border border-dashed rounded bg-white">
-                    <p class="text-muted">Para añadir o quitar ejercicios, usa el botón de "Editar Plan".</p>
-                    <a href="/edit_plan/{{ plan.id }}" class="btn btn-primary btn-sm">Ir a Editar</a>
-                </div>
+                {% if plan.notes %}
+                <div class="alert alert-info mt-3 small mb-0"><i class="bi bi-info-circle"></i> {{ plan.notes }}</div>
                 {% endif %}
             </div>
         </div>
 
+        {% set blocks = plan.structure.split(',') %}
+        {% for block in blocks %}
+        <div class="mb-4">
+            <div class="block-header d-flex justify-content-between align-items-center rounded">
+                <span>{{ block }}</span>
+                <button class="btn btn-sm btn-dark rounded-circle" onclick="openAddModal('{{ block }}')">+</button>
+            </div>
+            
+            <div class="list-group mt-2 shadow-sm">
+                {% for item in plan.items if item.block_name == block %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center overflow-hidden">
+                        <span class="badge bg-primary me-2">{{ item.duration }}'</span>
+                        <div class="text-truncate">
+                            <strong>{{ item.drill.title }}</strong>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="/drill/{{ item.drill.id }}" class="btn btn-link text-dark p-0 me-2" data-bs-toggle="modal" data-bs-target="#viewDrillModal" onclick="loadDrill({{ item.drill.id }})"><i class="bi bi-eye"></i></a>
+                        <a href="/delete_plan_item/{{ item.id }}" class="text-danger"><i class="bi bi-trash"></i></a>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-muted small text-center py-2 fst-italic">Sin ejercicios</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
     </div>
 
-    <div class="modal fade" id="drillModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"></div></div></div>
-    
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Añadir a <span id="modalBlockName" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="/add_item_to_plan" method="POST">
+                        <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                        <input type="hidden" name="block_name" id="inputBlockName">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Buscar Ejercicio</label>
+                            <select name="drill_id" class="form-select" id="drillSelect" style="width: 100%;">
+                                <option></option>
+                                {% for drill in all_drills %}
+                                <option value="{{ drill.id }}">{{ drill.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success fw-bold">Añadir</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="startSessionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Iniciar Entrenamiento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="/start_session" method="POST">
+                        <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                        <div class="mb-3">
+                            <label class="form-label">Selecciona el Equipo</label>
+                            <select name="team_id" class="form-select" required>
+                                {% for t in teams %}
+                                <option value="{{ t.id }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary fw-bold">COMENZAR</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="viewDrillModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"></div></div></div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-        const drillModal = document.getElementById('drillModal')
-        drillModal.addEventListener('show.bs.modal', event => {
-            const button = event.relatedTarget
-            const url = button.getAttribute('data-bs-url')
-            const modalContent = drillModal.querySelector('.modal-content')
-            modalContent.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>'
-            fetch(url).then(r => r.text()).then(html => { modalContent.innerHTML = html })
-        })
+        $(document).ready(function() {
+            $('#drillSelect').select2({
+                dropdownParent: $('#addModal'),
+                placeholder: "Escribe para buscar...",
+                allowClear: true
+            });
+        });
+
+        function openAddModal(blockName) {
+            document.getElementById('modalBlockName').innerText = blockName;
+            document.getElementById('inputBlockName').value = blockName;
+            new bootstrap.Modal(document.getElementById('addModal')).show();
+        }
+
+        function loadDrill(id) {
+            $('.modal-content').load('/drill/' + id);
+        }
     </script>
 </body>
 </html>
