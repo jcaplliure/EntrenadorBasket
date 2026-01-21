@@ -7,16 +7,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .player-card { transition: transform 0.2s; }
-        .player-card:hover { transform: translateY(-3px); }
-        .dorsal-badge { 
-            position: absolute; top: 10px; right: 10px; 
-            background: #fd7e14; color: white; width: 35px; height: 35px; 
-            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .nav-tabs .nav-link.active { font-weight: bold; color: #0d6efd; border-bottom: 3px solid #0d6efd; }
-        .nav-tabs .nav-link { color: #495057; }
+        .nav-tabs .nav-link.active { font-weight: bold; color: #0d6efd; border-bottom: 3px solid #0d6efd; background: transparent; }
+        .nav-tabs .nav-link { color: #6c757d; border: none; }
+        .player-row:hover { background-color: #f8f9fa; }
     </style>
 </head>
 <body class="bg-light">
@@ -30,209 +23,157 @@
                 {{ team.name }}
             </span>
             <div>
-                <a href="/team/{{ team.id }}/public" target="_blank" class="btn btn-warning btn-sm fw-bold me-2"><i class="bi bi-trophy-fill"></i> Portal Jugadores</a>
+                <a href="/team/{{ team.id }}/public" target="_blank" class="btn btn-warning btn-sm fw-bold me-2"><i class="bi bi-trophy-fill"></i> Portal</a>
                 <a href="/my_teams" class="btn btn-light btn-sm text-primary fw-bold">Volver</a>
             </div>
         </div>
     </nav>
 
     <div class="container pb-5">
-
         <ul class="nav nav-tabs mb-4" id="teamTab" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link active" id="players-tab" data-bs-toggle="tab" data-bs-target="#players" type="button">👥 Plantilla</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="staff-tab" data-bs-toggle="tab" data-bs-target="#staff" type="button">👔 Cuerpo Técnico</button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button">⚙️ Configuración</button>
-            </li>
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#players">👥 Plantilla</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#staff">👔 Staff</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings">⚙️ Ajustes</button></li>
         </ul>
 
-        <div class="tab-content" id="teamTabContent">
-            
+        <div class="tab-content">
             <div class="tab-pane fade show active" id="players">
-                <div class="card border-0 shadow-sm mb-4 p-3 bg-white">
-                    <h6 class="fw-bold text-muted mb-3"><i class="bi bi-person-plus-fill"></i> Nuevo Jugador</h6>
-                    <form method="POST" enctype="multipart/form-data" class="row g-2 align-items-end">
-                        <div class="col-3 col-md-2">
-                            <label class="small text-muted">Dorsal</label>
-                            <input type="number" name="dorsal" class="form-control" placeholder="#" required>
-                        </div>
-                        <div class="col-9 col-md-5">
-                            <label class="small text-muted">Nombre</label>
-                            <input type="text" name="name" class="form-control" placeholder="Nombre" required>
-                        </div>
-                        <div class="col-12 col-md-3">
-                            <label class="small text-muted">Foto</label>
-                            <input type="file" name="photo" class="form-control" accept="image/*">
-                        </div>
-                        <div class="col-12 col-md-2">
-                            <button type="submit" class="btn btn-primary w-100 fw-bold">Añadir</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3">
-                    {% for player in team.players|sort(attribute='dorsal') %}
-                    <div class="col">
-                        <div class="card h-100 border-0 shadow-sm player-card overflow-hidden">
-                            <div class="dorsal-badge">{{ player.dorsal }}</div>
-                            <div style="height: 150px; background: #e9ecef; display: flex; align-items: center; justify-content: center;">
-                                {% if player.photo_file %}
-                                    <img src="{{ url_for('static', filename='uploads/' + player.photo_file) }}" style="width: 100%; height: 100%; object-fit: cover;">
-                                {% else %}
-                                    <i class="bi bi-person-fill fs-1 text-secondary opacity-50"></i>
-                                {% endif %}
-                            </div>
-                            <div class="card-body p-2 text-center">
-                                <h6 class="card-title fw-bold text-truncate mb-0">{{ player.name }}</h6>
-                            </div>
-                            <div class="card-footer bg-white border-0 p-1 text-center d-flex justify-content-center gap-2">
-                                <a href="/edit_player/{{ player.id }}" class="text-primary small text-decoration-none fw-bold">Editar</a>
-                                <span class="text-muted small">|</span>
-                                <a href="/delete_player/{{ player.id }}" class="text-danger small text-decoration-none" onclick="return confirm('¿Eliminar?')">Borrar</a>
-                            </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="card p-3 border-0 shadow-sm h-100">
+                            <h6 class="fw-bold text-muted mb-2">Nuevo Jugador Manual</h6>
+                            <form method="POST" enctype="multipart/form-data" class="d-flex gap-2">
+                                <input type="number" name="dorsal" class="form-control" placeholder="#" style="width: 70px;" required>
+                                <input type="text" name="name" class="form-control" placeholder="Nombre" required>
+                                <button type="submit" class="btn btn-primary fw-bold">+</button>
+                            </form>
                         </div>
                     </div>
-                    {% endfor %}
+                    <div class="col-md-6">
+                        <div class="card p-3 border-0 shadow-sm h-100 bg-white">
+                            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-file-earmark-spreadsheet"></i> Importar desde CSV</h6>
+                            <form action="/import_players/{{ team.id }}" method="POST" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
+                                <input type="file" name="csv_file" class="form-control form-control-sm" accept=".csv" required>
+                                <button type="submit" class="btn btn-outline-primary btn-sm fw-bold">Subir</button>
+                            </form>
+                            <small class="text-muted" style="font-size: 0.7rem;">Formato CSV: Columna 1 (Dorsal), Columna 2 (Nombre). Sin cabeceras.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm">
+                    <div class="list-group list-group-flush">
+                        {% for player in team.players|sort(attribute='dorsal') %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center player-row p-3">
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-dark me-3" style="font-size: 1rem; width: 40px;">{{ player.dorsal }}</span>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">{{ player.name }}</h6>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="/edit_player/{{ player.id }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a>
+                                <a href="/delete_player/{{ player.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Borrar?')"><i class="bi bi-trash"></i></a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
 
             <div class="tab-pane fade" id="staff">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-3">Equipo Técnico</h5>
-                        
-                        <div class="list-group mb-4">
-                            <div class="list-group-item d-flex justify-content-between align-items-center bg-light">
-                                <div>
-                                    <span class="fw-bold">{{ team.owner.name }} ({{ team.owner.email }})</span>
-                                    <span class="badge bg-warning text-dark ms-2">👑 Propietario</span>
-                                </div>
-                            </div>
-                            {% for member in team.staff %}
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    <span class="fw-bold">{{ member.email }}</span>
-                                    {% if member.status == 'pending' %}
-                                        <span class="badge bg-secondary ms-2">⏳ Pendiente</span>
-                                    {% else %}
-                                        <span class="badge bg-info text-dark ms-2">🧢 Ayudante</span>
-                                        <small class="text-muted ms-1">{{ member.user.name }}</small>
-                                    {% endif %}
-                                </div>
+                <div class="card border-0 shadow-sm p-4">
+                    <h5 class="fw-bold mb-3">Cuerpo Técnico</h5>
+                    <p class="text-muted small">Invita a otros entrenadores para que puedan gestionar este equipo contigo.</p>
+                    
+                    {% if is_owner %}
+                    <form action="/manage_staff/{{ team.id }}" method="POST" class="d-flex gap-2 mb-4 bg-light p-3 rounded">
+                        <input type="hidden" name="action" value="invite">
+                        <input type="email" name="email" class="form-control" placeholder="Email del entrenador ayudante" required>
+                        <button type="submit" class="btn btn-primary fw-bold">Invitar</button>
+                    </form>
+                    {% endif %}
+
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                            <span>{{ team.owner.name }} (Propietario)</span>
+                            <span class="badge bg-warning text-dark">Owner</span>
+                        </li>
+                        {% for member in team.staff %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ member.email }}</span>
+                            <div>
+                                {% if member.status == 'pending' %}<span class="badge bg-secondary me-2">Pendiente</span>{% else %}<span class="badge bg-success me-2">Aceptado</span>{% endif %}
                                 {% if is_owner %}
-                                <form action="/manage_staff/{{ team.id }}" method="POST" onsubmit="return confirm('¿Eliminar del equipo?')">
+                                <form action="/manage_staff/{{ team.id }}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar?')">
                                     <input type="hidden" name="action" value="remove">
                                     <input type="hidden" name="staff_id" value="{{ member.id }}">
-                                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                                    <button class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-x-lg"></i></button>
                                 </form>
                                 {% endif %}
                             </div>
-                            {% endfor %}
-                        </div>
-
-                        {% if is_owner %}
-                        <div class="bg-light p-3 rounded">
-                            <h6 class="fw-bold"><i class="bi bi-envelope-plus"></i> Invitar Entrenador Ayudante</h6>
-                            <p class="small text-muted mb-2">Introduce el email de su cuenta en la App. Le llegará una invitación.</p>
-                            <form action="/manage_staff/{{ team.id }}" method="POST" class="d-flex gap-2">
-                                <input type="hidden" name="action" value="invite">
-                                <input type="email" name="email" class="form-control" placeholder="ayudante@gmail.com" required>
-                                <button type="submit" class="btn btn-primary">Invitar</button>
-                            </form>
-                        </div>
-                        {% else %}
-                        <div class="alert alert-info small">
-                            Solo el propietario puede invitar a nuevos entrenadores.
-                        </div>
-                        {% endif %}
-                    </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
 
             <div class="tab-pane fade" id="settings">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <form action="/edit_team_settings/{{ team.id }}" method="POST" enctype="multipart/form-data">
-                            
-                            <h5 class="fw-bold mb-3 border-bottom pb-2">Datos Generales</h5>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Nombre del Equipo</label>
-                                <input type="text" name="name" class="form-control" value="{{ team.name }}" required>
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Actualizar Escudo/Logo</label>
-                                <div class="d-flex align-items-center gap-3">
-                                    {% if team.logo_file %}
-                                    <img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" width="50" class="rounded">
-                                    {% endif %}
-                                    <input type="file" name="logo" class="form-control" accept="image/*">
-                                </div>
-                            </div>
+                <div class="card border-0 shadow-sm p-4">
+                    <form action="/edit_team_settings/{{ team.id }}" method="POST" enctype="multipart/form-data">
+                        
+                        <h6 class="fw-bold text-primary mb-3">Datos Básicos</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del Equipo</label>
+                            <input type="text" name="name" class="form-control" value="{{ team.name }}" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Escudo / Logo</label>
+                            <input type="file" name="logo" class="form-control">
+                        </div>
 
-                            <h5 class="fw-bold mb-3 border-bottom pb-2 mt-5">Ranking Público (Portal Jugador)</h5>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Modo de Visibilidad</label>
-                                <select name="visibility_mode" class="form-select" id="visMode" onchange="toggleVisInputs()">
-                                    <option value="fixed" {% if team.visibility_mode == 'fixed' %}selected{% endif %}>Top Fijo (Nº Jugadores)</option>
-                                    <option value="percent" {% if team.visibility_mode == 'percent' %}selected{% endif %}>Top Porcentual (%)</option>
+                        <h6 class="fw-bold text-primary mb-3">Configuración de Partidos</h6>
+                        <div class="mb-4 bg-light p-3 rounded">
+                            <label class="form-label fw-bold">Formato de Periodos</label>
+                            <select name="quarters" class="form-select">
+                                <option value="4" {% if team.quarters == 4 %}selected{% endif %}>4 Cuartos (Estándar)</option>
+                                <option value="6" {% if team.quarters == 6 %}selected{% endif %}>6 Sextos (Minibasket)</option>
+                                <option value="2" {% if team.quarters == 2 %}selected{% endif %}>2 Partes</option>
+                            </select>
+                            <div class="form-text">Esto definirá cuántos botones de periodo aparecen al jugar un partido.</div>
+                        </div>
+
+                        <h6 class="fw-bold text-primary mb-3">Portal Público (Ranking)</h6>
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <label class="small text-muted">Modo</label>
+                                <select name="visibility_mode" class="form-select form-select-sm">
+                                    <option value="fixed" {% if team.visibility_mode == 'fixed' %}selected{% endif %}>Top Fijo</option>
+                                    <option value="percent" {% if team.visibility_mode == 'percent' %}selected{% endif %}>Porcentaje</option>
                                 </select>
                             </div>
-
-                            <div class="mb-3" id="divFixed">
-                                <label class="form-label">Mostrar a los X primeros:</label>
-                                <input type="number" name="visibility_top_x" class="form-control" value="{{ team.visibility_top_x }}" min="1">
-                                <div class="form-text">Ejemplo: Pon "3" para mostrar solo el podio.</div>
+                            <div class="col-6">
+                                <label class="small text-muted">Valor (Nº o %)</label>
+                                <input type="number" name="visibility_top_x" class="form-control form-control-sm" value="{{ team.visibility_top_x }}">
                             </div>
-
-                            <div class="mb-3" id="divPct" style="display:none;">
-                                <label class="form-label">Mostrar al X% mejor:</label>
-                                <div class="input-group">
-                                    <input type="number" name="visibility_top_pct" class="form-control" value="{{ team.visibility_top_pct }}" min="1" max="100" id="pctInput" oninput="checkDanger()">
-                                    <span class="input-group-text">%</span>
-                                </div>
-                                <div id="pctWarning" class="form-text text-danger fw-bold mt-1" style="display:none;">
-                                    ⚠️ Advertencia: Mostrar más del 50% puede desmotivar a los últimos.
-                                </div>
-                            </div>
-
-                            <div class="d-grid gap-2 mt-4">
-                                <button type="submit" class="btn btn-success fw-bold">Guardar Cambios</button>
-                            </div>
-                        </form>
-
-                        {% if is_owner %}
-                        <hr class="my-5">
-                        <div class="text-end">
-                            <a href="/delete_team/{{ team.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿SEGURO? Esto borrará el equipo y todos sus datos para siempre.')">
-                                ⚠️ Eliminar Equipo Definitivamente
-                            </a>
                         </div>
-                        {% endif %}
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success fw-bold">Guardar Cambios</button>
+                        </div>
+                    </form>
+                    
+                    {% if is_owner %}
+                    <hr class="my-4">
+                    <div class="text-end">
+                        <a href="/delete_team/{{ team.id }}" class="text-danger small text-decoration-none fw-bold" onclick="return confirm('¡CUIDADO! Se borrarán todos los jugadores y datos de este equipo.')">Eliminar Equipo</a>
                     </div>
+                    {% endif %}
                 </div>
             </div>
-
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function toggleVisInputs() {
-            const mode = document.getElementById('visMode').value;
-            document.getElementById('divFixed').style.display = (mode === 'fixed') ? 'block' : 'none';
-            document.getElementById('divPct').style.display = (mode === 'percent') ? 'block' : 'none';
-            checkDanger();
-        }
-        function checkDanger() {
-            const val = document.getElementById('pctInput').value;
-            document.getElementById('pctWarning').style.display = (val > 50) ? 'block' : 'none';
-        }
-        toggleVisInputs(); // Init
-    </script>
 </body>
 </html>

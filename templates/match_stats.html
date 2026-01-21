@@ -7,82 +7,91 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .player-img-sm { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #dee2e6; }
-        .table-responsive { font-size: 0.9rem; }
-        .val-cell { font-weight: bold; background-color: #f8f9fa; }
-        .pos-score { color: #198754; }
-        .neg-score { color: #dc3545; }
+        .table-responsive { font-size: 0.85rem; }
+        .player-head { min-width: 150px; position: sticky; left: 0; background: white; z-index: 10; border-right: 2px solid #dee2e6; }
+        .val-col { font-weight: bold; background-color: #f8f9fa; border-left: 2px solid #dee2e6; }
+        .action-header { writing-mode: vertical-rl; transform: rotate(180deg); text-align: left; height: 100px; padding-bottom: 5px; }
     </style>
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+    <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
-            <span class="navbar-brand fw-bold">📊 Acta del Partido</span>
+            <span class="navbar-brand fw-bold fs-6 text-truncate">
+                📊 Stats vs {{ match.opponent }}
+            </span>
             <div>
-                <a href="/matches" class="btn btn-outline-light btn-sm me-2">Historial</a>
-                <a href="/" class="btn btn-outline-light btn-sm">Inicio</a>
+                <a href="/matches" class="btn btn-outline-light btn-sm">Historial</a>
+                <a href="/" class="btn btn-outline-secondary btn-sm ms-1">Salir</a>
             </div>
         </div>
     </nav>
 
     <div class="container pb-5">
-        
-        <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card shadow-sm border-0 mb-4 bg-primary text-white">
             <div class="card-body text-center">
-                <h5 class="text-muted mb-1">{{ match.date.strftime('%d/%m/%Y') }}</h5>
-                <h2 class="fw-bold mb-0">Mi Equipo <span class="text-muted text-decoration-none mx-2">vs</span> {{ match.opponent }}</h2>
+                <h6 class="opacity-75 mb-0">{{ match.date.strftime('%d/%m/%Y') }}</h6>
+                <h2 class="fw-bold mb-0">VS {{ match.opponent }}</h2>
+                
+                <div class="mt-3">
+                    <a href="/match_log/{{ match.id }}" class="btn btn-warning fw-bold shadow-sm">
+                        <i class="bi bi-pencil-square"></i> Ver/Editar LOG (VAR)
+                    </a>
+                </div>
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle text-center">
-                    <thead class="table-dark text-nowrap">
-                        <tr>
-                            <th class="text-start ps-3">Jugador</th>
-                            <th>VALORACIÓN</th> {% for act_name in action_names %}
-                            <th class="fw-normal small px-2">{{ act_name[:3]|upper }}</th> {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for pid, data in stats.items()|sort(attribute='1.total_val', reverse=True) %}
-                        <tr>
-                            <td class="text-start ps-3 text-nowrap">
-                                <div class="d-flex align-items-center gap-2">
-                                    {% if data.photo %}
-                                        <img src="{{ url_for('static', filename='uploads/' + data.photo) }}" class="player-img-sm">
-                                    {% else %}
-                                        <div class="player-img-sm bg-secondary d-flex align-items-center justify-content-center text-white small">{{ data.dorsal }}</div>
-                                    {% endif %}
-                                    <div>
-                                        <div class="fw-bold">{{ data.name }}</div>
-                                        <span class="badge bg-light text-dark border">#{{ data.dorsal }}</span>
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0 align-middle text-center">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="player-head text-start ps-3">Jugador</th>
+                                <th class="val-col bg-dark text-white">VAL</th>
+                                {% for name in action_names %}
+                                <th class="action-col"><div class="action-header">{{ name }}</div></th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pid, p_data in stats.items() %}
+                            <tr>
+                                <td class="player-head text-start ps-2">
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-secondary me-2" style="width:25px">{{ p_data.dorsal }}</span>
+                                        <span class="fw-bold text-truncate" style="max-width: 100px;">{{ p_data.name }}</span>
                                     </div>
-                                </div>
-                            </td>
-                            
-                            <td class="val-cell fs-5 {% if data.total_val >= 0 %}pos-score{% else %}neg-score{% endif %}">
-                                {{ data.total_val }}
-                            </td>
+                                </td>
+                                
+                                <td class="val-col fs-6 {% if p_data.total_val >= 10 %}text-success{% elif p_data.total_val < 0 %}text-danger{% endif %}">
+                                    {{ p_data.total_val|int }}
+                                </td>
 
-                            {% for act_name in action_names %}
-                            <td class="text-muted">
-                                {% set count = data.actions.get(act_name, 0) %}
-                                {% if count > 0 %}
-                                    <span class="fw-bold text-dark">{{ count }}</span>
-                                {% else %}
-                                    <span class="opacity-25">-</span>
-                                {% endif %}
-                            </td>
+                                {% for name in action_names %}
+                                <td class="text-muted">
+                                    {% if p_data.actions[name] %}
+                                        <span class="fw-bold text-dark">{{ p_data.actions[name] }}</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
                             {% endfor %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
+        </div>
+
+        <div class="text-center mt-4 text-muted small">
+            <p>💡 Gira el móvil para ver mejor la tabla completa.</p>
         </div>
 
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
