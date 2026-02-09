@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Estadísticas - {{ team.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: #0a1929;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            padding: 1rem 0;
+        }
+        .main-container {
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        .navbar {
+            background: rgba(10, 25, 41, 0.98);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+            padding: 0.8rem 1rem;
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar-title {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 60%;
+        }
+        .btn-back {
+            background: rgba(59, 130, 246, 0.2);
+            border: 2px solid #3b82f6;
+            color: #60a5fa;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .btn-back:hover {
+            background: rgba(59, 130, 246, 0.4);
+            color: #93c5fd;
+        }
+        .filters-container {
+            background: rgba(13, 31, 45, 0.95);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            flex: 1;
+            min-width: 110px;
+        }
+        .filter-label {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 0.2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .filter-select {
+            background: #162838;
+            border: 1px solid #3b82f6;
+            color: #ffffff;
+            padding: 0.4rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            width: 100%;
+            cursor: pointer;
+        }
+        .filter-select:focus {
+            outline: none;
+            border-color: #60a5fa;
+        }
+        .chart-card {
+            background: linear-gradient(135deg, rgba(13, 31, 45, 0.95) 0%, rgba(10, 25, 41, 0.95) 100%);
+            border: 3px solid rgba(59, 130, 246, 0.4);
+            border-radius: 16px;
+            padding: 1.2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        .chart-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        .chart-title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.3rem;
+            text-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+        .chart-subtitle {
+            text-align: center;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            position: relative;
+            z-index: 1;
+        }
+        .player-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .player-position {
+            min-width: 22px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.6);
+            text-align: right;
+        }
+        .player-name {
+            min-width: 90px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .bar-wrapper {
+            flex: 1;
+            height: 28px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .bar-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 0.5rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .bar-fill.gold {
+            background: #FFD700;
+            color: #0a1929;
+            border: 2px solid #FFD700;
+            box-shadow: 
+                0 0 30px rgba(255, 215, 0, 0.8),
+                0 0 15px rgba(255, 215, 0, 0.6),
+                inset 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        .bar-fill.gold::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shine 2s infinite;
+        }
+        @keyframes shine {
+            0% { left: -100%; }
+            50%, 100% { left: 100%; }
+        }
+        .bar-fill.blue {
+            background: #3b82f6;
+            color: #ffffff;
+            border: 2px solid #3b82f6;
+            box-shadow: 
+                0 0 25px rgba(59, 130, 246, 0.7),
+                0 0 12px rgba(59, 130, 246, 0.5),
+                inset 0 0 8px rgba(255, 255, 255, 0.2);
+        }
+        .sparkle {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            font-size: 2rem;
+            opacity: 0.3;
+            animation: sparkle-rotate 3s linear infinite;
+            z-index: 2;
+        }
+        @keyframes sparkle-rotate {
+            0%, 100% { transform: rotate(0deg) scale(1); opacity: 0.3; }
+            50% { transform: rotate(180deg) scale(1.2); opacity: 0.6; }
+        }
+        .no-data {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+        .modal-content {
+            background: #0d1f2d;
+            color: #ffffff;
+            border: 2px solid rgba(59, 130, 246, 0.4);
+        }
+        .modal-header {
+            border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .modal-body {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .modal-footer {
+            border-top: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .action-section {
+            margin-bottom: 1.5rem;
+        }
+        .action-section-title {
+            color: #60a5fa;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .action-checkbox {
+            background: #162838;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 0.3rem;
+            transition: all 0.2s ease;
+        }
+        .action-checkbox:hover {
+            background: #1a2f42;
+            border-color: #3b82f6;
+        }
+        .action-checkbox input[type="checkbox"] {
+            accent-color: #3b82f6;
+        }
+        .action-checkbox label {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            border: none;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+        }
+        .btn-secondary {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid #3b82f6;
+            color: #60a5fa;
+        }
+        .btn-secondary:hover {
+            background: rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+        }
+        .match-checkbox {
+            background: #162838;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 0.3rem;
+        }
+        .match-checkbox:hover {
+            background: #1a2f42;
+            border-color: #3b82f6;
+        }
+        .match-checkbox input[type="checkbox"] {
+            accent-color: #3b82f6;
+        }
+        .player-checkbox {
+            background: #162838;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 0.3rem;
+        }
+        .player-checkbox:hover {
+            background: #1a2f42;
+            border-color: #3b82f6;
+        }
+        .player-checkbox input[type="checkbox"] {
+            accent-color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="navbar">
+            <span class="navbar-title">📊 {{ team.name }}</span>
+            <a href="/matches" class="btn-back">← Volver</a>
+        </div>
+
+        <div class="filters-container">
+            <div class="filter-group">
+                <div class="filter-label">Partidos</div>
+                <select class="filter-select" id="filterSelect" onchange="handleFilterChange()">
+                    <option value="last1" {% if filter_type == 'last1' %}selected{% endif %}>Último</option>
+                    <option value="last5" {% if filter_type == 'last5' %}selected{% endif %}>Últ. 5</option>
+                    <option value="last10" {% if filter_type == 'last10' %}selected{% endif %}>Últ. 10</option>
+                    <option value="all" {% if filter_type == 'all' %}selected{% endif %}>Todos</option>
+                    <option value="custom" {% if filter_type == 'custom' %}selected{% endif %}>Seleccionar</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <div class="filter-label">Mostrar</div>
+                <select class="filter-select" id="showSelect" onchange="handleShowChange()">
+                    <option value="all" {% if show_type == 'all' %}selected{% endif %}>Todos</option>
+                    <option value="attack" {% if show_type == 'attack' %}selected{% endif %}>Todo ataque</option>
+                    <option value="defense" {% if show_type == 'defense' %}selected{% endif %}>Todo defensa</option>
+                    <option value="custom" {% if show_type == 'custom' %}selected{% endif %}>Personalizable</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <div class="filter-label">Jugadores</div>
+                <select class="filter-select" id="playersSelect" onchange="handlePlayersChange()">
+                    <option value="top10">Top 10</option>
+                    <option value="top9">Top 9</option>
+                    <option value="top8">Top 8</option>
+                    <option value="top7">Top 7</option>
+                    <option value="top6">Top 6</option>
+                    <option value="top5">Top 5</option>
+                    <option value="top4">Top 4</option>
+                    <option value="top3">Top 3</option>
+                    <option value="top2">Top 2</option>
+                    <option value="top1">Top 1</option>
+                    <option value="all">Todos</option>
+                    <option value="custom">Seleccionar</option>
+                </select>
+            </div>
+        </div>
+
+        {% if ranking %}
+        <div class="chart-card">
+            <h2 class="chart-title">LÍDERES EN VALORACIÓN TOTAL</h2>
+            <div class="chart-subtitle">
+                Mostrando datos de <strong>{{ num_matches }}</strong> partido{% if num_matches != 1 %}s{% endif %}
+                {% if num_matches > 1 %} (promedio){% endif %}
+            </div>
+            
+            <div class="ranking-list" id="rankingList">
+                {% for r in ranking %}
+                <div class="player-row" data-player-id="{{ r.player.id }}">
+                    <span class="player-position">{{ loop.index }}.</span>
+                    <span class="player-name">{{ r.player.name }}</span>
+                    <div class="bar-wrapper">
+                        {% set max_val = ranking[0].avg if num_matches > 1 else ranking[0].total %}
+                        {% set current_val = r.avg if num_matches > 1 else r.total %}
+                        {% set width = (current_val / max_val * 100) if max_val > 0 else 0 %}
+                        <div class="bar-fill {% if loop.first %}gold{% else %}blue{% endif %}" style="width: {{ width }}%">
+                            {{ current_val }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="sparkle">✨</div>
+        </div>
+        {% else %}
+        <div class="chart-card">
+            <div class="no-data">
+                <i class="bi bi-bar-chart"></i>
+                <p>No hay datos disponibles con los filtros seleccionados.</p>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Modal Seleccionar Partidos -->
+    <div class="modal fade" id="matchesModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Seleccionar Partidos</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="matchesForm">
+                        {% for match in all_matches %}
+                        <div class="match-checkbox">
+                            <input class="form-check-input" type="checkbox" name="match_ids" value="{{ match.id }}" 
+                                   id="m{{ match.id }}" {% if match.id in selected_match_ids %}checked{% endif %}>
+                            <label class="form-check-label" for="m{{ match.id }}">
+                                vs {{ match.opponent }} - {{ match.date.strftime('%d/%m/%Y') }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="applyMatchesFilter()">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Personalizable (Acciones) -->
+    <div class="modal fade" id="actionsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Seleccionar Acciones</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="actionsForm">
+                        {% for section, actions in actions_by_section.items() %}
+                        <div class="action-section">
+                            <div class="action-section-title">{{ section }}</div>
+                            {% for action in actions %}
+                            <div class="action-checkbox">
+                                <input class="form-check-input" type="checkbox" name="actions" value="{{ action.id }}" 
+                                       id="a{{ action.id }}" {% if action.id in custom_actions %}checked{% endif %}>
+                                <label class="form-check-label" for="a{{ action.id }}">
+                                    {{ action.name }} ({{ '+' if action.value > 0 else '' }}{{ action.value }})
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="applyActionsFilter()">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Seleccionar Jugadores -->
+    <div class="modal fade" id="playersModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Seleccionar Jugadores</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="playersForm">
+                        {% for r in ranking %}
+                        <div class="player-checkbox">
+                            <input class="form-check-input" type="checkbox" name="player_ids" value="{{ r.player.id }}" 
+                                   id="p{{ r.player.id }}">
+                            <label class="form-check-label" for="p{{ r.player.id }}">
+                                {{ r.player.name }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="applyPlayersFilter()">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const teamId = {{ team.id }};
+        const storageKey = `stats_filters_team_${teamId}`;
+
+        // Cargar filtros desde localStorage al cargar la página
+        window.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem(storageKey);
+            if (saved && !window.location.search) {
+                const filters = JSON.parse(saved);
+                applyFiltersFromStorage(filters);
+            } else {
+                // Cargar filtro de jugadores desde localStorage o usar top10 por defecto
+                const playersLimit = localStorage.getItem(`${storageKey}_players`) || 'top10';
+                document.getElementById('playersSelect').value = playersLimit;
+                applyPlayersLimit(playersLimit);
+            }
+        });
+
+        function handleFilterChange() {
+            const filterType = document.getElementById('filterSelect').value;
+
+            if (filterType === 'custom') {
+                new bootstrap.Modal(document.getElementById('matchesModal')).show();
+                return;
+            }
+
+            updateFilters();
+        }
+
+        function handleShowChange() {
+            const showType = document.getElementById('showSelect').value;
+
+            if (showType === 'custom') {
+                new bootstrap.Modal(document.getElementById('actionsModal')).show();
+                return;
+            }
+
+            updateFilters();
+        }
+
+        function handlePlayersChange() {
+            const playersLimit = document.getElementById('playersSelect').value;
+
+            if (playersLimit === 'custom') {
+                new bootstrap.Modal(document.getElementById('playersModal')).show();
+                return;
+            }
+
+            // Guardar en localStorage
+            localStorage.setItem(`${storageKey}_players`, playersLimit);
+
+            // Aplicar filtro visualmente
+            applyPlayersLimit(playersLimit);
+        }
+
+        function applyPlayersLimit(limit) {
+            const rows = document.querySelectorAll('.player-row');
+            
+            if (limit === 'all') {
+                rows.forEach(row => row.style.display = 'flex');
+                return;
+            }
+
+            const topN = parseInt(limit.replace('top', ''));
+            rows.forEach((row, index) => {
+                if (index < topN) {
+                    row.style.display = 'flex';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function updateFilters() {
+            const filterType = document.getElementById('filterSelect').value;
+            const showType = document.getElementById('showSelect').value;
+
+            // Guardar en localStorage
+            const filters = {
+                filter: filterType,
+                show: showType
+            };
+            localStorage.setItem(storageKey, JSON.stringify(filters));
+
+            // Redirigir
+            window.location.href = `/team/${teamId}/stats?filter=${filterType}&show=${showType}`;
+        }
+
+        function applyMatchesFilter() {
+            const form = document.getElementById('matchesForm');
+            const checkboxes = form.querySelectorAll('input[name="match_ids"]:checked');
+            const matchIds = Array.from(checkboxes).map(cb => cb.value);
+
+            if (matchIds.length === 0) {
+                alert('Selecciona al menos un partido');
+                return;
+            }
+
+            const showType = document.getElementById('showSelect').value;
+            const params = new URLSearchParams();
+            params.append('filter', 'custom');
+            params.append('show', showType);
+            matchIds.forEach(id => params.append('match_ids', id));
+
+            // Guardar en localStorage
+            const filters = {
+                filter: 'custom',
+                show: showType,
+                match_ids: matchIds
+            };
+            localStorage.setItem(storageKey, JSON.stringify(filters));
+
+            window.location.href = `/team/${teamId}/stats?${params.toString()}`;
+        }
+
+        function applyActionsFilter() {
+            const form = document.getElementById('actionsForm');
+            const checkboxes = form.querySelectorAll('input[name="actions"]:checked');
+            const actionIds = Array.from(checkboxes).map(cb => cb.value);
+
+            if (actionIds.length === 0) {
+                alert('Selecciona al menos una acción');
+                return;
+            }
+
+            const filterType = document.getElementById('filterSelect').value;
+            const params = new URLSearchParams();
+            params.append('filter', filterType);
+            params.append('show', 'custom');
+            actionIds.forEach(id => params.append('actions', id));
+
+            // Si hay partidos personalizados, incluirlos
+            {% if filter_type == 'custom' and selected_match_ids %}
+            {% for mid in selected_match_ids %}
+            params.append('match_ids', '{{ mid }}');
+            {% endfor %}
+            {% endif %}
+
+            // Guardar en localStorage
+            const filters = {
+                filter: filterType,
+                show: 'custom',
+                actions: actionIds
+            };
+            localStorage.setItem(storageKey, JSON.stringify(filters));
+
+            window.location.href = `/team/${teamId}/stats?${params.toString()}`;
+        }
+
+        function applyPlayersFilter() {
+            const form = document.getElementById('playersForm');
+            const checkboxes = form.querySelectorAll('input[name="player_ids"]:checked');
+            const playerIds = Array.from(checkboxes).map(cb => cb.value);
+
+            if (playerIds.length === 0) {
+                alert('Selecciona al menos un jugador');
+                return;
+            }
+
+            // Ocultar todos los jugadores excepto los seleccionados
+            const rows = document.querySelectorAll('.player-row');
+            rows.forEach(row => {
+                const playerId = row.getAttribute('data-player-id');
+                if (playerIds.includes(playerId)) {
+                    row.style.display = 'flex';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Guardar en localStorage
+            localStorage.setItem(`${storageKey}_players`, 'custom');
+            localStorage.setItem(`${storageKey}_custom_players`, JSON.stringify(playerIds));
+
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('playersModal')).hide();
+        }
+
+        function applyFiltersFromStorage(filters) {
+            const params = new URLSearchParams();
+            params.append('filter', filters.filter || 'last1');
+            params.append('show', filters.show || 'all');
+
+            if (filters.match_ids) {
+                filters.match_ids.forEach(id => params.append('match_ids', id));
+            }
+            if (filters.actions) {
+                filters.actions.forEach(id => params.append('actions', id));
+            }
+
+            window.location.href = `/team/${teamId}/stats?${params.toString()}`;
+        }
+    </script>
+</body>
+</html>

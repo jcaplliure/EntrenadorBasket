@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datos del Partido - {{ match.opponent }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: {{ theme_color }};
+            --green-pastel: #8ed1b1;
+            --red-pastel: #f5a8a8;
+            --border-separator: rgba(100, 150, 200, 0.2);
+            --stats-box-width: 682px;
+        }
+        body {
+            background: #0a1929;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 2rem 0;
+        }
+        .container {
+            max-width: 1400px;
+        }
+        .header-section {
+            background: linear-gradient(135deg, #0d1f2d 0%, #1a365d 100%);
+            border: 3px solid var(--primary-color);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            box-sizing: border-box;
+            width: var(--stats-box-width);
+            max-width: 100%;
+        }
+        .header-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .header-info {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+        .header-info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .header-info-item i {
+            color: var(--primary-color);
+        }
+        .data-section {
+            background: #0d1f2d;
+            border: 2px solid #1e3a5f;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            box-sizing: border-box;
+            width: var(--stats-box-width);
+            max-width: 100%;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+        .stats-table {
+            width: auto;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 1rem;
+            table-layout: auto;
+        }
+        .stats-table thead {
+            background: #1e3a5f;
+        }
+        .stats-table th {
+            padding: 0.4rem 0.3rem;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            white-space: nowrap;
+            font-size: 0.85rem;
+            vertical-align: bottom;
+        }
+        .stats-table th.player-header {
+            text-align: left;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+        .stats-table th.stat-col {
+        }
+        .stats-table th.rotated {
+            height: 100px;
+            padding: 0;
+            position: relative;
+        }
+        .stats-table th.rotated > div {
+            transform: rotate(-45deg);
+            width: 80px;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            margin-left: -40px;
+            text-align: center;
+            font-size: 0.8rem;
+        }
+        .stats-table th.positive {
+            color: var(--green-pastel);
+        }
+        .stats-table th.negative {
+            color: var(--red-pastel);
+        }
+        .stats-table th.group-end,
+        .stats-table td.group-end {
+            border-right: 2px solid var(--border-separator);
+        }
+        .stats-table td {
+            padding: 0.6rem 0.3rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .stats-table tbody tr {
+            transition: background 0.2s ease;
+        }
+        .stats-table tbody tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .stats-table tbody tr:nth-child(odd) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .player-name {
+            font-weight: 600;
+            color: #ffffff;
+            text-align: left !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .stat-col {
+        }
+        .val-positive {
+            color: var(--green-pastel);
+            font-weight: 600;
+        }
+        .val-negative {
+            color: var(--red-pastel);
+            font-weight: 600;
+        }
+        .val-neutral {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        .val-positive-soft {
+            color: var(--green-pastel);
+        }
+        .val-negative-soft {
+            color: var(--red-pastel);
+        }
+        .btn-back {
+            background: #1e3a5f;
+            border: 2px solid #3b82f6;
+            color: white;
+            font-weight: 700;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+        .btn-back:hover {
+            background: #2a4a75;
+            border-color: #60a5fa;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            color: white;
+        }
+        .events-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 1rem;
+            table-layout: fixed;
+        }
+        .events-table thead {
+            background: #1e3a5f;
+        }
+        .events-table th {
+            padding: 0.5rem 0.3rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            font-size: 0.85rem;
+        }
+        .events-table td {
+            padding: 0.5rem 0.3rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85rem;
+        }
+        .events-table tbody tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        .events-table .col-order {
+            width: 40px;
+            text-align: center;
+        }
+        .events-table .col-period {
+            width: 50px;
+        }
+        .events-table .col-player {
+            width: 70px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .events-table .col-action {
+            width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .events-table .col-value {
+            width: 50px;
+            text-align: center;
+        }
+        .period-badge {
+            background: #1e3a5f;
+            color: var(--primary-color);
+            padding: 0.15rem 0.4rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            border: 1px solid var(--primary-color);
+            display: inline-block;
+        }
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: rgba(255, 255, 255, 0.4);
+            font-style: italic;
+        }
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* ========================================
+           MEDIA QUERY PARA MÓVIL/TABLET
+           ======================================== */
+        @media (max-width: 767px) {
+            /* === AJUSTES GENERALES === */
+            body {
+                padding: 1rem 0;
+            }
+            .container {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            .header-section {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+            .header-title {
+                font-size: 1.3rem;
+                gap: 0.5rem;
+            }
+            .header-info {
+                flex-direction: column;
+                gap: 0.5rem;
+                font-size: 0.9rem;
+            }
+            .data-section {
+                padding: 0.75rem;
+                margin-bottom: 1rem;
+            }
+            .section-title {
+                font-size: 1.1rem;
+                margin-bottom: 0.75rem;
+                gap: 0.5rem;
+            }
+            .btn-back {
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            /* === TABLA ESTADÍSTICAS POR JUGADOR === */
+            .stats-table {
+                table-layout: auto;
+                font-size: 0.7rem;
+            }
+            .stats-table th,
+            .stats-table td {
+                padding: 4px 2px;
+                font-size: 0.7rem;
+                white-space: nowrap;
+            }
+            .stats-table th.player-header {
+                width: auto;
+                min-width: 50px;
+                max-width: 60px;
+                padding-left: 4px;
+                padding-right: 4px;
+                font-size: 0.65rem;
+            }
+            .stats-table th.stat-col {
+                width: 35px !important;
+                min-width: 35px !important;
+                max-width: 35px !important;
+                font-size: 0.65rem;
+            }
+            .stats-table th.rotated {
+                height: 70px;
+                width: 35px !important;
+                min-width: 35px !important;
+                max-width: 35px !important;
+            }
+            .stats-table th.rotated > div {
+                width: 60px;
+                margin-left: -30px;
+                font-size: 0.65rem;
+                bottom: 15px;
+            }
+            .stats-table td {
+                padding: 3px 2px;
+                font-size: 0.7rem;
+                width: 35px !important;
+                max-width: 35px !important;
+                min-width: 35px !important;
+            }
+            .player-name {
+                width: auto !important;
+                min-width: 50px !important;
+                max-width: 60px !important;
+                padding-left: 4px !important;
+                padding-right: 4px !important;
+                font-size: 0.7rem;
+            }
+            .stat-col {
+                width: 35px !important;
+                min-width: 35px !important;
+                max-width: 35px !important;
+            }
+
+            /* === TABLA REGISTRO DE ACCIONES === */
+            .events-table {
+                table-layout: auto;
+                font-size: 0.7rem;
+            }
+            .events-table th,
+            .events-table td {
+                padding: 4px 2px;
+                font-size: 0.7rem;
+                white-space: nowrap;
+            }
+            .events-table .col-order {
+                width: 1%;
+                min-width: 30px;
+                padding-left: 2px;
+                padding-right: 2px;
+            }
+            .events-table .col-period {
+                width: 1%;
+                min-width: 35px;
+                padding-left: 2px;
+                padding-right: 2px;
+            }
+            .events-table .col-player {
+                width: auto;
+                min-width: 50px;
+                max-width: 70px;
+                padding-left: 3px;
+                padding-right: 3px;
+            }
+            .events-table .col-action {
+                width: auto;
+                min-width: 60px;
+                max-width: 90px;
+                padding-left: 3px;
+                padding-right: 3px;
+            }
+            .events-table .col-value {
+                width: 1%;
+                min-width: 35px;
+                padding-left: 2px;
+                padding-right: 2px;
+            }
+            .period-badge {
+                padding: 0.1rem 0.3rem;
+                font-size: 0.6rem;
+            }
+
+            /* === SCROLL HORIZONTAL === */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin-left: -0.75rem;
+                margin-right: -0.75rem;
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            .data-section, .header-section {
+                border-color: #333;
+                box-shadow: none;
+            }
+            .btn-back {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/matches" class="btn-back">
+            <i class="bi bi-arrow-left"></i>
+            Volver a Partidos
+        </a>
+
+        <div class="header-section">
+            <div class="header-title">
+                <i class="bi bi-clipboard-data"></i>
+                Datos del Partido
+            </div>
+            <div class="header-info">
+                <div class="header-info-item">
+                    <i class="bi bi-trophy"></i>
+                    <span>{{ team.name }} vs {{ match.opponent }}</span>
+                </div>
+                <div class="header-info-item">
+                    <i class="bi bi-calendar3"></i>
+                    <span>{{ match.date.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div class="header-info-item">
+                    <i class="bi bi-award"></i>
+                    <span>{{ score_home }} - {{ score_away }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ESTADÍSTICAS POR JUGADOR -->
+        <div class="data-section">
+            <div class="section-title">
+                <i class="bi bi-bar-chart-fill"></i>
+                Estadísticas por Jugador
+            </div>
+            {% if ranking %}
+            <div class="table-responsive">
+                <table class="stats-table">
+                    <colgroup>
+                        <col style="width: 70px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                        <col style="width: 35px;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="player-header group-end">Jugador</th>
+                            <th class="stat-col">Val</th>
+                            <th class="stat-col">Ata</th>
+                            <th class="stat-col group-end">Def</th>
+                            <th class="rotated positive"><div>T2</div></th>
+                            <th class="rotated positive"><div>T3</div></th>
+                            <th class="rotated positive"><div>T1</div></th>
+                            <th class="rotated positive"><div>Reb</div></th>
+                            <th class="rotated positive"><div>Asist</div></th>
+                            <th class="rotated positive"><div>Robos</div></th>
+                            <th class="rotated positive group-end"><div>Tap</div></th>
+                            <th class="rotated negative"><div>T2</div></th>
+                            <th class="rotated negative"><div>T3</div></th>
+                            <th class="rotated negative"><div>T1</div></th>
+                            <th class="rotated negative"><div>BP</div></th>
+                            <th class="rotated negative"><div>TapR</div></th>
+                            <th class="rotated negative"><div>Faltas</div></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in ranking %}
+                        <tr>
+                            <td class="player-name group-end">{{ r.player.name }}</td>
+                            <td class="stat-col">
+                                <span class="{% if r.val > 0 %}val-positive{% elif r.val < 0 %}val-negative{% else %}val-neutral{% endif %}">
+                                    {{ "%.1f"|format(r.val) }}
+                                </span>
+                            </td>
+                            <td class="stat-col">
+                                <span class="{% if r.ata > 0 %}val-positive{% elif r.ata < 0 %}val-negative{% else %}val-neutral{% endif %}">
+                                    {{ "%.1f"|format(r.ata) }}
+                                </span>
+                            </td>
+                            <td class="stat-col group-end">
+                                <span class="{% if r.def > 0 %}val-positive{% elif r.def < 0 %}val-negative{% else %}val-neutral{% endif %}">
+                                    {{ "%.1f"|format(r.def) }}
+                                </span>
+                            </td>
+                            <td><span class="val-positive">{{ r.tiros_2 }}</span></td>
+                            <td><span class="val-positive">{{ r.tiros_3 }}</span></td>
+                            <td><span class="val-positive">{{ r.tiros_1 }}</span></td>
+                            <td><span class="val-positive-soft">{{ r.rebotes }}</span></td>
+                            <td><span class="val-positive-soft">{{ r.asist }}</span></td>
+                            <td><span class="val-positive-soft">{{ r.robos }}</span></td>
+                            <td class="group-end"><span class="val-positive-soft">{{ r.tapones }}</span></td>
+                            <td><span class="val-negative">{{ r.tiros_2_fallados }}</span></td>
+                            <td><span class="val-negative">{{ r.tiros_3_fallados }}</span></td>
+                            <td><span class="val-negative">{{ r.tiros_1_fallados }}</span></td>
+                            <td><span class="val-negative">{{ r.balones_perdidos }}</span></td>
+                            <td><span class="val-negative">{{ r.tapones_recibidos }}</span></td>
+                            <td><span class="val-negative-soft">{{ r.faltas }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="no-data">
+                <i class="bi bi-inbox" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+                No hay estadísticas registradas para este partido
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- REGISTRO DE ACCIONES -->
+        <div class="data-section">
+            <div class="section-title">
+                <i class="bi bi-list-ul"></i>
+                Registro de Acciones ({{ events|length }} acciones)
+            </div>
+            {% if events %}
+            <div class="table-responsive">
+                <table class="events-table">
+                    <thead>
+                        <tr>
+                            <th class="col-order">Ord</th>
+                            <th class="col-period">Per</th>
+                            <th class="col-player">Jugador</th>
+                            <th class="col-action">Acción</th>
+                            <th class="col-value">Val</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in events %}
+                        <tr>
+                            <td class="col-order">{{ e.orden }}</td>
+                            <td class="col-period">
+                                <span class="period-badge">{{ e.period }}</span>
+                            </td>
+                            <td class="col-player">{{ e.player }}</td>
+                            <td class="col-action">{{ e.action }}</td>
+                            <td class="col-value">
+                                <span class="{% if e.value > 0 %}val-positive{% elif e.value < 0 %}val-negative{% else %}val-neutral{% endif %}">
+                                    {{ "%+.2f"|format(e.value) }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="no-data">
+                <i class="bi bi-inbox" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+                No hay acciones registradas para este partido
+            </div>
+            {% endif %}
+        </div>
+
+        <a href="/matches" class="btn-back">
+            <i class="bi bi-arrow-left"></i>
+            Volver a Partidos
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

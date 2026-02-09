@@ -8,28 +8,261 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        .dashboard-card { transition: transform 0.2s; border: none; border-radius: 12px; }
-        .dashboard-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .icon-box { font-size: 1.8rem; margin-bottom: 5px; }
-        .drill-card { border: none; overflow: hidden; position: relative; border-radius: 12px; }
-        .card-img-zone { position: relative; height: 160px; cursor: pointer; background: #000; overflow: hidden; }
-        .card-img-zone img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
-        .overlay-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; }
-        .stats-badge { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+        :root {
+            --accent-color: {{ theme_color }};
+            --text-soft: #e9edf2;
+            --bg-dark: #0b1424;
+            --bg-panel: #0f1b2e;
+            --bg-panel-2: #111f35;
+            --cream: #e9e4d2;
+        }
+        body { background: var(--bg-dark); color: var(--text-soft); }
+        .navbar { background: #0d172a !important; }
         .text-orange { color: #fd7e14; }
+        .nav-link { color: #cfd6e3 !important; font-weight: 600; font-size: 0.85rem; }
+        .nav-link.active, .nav-link:hover { color: #ffffff !important; }
+
+        .library-title { color: #e7edf7; }
+        .filters-card { background: transparent; border: none; }
+        .filters-card .form-control,
+        .filters-card .form-select {
+            background: var(--bg-panel);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--cream);
+            transition: border-color 0.2s;
+        }
+        .filters-card .form-control:focus,
+        .filters-card .form-select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(255,215,0,0.15);
+        }
+        .filters-card .form-control::placeholder { color: var(--cream); opacity: 0.7; }
+        .filters-card .form-select option { color: var(--cream); }
+        .btn-accent { background: var(--accent-color); color: #0a1929; border: none; }
+        .btn-accent:hover { filter: brightness(1.05); }
+        .search-btn { 
+            background: var(--bg-panel); 
+            border: 1px solid rgba(255,255,255,0.15); 
+            color: var(--accent-color);
+            transition: all 0.2s;
+        }
+        .search-btn:hover { 
+            border-color: var(--accent-color); 
+            background: rgba(255,215,0,0.1);
+        }
+        .search-btn i { color: var(--accent-color); }
+
+        .drill-card {
+            position: relative;
+            border: 1px solid var(--cream);
+            border-radius: 16px;
+            overflow: hidden;
+            height: 160px;
+            background: var(--bg-panel);
+            cursor: pointer;
+            display: flex;
+        }
+        .drill-media {
+            position: relative;
+            width: 40%;
+            min-width: 130px;
+            max-width: 160px;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+        .drill-media::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(0.5px);
+        }
+        .drill-actions {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            display: flex;
+            gap: 8px;
+            z-index: 3;
+        }
+        .drill-action-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 1px solid var(--cream);
+            color: var(--cream);
+            background: rgba(0,0,0,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.68rem;
+        }
+        .drill-play {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            transform: translateY(6px);
+        }
+        .play-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid var(--cream);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--cream);
+            background: rgba(0,0,0,0.35);
+        }
+        .play-btn i { font-size: 1.15rem; }
+        .drill-info {
+            flex: 1;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 0;
+            background: linear-gradient(180deg, rgba(10,18,32,0.85), rgba(10,18,32,0.65));
+            overflow: hidden;
+        }
+        .drill-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            height: 40%;
+            flex-shrink: 0;
+        }
+        .drill-title {
+            font-weight: 700;
+            color: var(--cream);
+            margin: 0;
+            font-size: 1rem;
+            text-shadow: 0 1px 6px rgba(0,0,0,0.4);
+            line-height: 1.2;
+        }
+        .drill-tags {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            align-items: flex-start;
+            align-content: flex-start;
+            overflow: hidden;
+            height: 60%;
+            flex-shrink: 0;
+        }
+        .pill {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            line-height: 1;
+            border: 1px solid var(--cream);
+            color: var(--cream);
+            background: rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+        .pill-primary {
+            background: var(--accent-color);
+            color: #0a1929;
+            border-color: transparent;
+            font-weight: 700;
+        }
+        .origin-icon {
+            width: 18px;
+            height: 18px;
+            opacity: 0.9;
+            filter: brightness(1.1);
+            flex-shrink: 0;
+        }
+
         .select2-container .select2-selection--single { height: 38px; }
+        .select2-container--default .select2-selection--multiple {
+            background: var(--bg-panel);
+            border: 1px solid rgba(255,255,255,0.15);
+            min-height: 36px;
+        }
+        .select2-container--default .select2-selection--multiple:hover {
+            border-color: rgba(255,255,255,0.25);
+        }
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(255,215,0,0.15);
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background: rgba(255,215,0,0.15);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__placeholder {
+            color: var(--cream);
+            opacity: 0.7;
+        }
+        .select2-container--default .select2-search--inline .select2-search__field::placeholder {
+            color: var(--cream);
+            opacity: 0.7;
+        }
+        .select2-container--default .select2-results__group {
+            background: #19253d;
+            color: #e4ebf5;
+            font-weight: 700;
+            padding: 6px 8px;
+            border-radius: 6px;
+            margin: 4px 6px 2px;
+        }
+        .select2-container--default .select2-results__option { background: #0f1b2e; color: #dfe6f2; }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] { background: #1a2a46; }
+        .select2-dropdown { 
+            background: var(--bg-panel); 
+            border: 1px solid rgba(255,255,255,0.15); 
+        }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
     <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm p-1">
         <div class="container">
             <a class="navbar-brand fw-bold fs-6" href="/">
                 <i class="bi bi-basket text-orange"></i> Coach<span class="text-orange">App</span>
             </a>
-            <div class="d-flex align-items-center">
+            <ul class="navbar-nav flex-row gap-3 ms-3">
+                <li class="nav-item"><a class="nav-link active" href="/">Biblioteca</a></li>
+                <li class="nav-item"><a class="nav-link" href="/my_teams">Equipos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/my_plans">Entrenamientos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/matches">Partidos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/analytics">Analytics</a></li>
+            </ul>
+            <div class="d-flex align-items-center gap-2">
                 {% if current_user.is_authenticated %}
-                    <a href="/logout" class="btn btn-outline-secondary btn-sm" style="font-size: 0.7rem;">Salir</a>
+                    {% if current_user.is_admin %}
+                        <a class="btn btn-outline-light btn-sm" href="/admin/config" title="Configuración">
+                            <i class="bi bi-gear"></i>
+                        </a>
+                    {% endif %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.7rem;">
+                            <i class="bi bi-person-circle"></i> Usuario
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#themeModal">
+                                    <i class="bi bi-palette-fill"></i> Personalización
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/user/tags">
+                                    <i class="bi bi-tags-fill"></i> Mis Etiquetas
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a></li>
+                        </ul>
+                    </div>
                 {% else %}
                     <a href="/login" class="btn btn-primary btn-sm fw-bold">Entrar</a>
                 {% endif %}
@@ -39,36 +272,6 @@
 
     <div class="container mt-3">
         {% if current_user.is_authenticated %}
-        
-        <div class="row g-2 mb-4">
-            {% if current_user.is_admin %}
-            <div class="col-6 col-md-3 col-lg-2">
-                <a href="/admin/config" class="card dashboard-card bg-dark text-white text-decoration-none h-100 p-2 text-center">
-                    <div class="icon-box text-warning"><i class="bi bi-gear-fill"></i></div>
-                    <small class="fw-bold d-block">Admin</small>
-                </a>
-            </div>
-            {% endif %}
-            <div class="col-6 col-md-3 col-lg-2">
-                <a href="/my_teams" class="card dashboard-card bg-white text-dark text-decoration-none h-100 p-2 text-center shadow-sm">
-                    <div class="icon-box text-primary"><i class="bi bi-people-fill"></i></div>
-                    <small class="fw-bold d-block">Equipos</small>
-                </a>
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <a href="/my_plans" class="card dashboard-card bg-white text-dark text-decoration-none h-100 p-2 text-center shadow-sm">
-                    <div class="icon-box text-success"><i class="bi bi-clipboard-data-fill"></i></div>
-                    <small class="fw-bold d-block">Entrenamientos</small>
-                </a>
-            </div>
-            <div class="col-6 col-md-3 col-lg-2">
-                <a href="/matches" class="card dashboard-card bg-white text-dark text-decoration-none h-100 p-2 text-center shadow-sm">
-                    <div class="icon-box text-danger"><i class="bi bi-trophy-fill"></i></div>
-                    <small class="fw-bold d-block">Partidos</small>
-                </a>
-            </div>
-        </div>
-
         {% if pending_invites %}
         <div class="alert alert-info py-2 px-3 small mb-3">
             <strong>Invitaciones:</strong>
@@ -81,27 +284,45 @@
         {% endif %}
 
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0 text-dark">Biblioteca</h5>
+            <h5 class="fw-bold mb-0 library-title">Biblioteca</h5>
             {% if current_user.is_authenticated %}
-            <a href="/create" class="btn btn-dark btn-sm rounded-pill px-3 fw-bold shadow-sm">
+            <a href="/create" class="btn btn-accent btn-sm rounded-pill px-3 fw-bold shadow-sm">
                 <i class="bi bi-plus-lg"></i> Nuevo Ejercicio
             </a>
             {% endif %}
         </div>
 
-        <form action="/" method="GET" class="card p-2 shadow-sm border-0 mb-3">
+        <form action="/" method="GET" class="card p-2 shadow-sm filters-card mb-3">
             <div class="row g-2 align-items-center">
                 <div class="col-12 col-md-4">
                     <input class="form-control form-control-sm" type="search" name="q" placeholder="Buscar texto..." value="{{ request.args.get('q', '') }}">
                 </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-3">
                     <select class="form-select form-select-sm" name="primary" multiple id="tagSelect">
-                        {% for tag in tags %}
-                        <option value="{{ tag.id }}" {% if tag.id|string in request.args.getlist('primary') %}selected{% endif %}>{{ tag.name }}</option>
+                        {% for group in tag_groups %}
+                            {% if group.tags %}
+                            <optgroup label="{% if group.group.name == 'FÍSICO' %}💪 {{ group.group.name }}{% elif group.group.name == 'CATEGORÍA / NIVEL' %}🎓 {{ group.group.name }}{% elif group.group.name == 'TÉCNICA INDIVIDUAL' %}🏀 {{ group.group.name }}{% else %}{{ group.group.name }}{% endif %}">
+                                {% for tag in group.tags %}
+                                <option value="{{ tag.id }}" {% if tag.id|string in request.args.getlist('primary') %}selected{% endif %}>&nbsp;&nbsp;{{ tag.name }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endif %}
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-8 col-md-3">
+                <div class="col-6 col-md-2">
+                    <select name="origin" class="form-select form-select-sm">
+                        <option value="" {% if not request.args.get('origin') %}selected{% endif %}>Origen</option>
+                        <option value="youtube" {% if request.args.get('origin') == 'youtube' %}selected{% endif %}>YouTube</option>
+                        <option value="tiktok" {% if request.args.get('origin') == 'tiktok' %}selected{% endif %}>TikTok</option>
+                        <option value="instagram" {% if request.args.get('origin') == 'instagram' %}selected{% endif %}>Instagram</option>
+                        <option value="facebook" {% if request.args.get('origin') == 'facebook' %}selected{% endif %}>Facebook</option>
+                        <option value="pdf" {% if request.args.get('origin') == 'pdf' %}selected{% endif %}>PDF</option>
+                        <option value="image" {% if request.args.get('origin') == 'image' %}selected{% endif %}>Imagen</option>
+                        <option value="link" {% if request.args.get('origin') == 'link' %}selected{% endif %}>Link</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
                     <select name="sort_by" class="form-select form-select-sm">
                         <option value="smart_order" {% if request.args.get('sort_by') == 'smart_order' %}selected{% endif %}>⭐ Recomendado</option>
                         <option value="favs_desc" {% if request.args.get('sort_by') == 'favs_desc' %}selected{% endif %}>❤️ Más Favoritos</option>
@@ -110,59 +331,46 @@
                     </select>
                 </div>
                 <div class="col-4 col-md-1">
-                    <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold"><i class="bi bi-search"></i></button>
+                    <button type="submit" class="btn btn-accent btn-sm w-100 fw-bold search-btn"><i class="bi bi-search"></i></button>
                 </div>
             </div>
         </form>
 
-        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 pb-5">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-3 pb-5">
             {% for drill in drills %}
             <div class="col">
-                <div class="card h-100 drill-card shadow-sm bg-white">
-                    <div class="card-img-zone" data-bs-toggle="modal" data-bs-target="#drillModal" data-bs-url="/drill/{{ drill.id }}">
-                        {% if drill.cover_image %}
-                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}">
-                        {% elif drill.media_type == 'image' and drill.media_file %}
-                            <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}">
-                        {% elif drill.external_link and 'youtu' in drill.external_link %}
-                            <img src="{{ drill.external_link|youtube_thumb }}">
-                        {% else %}
-                            {% if drill.media_type == 'pdf' %}<img src="{{ get_config_url('pdf_bg') }}">
-                            {% elif 'tiktok' in (drill.external_link or '') %}<img src="{{ get_config_url('tiktok_bg') }}">
-                            {% elif 'instagram' in (drill.external_link or '') %}<img src="{{ get_config_url('instagram_bg') }}">
-                            {% elif 'facebook' in (drill.external_link or '') %}<img src="{{ get_config_url('facebook_bg') }}">
-                            {% else %}<img src="{{ get_config_url('generic_bg') }}">
+                <div class="drill-card" onclick="openDrillContent({{ drill.id }}, '{{ drill.media_type }}', '{{ drill.external_link or '' }}', '{{ drill.media_file or '' }}')">
+                    <div class="drill-media" style="background-image: url('{% if drill.cover_image %}{{ url_for('static', filename='uploads/' + drill.cover_image) }}{% elif drill.cover_fallback %}{{ url_for('static', filename='uploads/' + drill.cover_fallback) }}{% elif drill.media_type == 'image' and drill.media_file %}{{ url_for('static', filename='uploads/' + drill.media_file) }}{% else %}{{ get_config_url('generic_bg') }}{% endif %}');">
+                        {% if current_user.is_authenticated %}
+                        <div class="drill-actions">
+                            <button class="drill-action-btn" onclick="event.stopPropagation(); toggleFavorite({{ drill.id }}, this)" title="Favorito" id="fav-btn-{{ drill.id }}">
+                                <i class="bi {% if drill in current_user.favoritos %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+                            </button>
+                            {% if drill.user_id == current_user.id or current_user.is_admin %}
+                            <a href="/edit/{{ drill.id }}" class="drill-action-btn" onclick="event.stopPropagation()" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </a>
                             {% endif %}
+                        </div>
                         {% endif %}
-
-                        {% if drill.media_type == 'link' %}
-                            {% if 'youtu' in (drill.external_link or '') %}
-                                <img src="{{ get_config_url('youtube_overlay') }}" class="overlay-img">
-                            {% elif 'facebook' in (drill.external_link or '') %}
-                                <img src="{{ get_config_url('facebook_overlay') }}" class="overlay-img">
-                            {% elif 'tiktok' in (drill.external_link or '') %}
-                                <img src="{{ get_config_url('tiktok_overlay') }}" class="overlay-img">
-                            {% elif 'instagram' in (drill.external_link or '') %}
-                                <img src="{{ get_config_url('instagram_overlay') }}" class="overlay-img">
-                            {% else %}
-                                <img src="{{ get_config_url('generic_overlay') }}" class="overlay-img">
-                            {% endif %}
-                        {% elif drill.media_type == 'pdf' %}
-                            <img src="{{ get_config_url('pdf_overlay') }}" class="overlay-img">
-                        {% else %}
-                            <img src="{{ get_config_url('image_overlay') }}" class="overlay-img">
-                        {% endif %}
-
-                        <div class="stats-badge">
-                            <i class="bi bi-eye-fill"></i> {{ drill.views }}
-                            <i class="bi bi-heart-fill ms-1"></i> {{ drill.favorited_by.count() }}
+                        <div class="drill-play">
+                            <div class="play-btn">
+                                <i class="bi bi-play-fill"></i>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-body p-2">
-                        <h6 class="card-title fw-bold text-truncate mb-1" style="font-size: 0.9rem;">{{ drill.title }}</h6>
-                        <div>
-                            {% for tag in drill.primary_tags[:2] %}
-                                <span class="badge bg-light text-secondary border me-1" style="font-size: 0.6rem;">{{ tag.name }}</span>
+                    <div class="drill-info">
+                        <div class="drill-header">
+                            <div class="drill-title">
+                                {{ drill.title[:20] }}{% if drill.title|length > 20 %}…{% endif %}
+                            </div>
+                        </div>
+                        <div class="drill-tags">
+                            {% if drill.primary_tag %}
+                                <span class="pill pill-primary">{{ drill.primary_tag.name }}</span>
+                            {% endif %}
+                            {% for tag in drill.secondary_tags[:2] %}
+                                <span class="pill">{{ tag.name }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -194,6 +402,275 @@
             modalContent.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-warning"></div></div>'
             fetch(url).then(r => r.text()).then(html => { modalContent.innerHTML = html })
         })
+
+        // Función para abrir el contenido directamente
+        function openDrillContent(drillId, mediaType, externalLink, mediaFile) {
+            if (mediaType === 'link' && externalLink) {
+                // Si es YouTube, abrir en embed
+                if (externalLink.includes('youtu')) {
+                    const videoId = extractYouTubeId(externalLink);
+                    if (videoId) {
+                        window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
+                        return;
+                    }
+                }
+                // Otros enlaces externos
+                window.open(externalLink, '_blank');
+            } else if (mediaType === 'pdf' && mediaFile) {
+                // Abrir PDF en nueva pestaña
+                window.open('/static/uploads/' + mediaFile, '_blank');
+            } else if (mediaType === 'image' && mediaFile) {
+                // Abrir imagen en nueva pestaña
+                window.open('/static/uploads/' + mediaFile, '_blank');
+            } else if (mediaType === 'video_file' && mediaFile) {
+                // Abrir video en nueva pestaña
+                window.open('/static/uploads/' + mediaFile, '_blank');
+            } else {
+                // Por defecto, abrir la ficha completa
+                openDrillInfo(drillId);
+            }
+        }
+
+        // Función para extraer ID de YouTube
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            if (url.includes('/shorts/')) {
+                const parts = url.split('/shorts/');
+                return parts[parts.length - 1].split('?')[0];
+            }
+            if (url.includes('youtu.be/')) {
+                const parts = url.split('youtu.be/');
+                return parts[parts.length - 1].split('?')[0];
+            }
+            if (url.includes('v=')) {
+                return url.split('v=')[1].split('&')[0];
+            }
+            return null;
+        }
+
+        // Función para toggle de favorito con AJAX (desde tarjeta)
+        function toggleFavorite(drillId, buttonElement) {
+            fetch('/api/toggle_fav/' + drillId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    const isCardAction = buttonElement.classList.contains('drill-action-btn');
+                    const icon = buttonElement.querySelector('i');
+                    if (data.is_fav) {
+                        if (!isCardAction) {
+                            buttonElement.classList.remove('btn-outline-danger');
+                            buttonElement.classList.add('btn-danger');
+                        }
+                        icon.classList.remove('bi-heart');
+                        icon.classList.add('bi-heart-fill');
+                    } else {
+                        if (!isCardAction) {
+                            buttonElement.classList.remove('btn-danger');
+                            buttonElement.classList.add('btn-outline-danger');
+                        }
+                        icon.classList.remove('bi-heart-fill');
+                        icon.classList.add('bi-heart');
+                    }
+                    // Actualizar también el botón del modal si existe
+                    const modalBtn = document.getElementById('modal-fav-btn-' + drillId);
+                    if (modalBtn) {
+                        const isModalCardAction = modalBtn.classList.contains('drill-action-btn');
+                        const modalIcon = modalBtn.querySelector('i');
+                        if (data.is_fav) {
+                            if (!isModalCardAction) {
+                                modalBtn.classList.remove('btn-outline-danger');
+                                modalBtn.classList.add('btn-danger');
+                            }
+                            modalIcon.classList.remove('bi-heart');
+                            modalIcon.classList.add('bi-heart-fill');
+                        } else {
+                            if (!isModalCardAction) {
+                                modalBtn.classList.remove('btn-danger');
+                                modalBtn.classList.add('btn-outline-danger');
+                            }
+                            modalIcon.classList.remove('bi-heart-fill');
+                            modalIcon.classList.add('bi-heart');
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Fallback: recargar la página
+                window.location.href = '/toggle_fav/' + drillId;
+            });
+        }
+
+        // Función para toggle de favorito desde el modal
+        function toggleFavoriteModal(drillId, buttonElement) {
+            fetch('/api/toggle_fav/' + drillId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    const isCardAction = buttonElement.classList.contains('drill-action-btn');
+                    const icon = buttonElement.querySelector('i');
+                    if (data.is_fav) {
+                        if (!isCardAction) {
+                            buttonElement.classList.remove('btn-outline-danger');
+                            buttonElement.classList.add('btn-danger');
+                        }
+                        icon.classList.remove('bi-heart');
+                        icon.classList.add('bi-heart-fill');
+                    } else {
+                        if (!isCardAction) {
+                            buttonElement.classList.remove('btn-danger');
+                            buttonElement.classList.add('btn-outline-danger');
+                        }
+                        icon.classList.remove('bi-heart-fill');
+                        icon.classList.add('bi-heart');
+                    }
+                    // Actualizar también el botón de la tarjeta si existe
+                    const cardBtn = document.getElementById('fav-btn-' + drillId);
+                    if (cardBtn) {
+                        const isCardBtnAction = cardBtn.classList.contains('drill-action-btn');
+                        const cardIcon = cardBtn.querySelector('i');
+                        if (data.is_fav) {
+                            if (!isCardBtnAction) {
+                                cardBtn.classList.remove('btn-outline-danger');
+                                cardBtn.classList.add('btn-danger');
+                            }
+                            cardIcon.classList.remove('bi-heart');
+                            cardIcon.classList.add('bi-heart-fill');
+                        } else {
+                            if (!isCardBtnAction) {
+                                cardBtn.classList.remove('btn-danger');
+                                cardBtn.classList.add('btn-outline-danger');
+                            }
+                            cardIcon.classList.remove('bi-heart-fill');
+                            cardIcon.classList.add('bi-heart');
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Fallback: recargar la página
+                window.location.href = '/toggle_fav/' + drillId;
+            });
+        }
+
+        // Función para abrir la ficha completa
+        function openDrillInfo(drillId) {
+            const modal = document.getElementById('drillModal');
+            const modalContent = modal.querySelector('.modal-content');
+            modalContent.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-warning"></div></div>';
+            fetch('/drill/' + drillId)
+                .then(r => r.text())
+                .then(html => {
+                    modalContent.innerHTML = html;
+                    new bootstrap.Modal(modal).show();
+                });
+        }
+    </script>
+
+    <!-- Modal de Personalización de Tema -->
+    <div class="modal fade" id="themeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-palette-fill"></i> Personalización del Tema</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Personaliza el color principal de la aplicación. Deja vacío para usar el color por defecto.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Color Principal:</label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="color" id="userColorPicker" class="form-control form-control-color" value="{{ theme_color }}" style="width: 60px;">
+                            <input type="text" id="userColorText" class="form-control" value="{% if current_user.theme_color %}{{ current_user.theme_color }}{% endif %}" placeholder="Usar color por defecto" maxlength="7">
+                        </div>
+                        <small class="text-muted">Color global de la app: <span class="badge" style="background-color: {{ theme_color }}; color: #0a1929;">{{ theme_color }}</span></small>
+                    </div>
+
+                    <div class="p-3 rounded text-center mb-3" style="background: #0a1929;">
+                        <p class="text-light small mb-2">Vista previa:</p>
+                        <button class="btn fw-bold text-dark" id="userPreviewBtn" style="background: {{ theme_color }};">
+                            🏀 Botón de Ejemplo
+                        </button>
+                    </div>
+
+                    <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetUserColor()">
+                        <i class="bi bi-arrow-clockwise"></i> Restaurar Color por Defecto
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUserColor()">
+                        <i class="bi bi-check-lg"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const userColorPicker = document.getElementById('userColorPicker');
+        const userColorText = document.getElementById('userColorText');
+        const userPreviewBtn = document.getElementById('userPreviewBtn');
+
+        // Sincronizar picker y texto
+        userColorPicker.addEventListener('input', (e) => {
+            userColorText.value = e.target.value.toUpperCase();
+            userPreviewBtn.style.background = e.target.value;
+        });
+
+        userColorText.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val.match(/^#[0-9A-Fa-f]{6}$/)) {
+                userColorPicker.value = val;
+                userPreviewBtn.style.background = val;
+            } else if (val === '') {
+                userPreviewBtn.style.background = '{{ theme_color }}';
+            }
+        });
+
+        async function saveUserColor() {
+            const color = userColorText.value.trim();
+            if (color && !color.match(/^#[0-9A-Fa-f]{6}$/)) {
+                alert('Color inválido. Usa formato #RRGGBB (ej: #FFD700) o déjalo vacío.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/user/update_theme_color', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ color })
+                });
+
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    alert('✅ Color guardado. Recarga la página para ver los cambios.');
+                    location.reload();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                alert('❌ Error de conexión');
+            }
+        }
+
+        function resetUserColor() {
+            userColorText.value = '';
+            userColorPicker.value = '{{ theme_color }}';
+            userPreviewBtn.style.background = '{{ theme_color }}';
+        }
     </script>
 </body>
 </html>

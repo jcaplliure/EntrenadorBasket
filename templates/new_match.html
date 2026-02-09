@@ -5,59 +5,215 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Nuevo Partido</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: {{ theme_color }};
+        }
+        body {
+            background: #0a1929;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .match-card {
+            max-width: 580px;
+            margin: 2rem auto;
+            background: transparent;
+            border: none;
+        }
+        .match-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 100%);
+            color: #0a1929;
+            font-weight: 700;
+            text-align: center;
+            padding: 1.2rem;
+            border-radius: 16px;
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+        }
+        .form-label {
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .form-control, .form-select {
+            background: #0d1f2d;
+            border: 2px solid #3b82f6;
+            color: #ffffff;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            background: #0d1f2d;
+            border-color: #60a5fa;
+            color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .form-select option {
+            background: #0d1f2d;
+            color: #ffffff;
+        }
+        .help-text {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        .section-box {
+            background: transparent;
+            padding: 1rem 0;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .roster-container {
+            background: #0d1f2d;
+            border: 2px solid #3b82f6;
+            border-radius: 10px;
+            padding: 0.5rem;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+        .player-item {
+            background: #162838;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        .player-item:hover {
+            background: #1e3a5f;
+            border-color: #3b82f6;
+        }
+        .player-item:last-child {
+            margin-bottom: 0;
+        }
+        .player-checkbox {
+            width: 24px;
+            height: 24px;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .player-dorsal {
+            background: var(--primary-color);
+            color: #0a1929;
+            font-weight: 700;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+        .player-name {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 1rem;
+            flex: 1;
+        }
+        .btn-primary-action {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 100%);
+            border: none;
+            color: #0a1929;
+            font-weight: 700;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+        .btn-primary-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255, 215, 0, 0.6);
+            color: #0a1929;
+        }
+        .btn-secondary-action {
+            background: #0d1f2d;
+            border: 2px solid #3b82f6;
+            color: #ffffff;
+            font-weight: 700;
+            padding: 0.85rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary-action:hover {
+            background: #1e3a5f;
+            border-color: #60a5fa;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+        .empty-state {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 2rem;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
     <div class="container py-4">
-        <div class="card shadow border-0" style="max-width: 500px; margin: auto;">
-            <div class="card-header bg-danger text-white fw-bold text-center py-3">
+        <div class="match-card">
+            <div class="match-header">
                 🏀 Empezar Partido
             </div>
-            <div class="card-body p-4">
-                <form action="/new_match" method="POST">
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Rival</label>
-                        <input type="text" name="opponent" class="form-control form-control-lg" placeholder="Nombre del equipo contrario" required autofocus>
+            
+            <form action="/new_match" method="POST">
+                
+                <div class="mb-4">
+                    <label class="form-label">Rival</label>
+                    <input type="text" name="opponent" class="form-control" placeholder="Nombre del equipo contrario" required autofocus>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Fecha del partido</label>
+                    <input type="date" name="match_date" class="form-control" value="{{ today_date }}" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Mi Equipo</label>
+                    <select name="team_id" id="teamSelect" class="form-select" onchange="updateFromTeam()" required>
+                        {% for team in teams %}
+                        <option value="{{ team.id }}" data-quarters="{{ team.quarters }}">{{ team.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4 section-box">
+                    <label class="form-label">Número de periodos</label>
+                    <select name="quarters" id="quartersSelect" class="form-select">
+                        {% for i in range(2, 9) %}
+                        <option value="{{ i }}">{{ i }} periodos</option>
+                        {% endfor %}
+                    </select>
+                    <p class="help-text mb-0">Misma opción que en Ajustes del equipo; puedes cambiarla para este partido.</p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Convocatoria Inicial</label>
+                    <p class="help-text mb-2">Selecciona quiénes vienen hoy. Podrás cambiarlos luego.</p>
+                    <div id="roster-container" class="roster-container">
+                       <div class="empty-state">Cargando jugadores...</div>
                     </div>
+                </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Mi Equipo</label>
-                        <select name="team_id" id="teamSelect" class="form-select form-select-lg" onchange="updateQuarters()" required>
-                            {% for team in teams %}
-                            <option value="{{ team.id }}" data-quarters="{{ team.quarters }}">{{ team.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="mb-4 bg-light p-3 rounded">
-                        <label class="form-label fw-bold small text-muted">Estructura del Partido</label>
-                        <div class="d-flex gap-2">
-                            <input type="radio" class="btn-check" name="quarters" id="q4" value="4" checked>
-                            <label class="btn btn-outline-secondary flex-fill" for="q4">4 Cuartos</label>
-
-                            <input type="radio" class="btn-check" name="quarters" id="q6" value="6">
-                            <label class="btn btn-outline-secondary flex-fill" for="q6">6 Sextos</label>
-
-                            <input type="radio" class="btn-check" name="quarters" id="q2" value="2">
-                            <label class="btn btn-outline-secondary flex-fill" for="q2">2 Partes</label>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Convocatoria Inicial</label>
-                        <p class="small text-muted mb-2">Selecciona quiénes vienen hoy. Podrás cambiarlos luego.</p>
-                        <div id="roster-container" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
-                           <div class="text-center text-muted small py-3">Cargando jugadores...</div>
-                        </div>
-                    </div>
-
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-danger btn-lg fw-bold">Saltar a Pista</button>
-                        <a href="/" class="btn btn-light">Cancelar</a>
-                    </div>
-                </form>
-            </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary-action">Saltar a Pista</button>
+                    <a href="/" class="btn btn-secondary-action text-decoration-none">Cancelar</a>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -76,37 +232,37 @@
             {% endfor %}
         };
 
-        function updateQuarters() {
+        function updateFromTeam() {
             const teamId = document.getElementById('teamSelect').value;
             const data = teamsData[teamId];
-            
-            // 1. Update Quarters Radio
-            if(data.quarters === 4) document.getElementById('q4').checked = true;
-            else if(data.quarters === 6) document.getElementById('q6').checked = true;
-            else if(data.quarters === 2) document.getElementById('q2').checked = true;
-
-            // 2. Update Roster List
+            const quartersSelect = document.getElementById('quartersSelect');
             const rosterDiv = document.getElementById('roster-container');
-            rosterDiv.innerHTML = '';
-            
-            // Ordenar por dorsal
-            data.players.sort((a,b) => a.dorsal - b.dorsal);
 
+            if (data && data.quarters) {
+                quartersSelect.value = String(data.quarters);
+            }
+
+            rosterDiv.innerHTML = '';
+            if (!data || !data.players.length) {
+                rosterDiv.innerHTML = '<div class="empty-state">Sin jugadores en este equipo.</div>';
+                return;
+            }
+            data.players.sort((a,b) => a.dorsal - b.dorsal);
             data.players.forEach(p => {
-                const html = `
-                    <div class="form-check border-bottom py-2">
-                        <input class="form-check-input" type="checkbox" name="roster" value="${p.id}" id="p${p.id}" checked>
-                        <label class="form-check-label w-100 cursor-pointer" for="p${p.id}">
-                            <span class="badge bg-secondary me-2" style="width:30px">${p.dorsal}</span> ${p.name}
-                        </label>
-                    </div>
+                const div = document.createElement('div');
+                div.className = 'player-item';
+                div.innerHTML = `
+                    <input class="player-checkbox" type="checkbox" name="roster" value="${p.id}" id="p${p.id}" checked>
+                    <label for="p${p.id}" style="display: contents; cursor: pointer;">
+                        <div class="player-dorsal">${p.dorsal}</div>
+                        <div class="player-name">${p.name}</div>
+                    </label>
                 `;
-                rosterDiv.insertAdjacentHTML('beforeend', html);
+                rosterDiv.appendChild(div);
             });
         }
 
-        // Init on load
-        window.onload = updateQuarters;
+        window.onload = updateFromTeam;
     </script>
 </body>
 </html>

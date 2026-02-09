@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --accent-color: {{ theme_color }};
+            --cream: #e9e4d2;
+            --bg-dark: #0b1424;
+            --bg-panel: #0f1b2e;
+        }
+        body { background: var(--bg-dark); color: #e9edf2; }
+        .navbar { background: #0d172a !important; }
+        .nav-link { color: #cfd6e3 !important; font-weight: 600; font-size: 0.85rem; }
+        .nav-link.active, .nav-link:hover { color: #ffffff !important; }
+        .page-title { color: #ffffff; }
+        .team-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--cream);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: block;
+        }
+        .team-card:hover {
+            border-color: var(--accent-color);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            transform: translateY(-2px);
+        }
+        .team-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin: 0 auto 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .team-name { color: #ffffff; font-weight: 700; font-size: 1.1rem; margin-bottom: 4px; }
+        .team-season { color: var(--cream); opacity: 0.8; font-size: 0.85rem; }
+        .empty-state {
+            background: var(--bg-panel);
+            border: 1px solid var(--cream);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm p-1 mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-6" href="/">
+                <i class="bi bi-basket text-warning"></i> Coach<span class="text-warning">App</span>
+            </a>
+            <ul class="navbar-nav flex-row gap-3 ms-3">
+                <li class="nav-item"><a class="nav-link" href="/">Biblioteca</a></li>
+                <li class="nav-item"><a class="nav-link" href="/my_teams">Equipos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/my_plans">Entrenamientos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/matches">Partidos</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/analytics">Analytics</a></li>
+            </ul>
+            <div class="d-flex align-items-center gap-2">
+                {% if current_user.is_authenticated %}
+                    {% if current_user.is_admin %}
+                        <a class="btn btn-outline-light btn-sm" href="/admin/config" title="Configuración">
+                            <i class="bi bi-gear"></i>
+                        </a>
+                    {% endif %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.7rem;">
+                            <i class="bi bi-person-circle"></i> Usuario
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a></li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 800px;">
+        <h3 class="fw-bold page-title mb-4"><i class="bi bi-bar-chart-fill"></i> Analytics</h3>
+        <p class="text-muted mb-4">Selecciona un equipo para ver sus estadísticas de partidos:</p>
+
+        {% if teams %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for team in teams %}
+            <div class="col">
+                <a href="/team/{{ team.id }}/stats" class="team-card">
+                    <div class="team-logo">
+                        {% if team.logo_file %}
+                            <img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <i class="bi bi-shield-shaded fs-2 text-light"></i>
+                        {% endif %}
+                    </div>
+                    <div class="team-name">{{ team.name }}</div>
+                    <div class="team-season">{{ team.category }}</div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-bar-chart" style="font-size: 3rem; color: rgba(255, 255, 255, 0.3); margin-bottom: 1rem;"></i>
+            <p class="mb-3">No tienes equipos creados. Crea un equipo y graba partidos para ver estadísticas.</p>
+            <a href="/my_teams" class="btn btn-outline-light">Ir a Equipos</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

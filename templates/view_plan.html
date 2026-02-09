@@ -18,11 +18,8 @@
         <div class="container">
             <span class="navbar-brand fw-bold text-truncate">{{ plan.name }}</span>
             <div>
-                <button class="btn btn-success btn-sm fw-bold me-2" data-bs-toggle="modal" data-bs-target="#startSessionModal">
-                    <i class="bi bi-play-circle-fill"></i> Jugar
-                </button>
-                <a href="/court_mode/{{ plan.id }}" target="_blank" class="btn btn-outline-warning btn-sm me-2">
-                    <i class="bi bi-display"></i> Pista
+                <a href="/court_mode/{{ plan.id }}" target="_blank" class="btn btn-success btn-sm fw-bold me-2">
+                    <i class="bi bi-display"></i> Modo Pista
                 </a>
                 <a href="/my_plans" class="btn btn-outline-light btn-sm">Volver</a>
             </div>
@@ -101,33 +98,6 @@
                         </div>
                         <div class="d-grid">
                             <button type="submit" class="btn btn-success fw-bold">Añadir</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="startSessionModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Iniciar Entrenamiento</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form action="/start_session" method="POST">
-                        <input type="hidden" name="plan_id" value="{{ plan.id }}">
-                        <div class="mb-3">
-                            <label class="form-label">Selecciona el Equipo</label>
-                            <select name="team_id" class="form-select" required>
-                                {% for t in teams %}
-                                <option value="{{ t.id }}">{{ t.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary fw-bold">COMENZAR</button>
                         </div>
                     </form>
                 </div>

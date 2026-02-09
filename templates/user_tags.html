@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mis Etiquetas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bg-dark: #0b1424;
+            --bg-panel: #0f1b2e;
+            --bg-input: #0a1220;
+            --cream: #e9e4d2;
+            --accent-color: {{ theme_color }};
+            --text-primary: #ffffff;
+            --text-muted: #8b97ad;
+            --border-color: rgba(233, 228, 210, 0.25);
+            --custom-tag-color: #06b6d4;
+        }
+        
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .navbar { background: #0d172a !important; }
+        .nav-link { color: #cfd6e3 !important; font-weight: 600; font-size: 0.85rem; }
+        .nav-link.active, .nav-link:hover { color: #ffffff !important; }
+        .text-orange { color: #fd7e14; }
+        
+        .page-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        
+        .main-panel {
+            background: var(--bg-panel);
+            border: 2px solid var(--cream);
+            border-radius: 24px;
+            padding: 32px;
+            width: 100%;
+            max-width: 700px;
+            box-shadow: 0 0 40px rgba(233, 228, 210, 0.08);
+        }
+        
+        .panel-title {
+            color: var(--cream);
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        
+        .panel-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        
+        .tag-count {
+            color: var(--custom-tag-color);
+            font-weight: 700;
+        }
+        
+        .tags-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .tag-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--custom-tag-color);
+            border-radius: 12px;
+        }
+        
+        .tag-info {
+            flex: 1;
+        }
+        
+        .tag-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--custom-tag-color);
+        }
+        
+        .tag-group {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        .tag-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-action {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--cream);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-action:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .btn-action.delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--custom-tag-color);
+            opacity: 0.5;
+            margin-bottom: 16px;
+        }
+        
+        /* Formulario crear etiqueta */
+        .create-section {
+            background: var(--bg-input);
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+        }
+        
+        .create-title {
+            color: var(--cream);
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            color: var(--cream);
+            font-weight: 500;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+        
+        .form-control, .form-select {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            padding: 12px 14px;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-dark);
+            border-color: var(--custom-tag-color);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+        }
+        
+        .form-select option {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+        }
+        
+        .btn-create {
+            background: var(--custom-tag-color);
+            color: #0a1929;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        
+        .btn-create:hover {
+            filter: brightness(1.1);
+        }
+        
+        .btn-create:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-back {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 20px;
+        }
+        
+        .btn-back:hover {
+            color: var(--cream);
+        }
+        
+        /* Modal editar */
+        .modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .btn-close {
+            filter: invert(1);
+        }
+        
+        .alert-info-custom {
+            background: rgba(6, 182, 212, 0.15);
+            border: 1px solid var(--custom-tag-color);
+            color: var(--custom-tag-color);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    
+    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm p-1">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-6" href="/">
+                <i class="bi bi-basket text-orange"></i> Coach<span class="text-orange">App</span>
+            </a>
+            <ul class="navbar-nav flex-row gap-3 ms-3">
+                <li class="nav-item"><a class="nav-link" href="/">Biblioteca</a></li>
+                <li class="nav-item"><a class="nav-link" href="/my_teams">Equipos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/my_plans">Entrenamientos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/matches">Partidos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/analytics">Analytics</a></li>
+            </ul>
+            <div class="d-flex align-items-center gap-2">
+                {% if current_user.is_admin %}
+                    <a class="btn btn-outline-light btn-sm" href="/admin/config" title="Configuración">
+                        <i class="bi bi-gear-fill"></i>
+                    </a>
+                {% endif %}
+                <div class="dropdown">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.7rem;">
+                        <i class="bi bi-person-circle"></i> Usuario
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#themeModal">
+                                <i class="bi bi-palette-fill"></i> Personalización
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item active" href="/user/tags">
+                                <i class="bi bi-tags-fill"></i> Mis Etiquetas
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="page-wrapper">
+        <div class="main-panel">
+            <h2 class="panel-title"><i class="bi bi-tags-fill"></i> Mis Etiquetas</h2>
+            <p class="panel-subtitle">
+                Etiquetas personalizadas: <span class="tag-count">{{ custom_tags|length }}</span> / 5
+            </p>
+            
+            <div class="alert-info-custom">
+                <i class="bi bi-info-circle"></i> Las etiquetas personalizadas son privadas y solo tú puedes verlas. Se añaden a los grupos existentes para clasificar tus ejercicios.
+            </div>
+            
+            {% if custom_tags %}
+            <div class="tags-list">
+                {% for tag in custom_tags %}
+                <div class="tag-item" data-tag-id="{{ tag.id }}">
+                    <div class="tag-info">
+                        <div class="tag-name">{{ tag.name }}</div>
+                        <div class="tag-group">
+                            <i class="bi bi-folder2"></i> {{ tag.group.name if tag.group else 'Sin grupo' }}
+                        </div>
+                    </div>
+                    <div class="tag-actions">
+                        <button class="btn-action" onclick="openEditModal({{ tag.id }}, '{{ tag.name }}', {{ tag.group_id }})" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn-action delete" onclick="deleteTag({{ tag.id }})" title="Eliminar">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="bi bi-tags"></i>
+                <p>No tienes etiquetas personalizadas</p>
+                <p class="small">Crea una usando el formulario de abajo</p>
+            </div>
+            {% endif %}
+            
+            {% if custom_tags|length < 5 %}
+            <div class="create-section">
+                <div class="create-title"><i class="bi bi-plus-circle"></i> Crear nueva etiqueta</div>
+                <form id="createTagForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre de la etiqueta</label>
+                            <input type="text" class="form-control" id="newTagName" placeholder="Ej: Contraataque rápido" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Grupo</label>
+                            <select class="form-select" id="newTagGroup" required>
+                                {% for group in tag_groups %}
+                                <option value="{{ group.id }}">{{ group.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="submit" class="btn-create">
+                            <i class="bi bi-plus-lg"></i> Crear etiqueta
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% else %}
+            <div class="alert-info-custom" style="background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #ef4444;">
+                <i class="bi bi-exclamation-triangle"></i> Has alcanzado el límite de 5 etiquetas personalizadas. Elimina alguna para crear más.
+            </div>
+            {% endif %}
+            
+            <a href="/" class="btn-back">
+                <i class="bi bi-arrow-left"></i> Volver a la biblioteca
+            </a>
+        </div>
+    </div>
+    
+    <!-- Modal Editar -->
+    <div class="modal fade" id="editTagModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar etiqueta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editTagId">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de la etiqueta</label>
+                        <input type="text" class="form-control" id="editTagName">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Grupo</label>
+                        <select class="form-select" id="editTagGroup">
+                            {% for group in tag_groups %}
+                            <option value="{{ group.id }}">{{ group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveTagEdit()" style="background: var(--custom-tag-color); border-color: var(--custom-tag-color);">Guardar cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Crear etiqueta
+        document.getElementById('createTagForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('newTagName').value.trim();
+            const groupId = document.getElementById('newTagGroup').value;
+            
+            if (!name) {
+                alert('Escribe un nombre para la etiqueta');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/custom_tag', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, group_id: groupId })
+                });
+                
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                location.reload();
+            } catch (error) {
+                alert('Error al crear la etiqueta');
+            }
+        });
+        
+        // Abrir modal editar
+        function openEditModal(tagId, tagName, groupId) {
+            document.getElementById('editTagId').value = tagId;
+            document.getElementById('editTagName').value = tagName;
+            document.getElementById('editTagGroup').value = groupId;
+            new bootstrap.Modal(document.getElementById('editTagModal')).show();
+        }
+        
+        // Guardar edición
+        async function saveTagEdit() {
+            const tagId = document.getElementById('editTagId').value;
+            const name = document.getElementById('editTagName').value.trim();
+            const groupId = document.getElementById('editTagGroup').value;
+            
+            if (!name) {
+                alert('El nombre no puede estar vacío');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/custom_tag/${tagId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, group_id: groupId })
+                });
+                
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                location.reload();
+            } catch (error) {
+                alert('Error al actualizar la etiqueta');
+            }
+        }
+        
+        // Eliminar etiqueta
+        async function deleteTag(tagId) {
+            if (!confirm('¿Seguro que quieres eliminar esta etiqueta? Se quitará de todos los ejercicios que la tengan.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/custom_tag/${tagId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                
+                location.reload();
+            } catch (error) {
+                alert('Error al eliminar la etiqueta');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -6,121 +6,596 @@
     <title>Nuevo Entrenamiento</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        :root {
+            --cream: #e9e4d2;
+            --bg-dark: #0b1424;
+            --bg-panel: #0f1b2e;
+            --bg-panel-2: #111f35;
+            --action-green: #4ade80;
+        }
+        body { background: var(--bg-dark); color: #e9edf2; }
+        .page-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .panel-card {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--bg-panel);
+            border: 1px solid var(--cream);
+            border-radius: 18px;
+            box-shadow: 0 0 24px rgba(233, 228, 210, 0.12), 0 16px 32px rgba(0,0,0,0.45);
+            padding: 20px;
+        }
+        .panel-header { border-bottom: 1px solid rgba(233, 228, 210, 0.2); padding-bottom: 10px; margin-bottom: 16px; }
+        .panel-title { color: #ffffff; font-weight: 700; }
+        .btn-cancel {
+            border: 1px solid var(--cream);
+            color: var(--cream);
+            background: transparent;
+        }
+        .panel-section {
+            background: var(--bg-panel-2);
+            border: 1px solid rgba(233, 228, 210, 0.25);
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .form-control, .form-select, textarea {
+            background: #0e1b2f;
+            border: 1px solid var(--cream);
+            color: #ffffff;
+        }
+        .form-control::placeholder, textarea::placeholder { color: #8c97ad; }
+        .form-label { color: var(--cream); }
+        .block-section { margin-bottom: 1rem; }
+        .block-header {
+            background: #12233b;
+            padding: 10px 12px;
+            font-weight: bold;
+            border-left: 4px solid var(--cream);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .block-name-input {
+            border: none;
+            background: transparent;
+            font-weight: bold;
+            padding: 0;
+            font-size: 1rem;
+            color: #ffffff;
+        }
+        .block-name-input:focus { outline: 2px solid var(--cream); border-radius: 2px; }
+        .block-actions { display: flex; gap: 6px; }
+        .block-actions .btn {
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(233, 228, 210, 0.5);
+            color: var(--cream);
+            background: transparent;
+        }
+        .block-actions .btn:hover { border-color: var(--cream); color: #ffffff; }
+        .exercises-list { margin-top: 8px; }
+        .exercise-item {
+            background: #0e1b2f;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            border: 1px solid rgba(233, 228, 210, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #ffffff;
+        }
+        .exercise-item .duration-input {
+            width: 50px;
+            text-align: center;
+            padding: 2px 4px;
+            font-size: 0.85rem;
+            background: #0b1628;
+            border: 1px solid var(--cream);
+            color: #ffffff;
+        }
+        .exercise-title { max-width: 420px; }
+        .exercise-icon { color: var(--cream); }
+        .exercise-remove {
+            border: 1px solid rgba(248, 113, 113, 0.6);
+            color: #f87171;
+            background: transparent;
+        }
+        .exercise-remove:hover { border-color: #ef4444; color: #ef4444; }
+        .btn-add-block { border: 1px solid var(--cream); color: var(--cream); background: transparent; }
+        .btn-add-block:hover { color: #ffffff; border-color: #ffffff; }
+        .btn-reset { color: var(--cream); }
+        .btn-submit {
+            background: var(--action-green);
+            color: #0b1a12;
+            font-weight: 700;
+            border: none;
+            padding: 0.8rem;
+            font-size: 1.05rem;
+        }
+        .btn-submit:hover { filter: brightness(1.05); }
+        .drill-card-mini { border: 1px solid rgba(233, 228, 210, 0.3); border-radius: 8px; overflow: hidden; transition: transform 0.2s; position: relative; background: #0f1b2e; color: #fff; }
+        .drill-card-mini:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.25); }
+        .drill-card-mini img { width: 100%; height: 120px; object-fit: cover; }
+        .drill-card-mini .card-body { padding: 10px; }
+        .drill-card-mini .card-title { font-size: 0.85rem; font-weight: bold; margin: 0; color: #fff; }
+        .drill-card-actions { position: absolute; top: 5px; right: 5px; display: flex; gap: 4px; z-index: 10; }
+        .drill-card-actions .btn { padding: 4px 8px; font-size: 0.75rem; }
+        .modal-content { background: #0f1b2e; color: #e9edf2; border: 1px solid var(--cream); }
+        .modal-header { border-bottom: 1px solid rgba(233, 228, 210, 0.2); }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-    <div class="container mt-4 mb-5" style="max-width: 800px;">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="fw-bold"><i class="bi bi-clipboard-data text-primary"></i> Planificar Sesión</h3>
-            <a href="/" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+    <div class="page-wrap">
+        <div class="panel-card">
+            <div class="d-flex justify-content-between align-items-center panel-header">
+                <h4 class="mb-0 panel-title"><i class="bi bi-clipboard-data"></i> {% if plan %}Editar Plan{% else %}Planificar Sesión{% endif %}</h4>
+                <a href="/my_plans" class="btn btn-cancel btn-sm">Cancelar</a>
         </div>
 
-        <form action="/create_plan" method="POST" id="planForm">
+            <form action="{% if plan %}/edit_plan/{{ plan.id }}{% else %}/create_plan{% endif %}" method="POST" id="planForm">
             
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Nombre del Entreno</label>
-                            <input type="text" name="name" class="form-control" placeholder="Ej: Defensa Zonal Martes" required>
+            <div class="panel-section mb-3">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold mb-1">Nombre del Entreno</label>
+                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Ej: Defensa Zonal Martes" value="{% if plan %}{{ plan.name }}{% endif %}" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Equipo</label>
-                            <input type="text" name="team" class="form-control" placeholder="Ej: Cadete A">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold mb-1">Equipo</label>
+                        <input type="text" name="team" class="form-control form-control-sm" placeholder="Ej: Cadete A" value="{% if plan %}{{ plan.team_name or '' }}{% endif %}">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Fecha</label>
-                            <input type="date" name="date" class="form-control" value="{{ now }}" required>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold mb-1">Fecha</label>
+                        <input type="date" name="date" class="form-control form-control-sm" value="{% if plan %}{{ plan.date.strftime('%Y-%m-%d') if plan.date else now }}{% else %}{{ now }}{% endif %}" required>
                         </div>
-                        <div class="col-md-12">
-                            <label class="form-label text-muted small">Notas generales</label>
-                            <textarea name="notes" class="form-control" rows="2" placeholder="Objetivos principales..."></textarea>
-                        </div>
+                    <div class="col-12">
+                        <label class="form-label small mb-1">Notas</label>
+                        <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Objetivos principales...">{% if plan %}{{ plan.notes or '' }}{% endif %}</textarea>
                     </div>
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-end mb-2">
-                <label class="fw-bold text-uppercase text-muted small">Estructura de la sesión</label>
-                <button type="button" class="btn btn-link btn-sm text-decoration-none" onclick="resetBlocks()">
-                    <i class="bi bi-arrow-counterclockwise"></i> Restablecer Estándar
+            <!-- Botón para añadir bloque y reset -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="fw-bold text-uppercase small mb-0" style="color: var(--cream);">Bloques de la sesión</label>
+                <div>
+                    <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 me-2 btn-reset" onclick="resetBlocks()">
+                        <i class="bi bi-arrow-counterclockwise"></i> Estándar
                 </button>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-body bg-light">
-                    <div id="blocks-container">
-                        {% for block in blocks %}
-                        <div class="block-row input-group mb-2">
-                            <span class="input-group-text bg-white handle" style="cursor: move"><i class="bi bi-list"></i></span>
-                            <input type="text" class="form-control" value="{{ block }}">
-                            <button type="button" class="btn btn-outline-secondary" onclick="moveUp(this)"><i class="bi bi-arrow-up"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="moveDown(this)"><i class="bi bi-arrow-down"></i></button>
-                            <button type="button" class="btn btn-outline-danger" onclick="removeBlock(this)"><i class="bi bi-trash"></i></button>
-                        </div>
-                        {% endfor %}
-                    </div>
-
-                    <button type="button" class="btn btn-outline-primary w-100 mt-2 border-dashed" onclick="addBlock()">
+                    <button type="button" class="btn btn-sm btn-add-block" onclick="addBlock()">
                         <i class="bi bi-plus-lg"></i> Añadir Bloque
                     </button>
                 </div>
             </div>
 
-            <input type="hidden" name="blocks_csv" id="blocks_csv">
+            <!-- Bloques unificados (nombre + ejercicios) -->
+            <div id="blocks-sections"></div>
 
-            <div class="d-grid gap-2 mt-4">
-                <button type="submit" class="btn btn-primary btn-lg fw-bold">Crear y Empezar</button>
+            <input type="hidden" name="blocks_csv" id="blocks_csv">
+            <input type="hidden" name="exercises_json" id="exercises_json">
+
+            <div class="d-grid gap-2 mt-3">
+                <button type="submit" class="btn btn-submit">{% if plan %}Guardar Cambios{% else %}Crear Plan{% endif %}</button>
             </div>
         </form>
+        </div>
     </div>
 
+    <!-- Modal de búsqueda de ejercicios -->
+    <div class="modal fade" id="searchDrillModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Buscar Ejercicio para <span id="modalBlockName" class="text-primary fw-bold"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-8">
+                            <input type="text" class="form-control form-control-sm" id="searchDrillInput" placeholder="Buscar por nombre o descripción...">
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" id="searchTagSelect" multiple>
+                                {% for tag in tags %}
+                                <option value="{{ tag.id }}">{{ tag.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div id="drillsGrid" class="row g-3" style="max-height: 500px; overflow-y: auto;">
+                        <!-- Los ejercicios se cargarán aquí -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de previsualización de ejercicio -->
+    <div class="modal fade" id="previewDrillModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;" id="previewDrillContent">
+                <!-- El contenido se cargará aquí -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-        const container = document.getElementById('blocks-container');
+        const blocksSections = document.getElementById('blocks-sections');
         const standardBlocks = "{{ standard_blocks }}".split(',');
+        let currentBlockName = '';
+        let exercisesData = {}; // {blockName: [{drill_id, duration, order, title}]}
+        let blocksOrder = []; // Array para mantener el orden de los bloques
+        
+        // Si estamos editando, cargar datos existentes
+        {% if plan %}
+        const existingExercises = {{ existing_exercises|safe }};
+        blocksOrder = '{{ plan.structure or standard_blocks }}'.split(',');
+        
+        // Cargar ejercicios existentes
+        if (existingExercises && Object.keys(existingExercises).length > 0) {
+            blocksOrder.forEach(block => {
+                exercisesData[block] = [];
+            });
+            
+            // Necesitamos obtener los títulos de los ejercicios
+            Object.keys(existingExercises).forEach(blockName => {
+                if (blocksOrder.includes(blockName)) {
+                    existingExercises[blockName].forEach(ex => {
+                        exercisesData[blockName].push({
+                            drill_id: ex.drill_id,
+                            duration: ex.duration || 10,
+                            title: 'Cargando...' // Se actualizará después
+                        });
+                    });
+                }
+            });
+        } else {
+            blocksOrder.forEach(block => {
+                if (!exercisesData[block]) {
+                    exercisesData[block] = [];
+                }
+            });
+        }
+        {% endif %}
 
-        function addBlock(value = "") {
-            const div = document.createElement('div');
-            div.className = 'block-row input-group mb-2';
-            div.innerHTML = `
-                <span class="input-group-text bg-white"><i class="bi bi-grip-vertical text-muted"></i></span>
-                <input type="text" class="form-control" value="${value}" placeholder="Nombre del bloque..." required>
-                <button type="button" class="btn btn-outline-secondary" onclick="moveUp(this)"><i class="bi bi-arrow-up-short"></i></button>
-                <button type="button" class="btn btn-outline-secondary" onclick="moveDown(this)"><i class="bi bi-arrow-down-short"></i></button>
-                <button type="button" class="btn btn-outline-danger" onclick="removeBlock(this)"><i class="bi bi-trash"></i></button>
-            `;
-            container.appendChild(div);
+        // Inicializar Select2 para tags
+        function initSelect2() {
+            $('#searchTagSelect').select2({
+                placeholder: "Filtrar por etiquetas",
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#searchDrillModal')
+            });
         }
 
-        function removeBlock(btn) {
-            btn.closest('.block-row').remove();
-        }
+        $(document).ready(async function() {
+            initSelect2();
+            
+            {% if plan %}
+            // Modo edición: ya tenemos blocksOrder y exercisesData inicializados arriba
+            // Necesitamos obtener los títulos de los ejercicios
+            for (const blockName of blocksOrder) {
+                for (const ex of exercisesData[blockName] || []) {
+                    try {
+                        const response = await fetch(`/api/get_drill_title/${ex.drill_id}`);
+                        const data = await response.json();
+                        ex.title = data.title || 'Ejercicio';
+                    } catch (e) {
+                        ex.title = 'Ejercicio';
+                    }
+                }
+            }
+            renderBlocks();
+            {% else %}
+            // Modo creación: inicializar bloques estándar
+            blocksOrder = standardBlocks.slice();
+            blocksOrder.forEach(block => {
+                if (!exercisesData[block]) {
+                    exercisesData[block] = [];
+                }
+            });
+            renderBlocks();
+            {% endif %}
+        });
 
-        function moveUp(btn) {
-            const row = btn.closest('.block-row');
-            if (row.previousElementSibling) {
-                row.parentNode.insertBefore(row, row.previousElementSibling);
+        function addBlock() {
+            const blockName = prompt('Nombre del bloque:');
+            if (blockName && blockName.trim()) {
+                const trimmed = blockName.trim();
+                if (!blocksOrder.includes(trimmed)) {
+                    blocksOrder.push(trimmed);
+                    exercisesData[trimmed] = [];
+                    renderBlocks();
+                } else {
+                    alert('Ya existe un bloque con ese nombre');
+                }
             }
         }
 
-        function moveDown(btn) {
-            const row = btn.closest('.block-row');
-            if (row.nextElementSibling) {
-                row.parentNode.insertBefore(row.nextElementSibling, row);
+        function removeBlock(blockName) {
+            if (confirm(`¿Eliminar el bloque "${blockName}" y todos sus ejercicios?`)) {
+                const index = blocksOrder.indexOf(blockName);
+                if (index > -1) {
+                    blocksOrder.splice(index, 1);
+                    delete exercisesData[blockName];
+                    renderBlocks();
+                }
+            }
+        }
+
+        function moveBlockUp(blockName) {
+            const index = blocksOrder.indexOf(blockName);
+            if (index > 0) {
+                blocksOrder[index] = blocksOrder[index - 1];
+                blocksOrder[index - 1] = blockName;
+                renderBlocks();
+            }
+        }
+
+        function moveBlockDown(blockName) {
+            const index = blocksOrder.indexOf(blockName);
+            if (index < blocksOrder.length - 1) {
+                blocksOrder[index] = blocksOrder[index + 1];
+                blocksOrder[index + 1] = blockName;
+                renderBlocks();
+            }
+        }
+
+        function updateBlockName(oldName, newName) {
+            if (!newName || !newName.trim()) return;
+            const trimmed = newName.trim();
+            if (trimmed === oldName) return;
+            
+            if (blocksOrder.includes(trimmed) && trimmed !== oldName) {
+                alert('Ya existe un bloque con ese nombre');
+                renderBlocks(); // Restaurar nombre anterior
+                return;
+            }
+            
+            const index = blocksOrder.indexOf(oldName);
+            if (index > -1) {
+                blocksOrder[index] = trimmed;
+                if (exercisesData[oldName]) {
+                    exercisesData[trimmed] = exercisesData[oldName];
+                    delete exercisesData[oldName];
+                }
+                renderBlocks();
             }
         }
 
         function resetBlocks() {
-            if(!confirm('¿Volver a la estructura estándar?')) return;
-            container.innerHTML = '';
-            standardBlocks.forEach(block => addBlock(block));
+            if(!confirm('¿Volver a la estructura estándar? Se perderán todos los ejercicios añadidos.')) return;
+            blocksOrder = standardBlocks.slice();
+            exercisesData = {};
+            blocksOrder.forEach(block => {
+                exercisesData[block] = [];
+            });
+            renderBlocks();
         }
 
-        // Antes de enviar, juntamos todos los nombres en un String separado por comas
+        const blockColors = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#f97316', '#22c55e'];
+
+        function renderBlocks() {
+            blocksSections.innerHTML = '';
+            
+            blocksOrder.forEach((blockName, index) => {
+                if (!exercisesData[blockName]) {
+                    exercisesData[blockName] = [];
+                }
+                const blockColor = blockColors[index % blockColors.length];
+                
+                const section = document.createElement('div');
+                section.className = 'block-section';
+                section.innerHTML = `
+                    <div class="block-header" style="border-left-color: ${blockColor};">
+                        <input type="text" class="block-name-input" value="${blockName}" 
+                               onblur="updateBlockName('${blockName}', this.value)"
+                               onkeypress="if(event.key==='Enter') {event.preventDefault(); this.blur();}">
+                        <div class="block-actions">
+                            <button type="button" class="btn btn-sm" onclick="moveBlockUp('${blockName}')" ${index === 0 ? 'disabled' : ''} title="Mover arriba">
+                                <i class="bi bi-arrow-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm" onclick="moveBlockDown('${blockName}')" ${index === blocksOrder.length - 1 ? 'disabled' : ''} title="Mover abajo">
+                                <i class="bi bi-arrow-down"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm" onclick="openSearchModal('${blockName}')" title="Añadir ejercicio">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm exercise-remove" onclick="removeBlock('${blockName}')" title="Eliminar bloque">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="exercises-list" id="exercises-${blockName.replace(/\s/g, '_')}">
+                        ${renderExercises(blockName)}
+                    </div>
+                `;
+                blocksSections.appendChild(section);
+            });
+        }
+
+        function renderExercises(blockName) {
+            const exercises = exercisesData[blockName] || [];
+            if (exercises.length === 0) {
+                return '<div class="text-muted small text-center py-1 fst-italic">Sin ejercicios</div>';
+            }
+            return exercises.map((ex, idx) => `
+                <div class="exercise-item" data-drill-id="${ex.drill_id}">
+                    <div class="d-flex align-items-center">
+                        <input type="number" class="duration-input form-control form-control-sm me-2" 
+                               value="${ex.duration}" min="1" max="60" 
+                               onchange="updateDuration('${blockName}', ${ex.drill_id}, this.value)">
+                        <span class="text-muted me-2">'</span>
+                        <strong class="text-truncate exercise-title">${ex.title}</strong>
+                        ${hasBallIcon(ex.title) ? '<i class="bi bi-basket3 ms-2 exercise-icon"></i>' : ''}
+                    </div>
+                    <button type="button" class="btn btn-sm exercise-remove p-1" onclick="removeExercise('${blockName}', ${ex.drill_id})" title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function hasBallIcon(title) {
+            const t = (title || '').toLowerCase();
+            return t.includes('balon') || t.includes('balón') || t.includes('bote') || t.includes('tiro');
+        }
+
+        function openSearchModal(blockName) {
+            currentBlockName = blockName;
+            document.getElementById('modalBlockName').textContent = blockName;
+            // Reinicializar Select2 cuando se abre el modal
+            setTimeout(() => {
+                initSelect2();
+                loadDrills();
+            }, 100);
+            new bootstrap.Modal(document.getElementById('searchDrillModal')).show();
+        }
+
+        function loadDrills() {
+            const query = document.getElementById('searchDrillInput').value;
+            const tags = $('#searchTagSelect').val() || [];
+            
+            const params = new URLSearchParams();
+            if (query) params.append('q', query);
+            tags.forEach(tag => params.append('tags', tag));
+            
+            fetch('/api/get_drills?' + params.toString())
+                .then(r => r.json())
+                .then(data => {
+                    renderDrillsGrid(data.drills);
+                });
+        }
+
+        function renderDrillsGrid(drills) {
+            const grid = document.getElementById('drillsGrid');
+            if (drills.length === 0) {
+                grid.innerHTML = '<div class="col-12 text-center text-muted py-4">No se encontraron ejercicios</div>';
+                return;
+            }
+            
+            grid.innerHTML = drills.map(drill => `
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="drill-card-mini">
+                        <div style="height: 120px; background: #000; display: flex; align-items: center; justify-content: center; color: white; position: relative;">
+                            ${drill.cover_image ? 
+                                `<img src="/static/uploads/${drill.cover_image}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                                drill.media_type === 'link' && drill.external_link && drill.external_link.includes('youtu') ?
+                                `<img src="https://img.youtube.com/vi/${extractYouTubeId(drill.external_link)}/mqdefault.jpg" style="width: 100%; height: 100%; object-fit: cover;">` :
+                                '<i class="bi bi-file-earmark-play display-4"></i>'
+                            }
+                            <div class="drill-card-actions">
+                                <button class="btn btn-sm btn-info" onclick="previewDrill(${drill.id})" title="Ver ejercicio">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="addExerciseToBlock(${drill.id}, '${drill.title.replace(/'/g, "\\'")}')" title="Añadir">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-title">${drill.title}</h6>
+                            ${drill.tags.length > 0 ? `<div>${drill.tags.map(t => `<span class="badge bg-secondary me-1" style="font-size: 0.6rem;">${t}</span>`).join('')}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function previewDrill(drillId) {
+            const previewContent = document.getElementById('previewDrillContent');
+            previewContent.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-primary"></div></div>';
+            
+            fetch('/drill/' + drillId)
+                .then(r => r.text())
+                .then(html => {
+                    previewContent.innerHTML = html;
+                    new bootstrap.Modal(document.getElementById('previewDrillModal')).show();
+                })
+                .catch(error => {
+                    previewContent.innerHTML = '<div class="p-4 text-center text-danger">Error al cargar el ejercicio</div>';
+                });
+        }
+
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            if (url.includes('/shorts/')) {
+                const parts = url.split('/shorts/');
+                return parts[parts.length - 1].split('?')[0];
+            }
+            if (url.includes('youtu.be/')) {
+                const parts = url.split('youtu.be/');
+                return parts[parts.length - 1].split('?')[0];
+            }
+            if (url.includes('v=')) {
+                return url.split('v=')[1].split('&')[0];
+            }
+            return null;
+        }
+
+        function addExerciseToBlock(drillId, title) {
+            if (!exercisesData[currentBlockName]) {
+                exercisesData[currentBlockName] = [];
+            }
+            
+            // Verificar si ya existe
+            if (exercisesData[currentBlockName].some(ex => ex.drill_id === drillId)) {
+                alert('Este ejercicio ya está añadido');
+                return;
+            }
+            
+            exercisesData[currentBlockName].push({
+                drill_id: drillId,
+                title: title,
+                duration: 10,
+                order: exercisesData[currentBlockName].length
+            });
+            
+            renderBlocks();
+            bootstrap.Modal.getInstance(document.getElementById('searchDrillModal')).hide();
+        }
+
+        function removeExercise(blockName, drillId) {
+            exercisesData[blockName] = exercisesData[blockName].filter(ex => ex.drill_id !== drillId);
+            const exercisesList = document.getElementById(`exercises-${blockName.replace(/\s/g, '_')}`);
+            if (exercisesList) {
+                exercisesList.innerHTML = renderExercises(blockName);
+            }
+        }
+
+        function updateDuration(blockName, drillId, duration) {
+            const exercise = exercisesData[blockName].find(ex => ex.drill_id === drillId);
+            if (exercise) {
+                exercise.duration = parseInt(duration) || 10;
+            }
+        }
+
+        // Event listeners para búsqueda
+        document.getElementById('searchDrillInput').addEventListener('input', loadDrills);
+        
+        // Event listener para Select2 (necesita estar fuera del ready porque se reinicializa)
+        $(document).on('change', '#searchTagSelect', function() {
+            loadDrills();
+        });
+
+        // Antes de enviar, juntamos todos los datos
         document.getElementById('planForm').addEventListener('submit', function(e) {
-            const inputs = container.querySelectorAll('input[type="text"]');
-            const values = Array.from(inputs).map(input => input.value.trim()).filter(v => v);
-            document.getElementById('blocks_csv').value = values.join(',');
+            document.getElementById('blocks_csv').value = blocksOrder.join(',');
+            document.getElementById('exercises_json').value = JSON.stringify(exercisesData);
         });
     </script>
 </body>

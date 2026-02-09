@@ -3,174 +3,876 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>En Juego</title>
+    <title>vs {{ match.opponent }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #212529; color: white; overflow-x: hidden; padding-bottom: 80px; }
-        
-        /* HEADER */
-        .game-header { background: #000; padding: 10px; border-bottom: 1px solid #444; }
-        
-        /* PERIOD SELECTOR */
-        .period-bar { display: flex; gap: 5px; overflow-x: auto; padding: 10px; background: #1a1d20; scrollbar-width: none; }
-        .btn-period { 
-            flex: 0 0 auto; width: 50px; height: 40px; 
-            border: 1px solid #444; background: #333; color: #888; 
-            border-radius: 5px; font-weight: bold; font-size: 0.9rem;
+        :root {
+            --primary-color: {{ theme_color }};
         }
-        .btn-period.active { background: #ffc107; color: #000; border-color: #ffc107; box-shadow: 0 0 10px rgba(255,193,7,0.5); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            background: #000; 
+            color: #e3f2fd; 
+            overflow-x: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 0;
+        }
         
-        /* PLAYER SCROLL */
-        .player-scroll { display: flex; overflow-x: auto; gap: 10px; padding: 10px; background: #343a40; }
-        .player-btn {
-            flex: 0 0 auto; width: 70px; height: 70px; border-radius: 50%; border: 3px solid #6c757d;
-            background-size: cover; background-position: center; background-color: #495057;
-            position: relative; transition: all 0.1s; opacity: 0.6; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; text-align: center;
+        .app-container {
+            max-width: 480px;
+            width: 100%;
+            background: #0a1929;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
         }
-        .player-btn.active { border-color: #ffc107; transform: scale(1.1); opacity: 1; box-shadow: 0 0 15px #ffc107; z-index: 10; }
-        .dorsal-tag { position: absolute; bottom: -5px; right: -5px; background: #ffc107; color: black; font-weight: bold; padding: 2px 6px; border-radius: 10px; font-size: 0.8rem; z-index: 2; }
-        .no-photo-name { font-size: 0.65rem; line-height: 1; color: white; font-weight: bold; text-shadow: 0 0 4px black; padding: 2px; }
-
-        /* ACTION GRID */
-        .action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
-        .btn-action { height: 75px; border-radius: 12px; font-size: 1rem; border: none; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .btn-action:active { transform: scale(0.95); }
-        .btn-pos { background: #198754; color: white; }
-        .btn-neg { background: #dc3545; color: white; }
-        .val-badge { font-size: 0.7rem; opacity: 0.8; }
-
-        /* LOG PANEL */
-        .log-panel {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 50px;
-            background: #000; border-top: 1px solid #444; display: flex; align-items: center;
-            padding: 0 15px; z-index: 1000; font-family: monospace; font-size: 0.9rem;
+        
+        .header { 
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%); 
+            padding: 10px 12px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
         }
-        #last-event-text { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .scoreboard { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            font-weight: 700; 
+            font-size: 1.1rem; 
+        }
+        .score-team { color: #fff; font-size: 0.85rem; }
+        .score-num { 
+            background: #0d47a1; 
+            padding: 3px 12px; 
+            border-radius: 6px; 
+            min-width: 42px; 
+            text-align: center; 
+            font-size: 1.25rem;
+        }
+        .header-right { display: flex; gap: 6px; align-items: center; }
+        .btn-cambios { 
+            background: var(--primary-color); 
+            color: #000; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-weight: 700; 
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        
+        .period-bar { 
+            background: #132f4c; 
+            padding: 8px 12px; 
+            display: flex; 
+            gap: 8px; 
+            align-items: center; 
+            border-bottom: 2px solid #1e4976; 
+        }
+        .period-select { 
+            background: var(--primary-color); 
+            color: #000; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            appearance: none;
+            font-size: 0.9rem;
+        }
+        
+        .players-row { 
+            display: flex; 
+            gap: 4px; 
+            padding: 10px 6px; 
+            background: #0a1929; 
+            overflow-x: auto;
+            border-bottom: 2px solid #1e4976;
+        }
+        .players-row::-webkit-scrollbar { height: 4px; }
+        .players-row::-webkit-scrollbar-thumb { background: #1e4976; border-radius: 4px; }
+        
+        .player-card { 
+            flex: 0 0 92px;
+            background: #132f4c; 
+            border: 2px solid #1e4976; 
+            border-radius: 10px; 
+            padding: 6px 3px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            position: relative; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            min-width: 92px;
+        }
+        .player-card:hover { border-color: #42a5f5; }
+        .player-card.active { 
+            border-color: var(--primary-color); 
+            box-shadow: 0 0 0 2px rgba(255,213,79,0.3); 
+            background: #1a3a52; 
+        }
+        .player-card.empty { 
+            border-style: dashed; 
+            border-color: #37474f; 
+            background: transparent; 
+            justify-content: center; 
+        }
+        .player-card.empty:hover { border-color: #90caf9; background: rgba(144,202,249,0.05); }
+        .player-card .photo { 
+            width: 42px; 
+            height: 42px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            margin-bottom: 3px; 
+            background: #1e4976; 
+        }
+        .player-card .name { 
+            font-size: 0.74rem; 
+            font-weight: 600; 
+            text-align: center; 
+            margin-bottom: 2px; 
+            line-height: 1.1; 
+            max-width: 85px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .player-card .dorsal { 
+            background: #1976d2; 
+            color: #fff; 
+            font-size: 0.7rem; 
+            font-weight: 700; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            margin-bottom: 3px; 
+        }
+        .player-card .stats { 
+            display: flex; 
+            gap: 3px; 
+            font-size: 0.6rem; 
+            font-weight: 600; 
+        }
+        .player-card .stats span { 
+            color: #90caf9; 
+        }
+        .player-card .foul-alert { 
+            position: absolute; 
+            top: 3px; 
+            right: 3px; 
+            background: #fbc02d; 
+            color: #000; 
+            font-size: 0.65rem; 
+            font-weight: 700; 
+            padding: 2px 5px; 
+            border-radius: 3px; 
+        }
+        .player-card .foul-alert.danger { background: #d32f2f; color: #fff; }
+        
+        .last-actions { 
+            background: #0d1b2a; 
+            padding: 10px 12px; 
+            border-bottom: 2px solid #1e4976; 
+        }
+        .last-actions h6 { 
+            color: #90caf9; 
+            font-size: 0.75rem; 
+            font-weight: 700; 
+            margin-bottom: 6px; 
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .scroll-btn { 
+            background: #1e4976; 
+            border: none; 
+            color: #90caf9; 
+            width: 24px; 
+            height: 24px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .scroll-btn:hover { background: #42a5f5; color: #fff; }
+        .scroll-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .last-actions-scroll { 
+            max-height: 90px; 
+            overflow-y: auto; 
+            position: relative;
+        }
+        .last-actions-scroll::-webkit-scrollbar { width: 4px; }
+        .last-actions-scroll::-webkit-scrollbar-thumb { background: #1e4976; border-radius: 4px; }
+        .last-event { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            background: #1a2332; 
+            padding: 6px 8px; 
+            border-radius: 6px; 
+            margin-bottom: 4px; 
+            font-size: 0.88rem; 
+        }
+        .last-event .text { 
+            flex: 1; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        }
+        .last-event .btn-del { 
+            background: transparent; 
+            border: none; 
+            color: #ef5350; 
+            font-size: 0.9rem; 
+            cursor: pointer; 
+            padding: 2px 6px;
+        }
+        
+        .actions-container { 
+            padding: 10px 12px; 
+        }
+        .action-section { 
+            margin-bottom: 12px; 
+        }
+        .action-section h6 { 
+            color: #90caf9; 
+            font-size: 0.75rem; 
+            font-weight: 700; 
+            margin-bottom: 6px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
+            text-align: center;
+        }
+        .action-grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 6px; 
+        }
+        .action-grid.ataque-grid .btn-action.span2 {
+            grid-column: 1 / span 2;
+        }
+        .btn-action { 
+            height: 40px; 
+            border-radius: 8px; 
+            border: 2px solid; 
+            font-weight: 600; 
+            font-size: 0.81rem; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            line-height: 1; 
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-action:active { transform: scale(0.97); }
+        .btn-action.pos { 
+            background: #c8e6c9; 
+            color: #1b5e20; 
+            border-color: #a5d6a7;
+        }
+        .btn-action.neg { 
+            background: #ffcdd2; 
+            color: #b71c1c; 
+            border-color: #ef9a9a;
+        }
+        .btn-action.neutral { 
+            background: #ffcdd2; 
+            color: #b71c1c; 
+            border-color: #ef9a9a;
+        }
+        .btn-action.custom { 
+            background: #ffcdd2; 
+            color: #b71c1c; 
+            border-color: #ef9a9a;
+            cursor: default;
+            font-size: 0.65rem;
+            opacity: 0.5;
+        }
+        .btn-action .val { 
+            font-size: 0.62rem; 
+            opacity: 0.85; 
+            margin-top: 2px;
+        }
+        .btn-action.span2 { 
+            grid-column: span 2; 
+        }
+        .btn-action-placeholder {
+            height: 40px;
+            border-radius: 8px;
+            background: transparent;
+            border: none;
+        }
+        .btn-action-placeholder.span2 {
+            grid-column: span 2;
+        }
+        
+        .rival-section { 
+            background: #1a237e; 
+            padding: 12px; 
+            text-align: center;
+        }
+        .rival-section h6 { 
+            color: var(--primary-color); 
+            font-size: 0.8rem; 
+            font-weight: 700; 
+            margin-bottom: 10px; 
+            text-transform: uppercase;
+        }
+        .rival-btns { 
+            display: flex; 
+            justify-content: center; 
+            gap: 12px; 
+        }
+        .btn-rival { 
+            width: 95px; 
+            height: 95px; 
+            border-radius: 50%; 
+            border: 4px solid var(--primary-color); 
+            background: linear-gradient(135deg, #1565c0, #0d47a1); 
+            color: var(--primary-color); 
+            font-weight: 700; 
+            font-size: 0.8rem; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-rival:active { transform: scale(0.95); }
+        .btn-rival i { font-size: 2rem; margin-bottom: 4px; }
+        
+        .modal-content { background: #132f4c; color: #e3f2fd; }
+        .modal-header { border-bottom-color: #1e4976; }
+        .modal-body { max-height: 60vh; overflow-y: auto; }
+        
+        .modal-title-add { color: #66bb6a; }
+        .modal-title-remove { color: var(--primary-color); }
+        
+        .changes-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
+            margin-top: 12px; 
+        }
+        .changes-player { 
+            background: #1a2332; 
+            border: 2px solid #1e4976; 
+            border-radius: 8px; 
+            padding: 10px; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.2s;
+            position: relative;
+        }
+        .changes-player:hover { border-color: #42a5f5; }
+        .changes-player.selected { background: #1e4976; border-color: var(--primary-color); }
+        .changes-player .dorsal { 
+            background: #1976d2; 
+            color: #fff; 
+            display: inline-block; 
+            padding: 3px 8px; 
+            border-radius: 4px; 
+            font-size: 0.8rem; 
+            font-weight: 700; 
+            margin-bottom: 6px; 
+        }
+        .changes-player .name { font-size: 0.85rem; }
+        .changes-player .check { 
+            position: absolute; 
+            top: 6px; 
+            right: 6px; 
+            width: 20px; 
+            height: 20px; 
+            background: var(--primary-color); 
+            border-radius: 50%; 
+            display: none; 
+            align-items: center; 
+            justify-content: center;
+            color: #000;
+            font-size: 0.8rem;
+        }
+        .changes-player.selected .check { display: flex; }
+        
+        @media (max-width: 480px) {
+            .app-container { max-width: 100%; }
+        }
     </style>
 </head>
 <body>
+    <div class="app-container">
+        <div class="header">
+            <div class="scoreboard">
+                <span class="score-team">HOME</span>
+                <span class="score-num" id="scoreHome">0</span>
+                <span style="color: #90caf9;">-</span>
+                <span class="score-num" id="scoreAway">0</span>
+                <span class="score-team">AWAY</span>
+            </div>
+            <div class="header-right">
+                <a href="/matches" class="btn-cambios" style="text-decoration:none; margin-right: 4px;">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+                <select id="periodSelect" class="period-select">
+                    {% for i in range(1, match.quarters + 1) %}
+                    <option value="{{ i }}" {% if i == saved_period %}selected{% endif %}>Q{{ i }}</option>
+                    {% endfor %}
+                    <option value="{{ match.quarters + 1 }}" {% if saved_period == match.quarters + 1 %}selected{% endif %}>OT</option>
+                </select>
+                <button type="button" class="btn-cambios" onclick="openChangesModal()">
+                    <i class="bi bi-repeat"></i> Cambios
+                </button>
+            </div>
+        </div>
 
-    <div class="d-flex justify-content-between align-items-center game-header">
-        <div class="fw-bold text-truncate" style="max-width: 60%;">vs {{ match.opponent }}</div>
-        <a href="/match_stats/{{ match.id }}" class="btn btn-sm btn-danger fw-bold" onclick="return confirm('¿Terminar partido?')">FIN</a>
+        <div class="players-row" id="playersRow"></div>
+
+        <div class="last-actions">
+            <h6>
+                <button class="scroll-btn" id="scrollUp" onclick="scrollActions(-1)">
+                    <i class="bi bi-chevron-up"></i>
+                </button>
+                Last Actions
+                <button class="scroll-btn" id="scrollDown" onclick="scrollActions(1)">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </h6>
+            <div class="last-actions-scroll" id="lastActionsScroll">
+                <div id="lastActionsList"></div>
+            </div>
     </div>
 
-    <div class="period-bar" id="periodBar">
+        <div class="actions-container">
+            <div class="action-section">
+                <h6>⚔️ Ataque +</h6>
+                <div class="action-grid ataque-grid" id="attackPosGrid"></div>
+            </div>
+            <div class="action-section">
+                <h6>⚔️ Ataque −</h6>
+                <div class="action-grid ataque-grid" id="attackNegGrid"></div>
+            </div>
+            <div class="action-section">
+                <h6>🛡️ Defensa +</h6>
+                <div class="action-grid" id="defensePosGrid"></div>
+            </div>
+            <div class="action-section">
+                <h6>🛡️ Defensa −</h6>
+                <div class="action-grid" id="defenseNegGrid"></div>
+            </div>
         </div>
 
-    <div class="player-scroll">
-        {% for player in match.roster|sort(attribute='dorsal') %}
-        <div class="player-btn" onclick="selectPlayer(this, {{ player.id }}, '{{ player.name }}', {{ player.dorsal }})"
-             style="{% if player.photo_file %}background-image: url('/static/uploads/{{ player.photo_file }}'){% endif %}">
-            {% if not player.photo_file %}<span class="no-photo-name">{{ player.name }}</span>{% endif %}
-            <div class="dorsal-tag">{{ player.dorsal }}</div>
+        <div class="rival-section">
+            <h6>Canasta Rival</h6>
+            <div class="rival-btns">
+                <button type="button" class="btn-rival" onclick="recordRival(1)">
+                    <i class="bi bi-trophy-fill"></i>
+                    <span>1 pto</span>
+                </button>
+                <button type="button" class="btn-rival" onclick="recordRival(2)">
+                    <i class="bi bi-trophy-fill"></i>
+                    <span>2 ptos</span>
+                </button>
+                <button type="button" class="btn-rival" onclick="recordRival(3)">
+                    <i class="bi bi-trophy-fill"></i>
+                    <span>3 ptos</span>
+                </button>
+            </div>
         </div>
-        {% endfor %}
     </div>
     
-    <div class="text-center py-1 text-muted small" id="selected-player-name">Selecciona un jugador</div>
-
-    <div class="action-grid">
-        {% for action in actions %}
-        <button class="btn-action {% if action.is_positive %}btn-pos{% else %}btn-neg{% endif %}" 
-                onclick="recordAction({{ action.id }}, '{{ action.name }}')">
-            <span>{{ action.name }}</span>
-            <span class="val-badge">{% if action.value > 0 %}+{% endif %}{{ action.value }}</span>
-        </button>
-        {% endfor %}
+    <div class="modal fade" id="changesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle"></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="modalActionBtn" onclick="applyModalAction()"></button>
+                </div>
+            </div>
+    </div>
     </div>
 
-    <div class="log-panel">
-        <span class="text-secondary me-2">Último:</span>
-        <span id="last-event-text" class="text-white">Esperando...</span>
-        <button class="btn btn-sm btn-outline-danger ms-2" id="undo-btn" onclick="undoLastEvent()" style="display:none;">
-            <i class="bi bi-arrow-counterclockwise"></i>
-        </button>
-    </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // CONFIGURACIÓN DE PERIODOS
-        const totalPeriods = {{ match.quarters }};
-        let currentPeriod = 1;
+        const matchId = {{ match.id }};
+        const maxQuarters = {{ match.quarters }};
+        const fullRoster = [
+            {% for p in match.roster|sort(attribute='dorsal') %}
+            { id: {{ p.id }}, name: {{ p.name|tojson }}, dorsal: {{ p.dorsal }}, photo: {{ (p.photo_file or '')|tojson }} }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        // Todas las acciones con su posición de grid (para mantener huecos cuando hay ocultas)
+        const allActions = [
+            {% for a in all_actions %}
+            { 
+                id: {{ a.id }}, 
+                name: {{ a.name|tojson }}, 
+                value: {{ a.value }}, 
+                score: {{ a.score_value or 0 }},
+                section: {{ (a.display_section or '')|tojson }},
+                order: {{ a.display_order }},
+                isPos: {{ 'true' if a.is_positive else 'false' }},
+                gridRow: {{ a.grid_row or 1 }},
+                gridCol: {{ a.grid_col or 1 }},
+                visible: {{ 'true' if a.visible else 'false' }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+        // Solo acciones visibles para registrar eventos
+        const actions = allActions.filter(a => a.visible);
+
+        let currentPeriod = {{ saved_period or 1 }};
         let selectedPlayerId = null;
-        let lastEventId = null;
+        let courtLineup = {{ saved_lineup|tojson }};
+        let stats = {};
+        let selectedPlayers = new Set();
+        let modalMode = '';
+        let lineupBeforeRemove = 0;
 
-        // 1. Dibujar Barra de Periodos
-        const periodBar = document.getElementById('periodBar');
-        for(let i=1; i<=totalPeriods; i++) {
-            const btn = document.createElement('button');
-            btn.className = `btn-period ${i===1 ? 'active' : ''}`;
-            btn.innerText = (totalPeriods === 2) ? `P${i}` : `Q${i}`;
-            btn.onclick = () => setPeriod(i, btn);
-            periodBar.appendChild(btn);
-        }
-        // Botón Extra "Prórroga" (OT)
-        const btnOT = document.createElement('button');
-        btnOT.className = 'btn-period';
-        btnOT.innerText = 'OT';
-        btnOT.onclick = () => setPeriod(totalPeriods + 1, btnOT);
-        periodBar.appendChild(btnOT);
-
-        function setPeriod(p, btn) {
-            currentPeriod = p;
-            document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
-
-        function selectPlayer(element, id, name, dorsal) {
-            document.querySelectorAll('.player-btn').forEach(el => el.classList.remove('active'));
-            element.classList.add('active');
-            selectedPlayerId = id;
-            document.getElementById('selected-player-name').innerText = `#${dorsal} ${name}`;
-            document.getElementById('selected-player-name').style.color = '#ffc107';
-        }
-
-        function recordAction(actionId, actionName) {
-            if (!selectedPlayerId) { alert("⚠️ ¡Selecciona un jugador primero!"); return; }
+        function renderPlayers(statsData) {
+            const row = document.getElementById('playersRow');
+            stats = statsData || {};
             
-            document.getElementById('last-event-text').innerText = "Guardando...";
+            const slots = Array(5).fill(null);
+            courtLineup.slice(0, 5).forEach((pid, idx) => { slots[idx] = pid; });
             
+            row.innerHTML = slots.map((pid, idx) => {
+                if (!pid) {
+                    return `<div class="player-card empty" onclick="openAddModal()">
+                        <i class="bi bi-plus-circle" style="font-size: 2rem; color: #546e7a;"></i>
+                    </div>`;
+                }
+                const p = fullRoster.find(x => x.id === pid);
+                const s = stats[pid] || { val: 0, ata: 0, def: 0, fouls: 0 };
+                const sel = selectedPlayerId === pid ? 'active' : '';
+                const foulBadge = s.fouls >= 5 ? `<div class="foul-alert danger">${s.fouls}F</div>` : (s.fouls >= 4 ? `<div class="foul-alert">${s.fouls}F</div>` : '');
+                const photoHtml = p.photo ? `<img src="/static/uploads/${p.photo}" class="photo">` : `<div class="photo" style="display:flex;align-items:center;justify-content:center;color:#90caf9;font-size:0.7rem;font-weight:700;">${(p.name||'').slice(0,2).toUpperCase()}</div>`;
+                return `<div class="player-card ${sel}" onclick="selectPlayer(${p.id})">
+                    ${foulBadge}
+                    ${photoHtml}
+                    <div class="name">${(p.name||'').slice(0,6)}</div>
+                    <div class="dorsal">#${p.dorsal}</div>
+                    <div class="stats">
+                        <span>${Math.round(s.val||0)}</span>
+                        <span>${Math.round(s.ata||0)}</span>
+                        <span>${Math.round(s.def||0)}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function selectPlayer(pid) {
+            selectedPlayerId = pid;
+            renderPlayers(stats);
+        }
+
+        function renderBlock(actionsList, gridId, isAtaque) {
+            const grid = document.getElementById(gridId);
+            if (!grid) return;
+            // Renderizar todas las acciones (visibles e invisibles) respetando posición original
+            // Las invisibles se muestran como espacio vacío
+            grid.innerHTML = actionsList.map((a, idx) => {
+                if (!a.visible) {
+                    // Espacio vacío para mantener el layout
+                    const span = (isAtaque && idx === 0) ? 'span2' : '';
+                    return `<div class="btn-action-placeholder ${span}"></div>`;
+                }
+                const cls = a.name === 'Falta' ? 'neutral' : (a.isPos ? 'pos' : 'neg');
+                // El primer elemento de Ataque ocupa 2 columnas (igual que en configuración)
+                const span = (isAtaque && idx === 0) ? 'span2' : '';
+                const valStr = a.value > 0 ? `+${a.value}` : (a.value === 0 ? '+0' : a.value);
+                return `<button class="btn-action ${cls} ${span}" onclick="recordAction(${a.id})">
+                    <span>${(a.name || '').slice(0, 10)}</span>
+                    <span class="val">${valStr}</span>
+                </button>`;
+            }).join('');
+        }
+        function renderActions() {
+            // Usar allActions (incluye ocultas) para mantener posiciones
+            const ataPos = allActions.filter(a => a.section === 'ATAQUE' && a.isPos);
+            const ataNeg = allActions.filter(a => a.section === 'ATAQUE' && !a.isPos);
+            const defPos = allActions.filter(a => a.section === 'DEFENSA' && a.isPos);
+            const defNeg = allActions.filter(a => a.section === 'DEFENSA' && !a.isPos);
+            renderBlock(ataPos, 'attackPosGrid', true);
+            renderBlock(ataNeg, 'attackNegGrid', true);
+            renderBlock(defPos, 'defensePosGrid', false);
+            renderBlock(defNeg, 'defenseNegGrid', false);
+        }
+
+        function loadStats() {
+            fetch('/api/match/' + matchId + '/live_stats').then(r => r.json()).then(data => {
+                document.getElementById('scoreHome').textContent = data.score_home || 0;
+                document.getElementById('scoreAway').textContent = data.score_away || 0;
+                renderPlayers(data.players || {});
+            }).catch(() => {});
+        }
+
+        function loadLastActions() {
+            fetch('/api/last_events?match_id=' + matchId + '&n=10').then(r => r.json()).then(data => {
+                const list = document.getElementById('lastActionsList');
+                if (!data.events || !data.events.length) {
+                    list.innerHTML = '<div style="color:#546e7a;font-size:0.7rem;text-align:center;">Sin acciones aún</div>';
+                    return;
+                }
+                list.innerHTML = data.events.map(e => {
+                    const periodLabel = e.period > maxQuarters ? 'OT' : 'Q' + e.period;
+                    if (e.kind === 'rival') {
+                        return `<div class="last-event">
+                            <span class="text">${periodLabel} Canasta rival +${e.pts}</span>
+                            <button class="btn-del" onclick="deleteEvent(${e.id})"><i class="bi bi-trash"></i></button>
+                        </div>`;
+                    }
+                    const p = e.player || {};
+                    const a = e.action || {};
+                    const valueStr = a.value !== undefined ? ` (${a.value >= 0 ? '+' : ''}${a.value})` : '';
+                    return `<div class="last-event">
+                        <span class="text">${periodLabel} #${p.dorsal||'?'} ${p.name||'?'} · ${a.name||'?'}${valueStr}</span>
+                        <button class="btn-del" onclick="deleteEvent(${e.id})"><i class="bi bi-trash"></i></button>
+                    </div>`;
+                }).join('');
+                updateScrollButtons();
+            }).catch(() => {});
+        }
+
+        function scrollActions(direction) {
+            const container = document.getElementById('lastActionsScroll');
+            const scrollAmount = 50;
+            container.scrollTop += direction * scrollAmount;
+            setTimeout(updateScrollButtons, 100);
+        }
+
+        function updateScrollButtons() {
+            const container = document.getElementById('lastActionsScroll');
+            const upBtn = document.getElementById('scrollUp');
+            const downBtn = document.getElementById('scrollDown');
+            
+            upBtn.disabled = container.scrollTop <= 0;
+            downBtn.disabled = container.scrollTop >= container.scrollHeight - container.clientHeight - 5;
+        }
+
+        function recordAction(actionId) {
+            if (!selectedPlayerId) { alert('Selecciona un jugador primero'); return; }
+            const a = actions.find(x => x.id === actionId);
+            if (a && a.name === 'Falta') {
+                const s = stats[selectedPlayerId] || { fouls: 0 };
+                if (s.fouls >= 4 && !confirm('Este jugador ya tiene ' + s.fouls + ' faltas. ¿Continuar?')) return;
+            }
             fetch('/api/add_event', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    match_id: {{ match.id }},
+                    match_id: matchId,
                     player_id: selectedPlayerId,
                     action_id: actionId,
-                    period: currentPeriod, // Enviamos el periodo seleccionado
-                    game_minute: 0 // Ya no usamos crono exacto
+                    period: currentPeriod,
+                    game_minute: 0
                 })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'ok') {
-                    lastEventId = data.event_id;
-                    const pName = document.getElementById('selected-player-name').innerText;
-                    document.getElementById('last-event-text').innerText = `${pName} - ${actionName}`;
-                    document.getElementById('undo-btn').style.display = 'block';
+            }).then(r => r.json()).then(d => {
+                if (d.status === 'ok') { loadStats(); loadLastActions(); }
+            });
+        }
+
+        function recordRival(pts) {
+            fetch('/api/add_event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    match_id: matchId,
+                    opponent_points: pts,
+                    period: currentPeriod,
+                    game_minute: 0
+                })
+            }).then(r => r.json()).then(d => {
+                if (d.status === 'ok') { loadStats(); loadLastActions(); }
+            });
+        }
+
+        function deleteEvent(eventId) {
+            if (!confirm('¿Eliminar esta acción?')) return;
+            fetch('/api/undo_event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event_id: eventId })
+            }).then(r => r.json()).then(d => {
+                if (d.status === 'ok') { loadStats(); loadLastActions(); }
+            });
+        }
+
+        function openChangesModal() {
+            const emptySlots = 5 - courtLineup.filter(pid => pid).length;
+            
+            if (emptySlots > 0) {
+                openAddModal();
+            } else {
+                openRemoveModal();
+            }
+        }
+
+        function openAddModal() {
+            selectedPlayers.clear();
+            modalMode = 'add';
+            
+            const available = fullRoster.filter(p => !courtLineup.includes(p.id));
+            const emptySlots = 5 - courtLineup.filter(pid => pid).length;
+            
+            if (!available.length) {
+                alert('No hay jugadores disponibles en el banco');
+                return;
+            }
+            
+            document.getElementById('modalTitle').innerHTML = '<span class="modal-title-add"><i class="bi bi-plus-circle"></i> Añadir jugadores a cancha</span>';
+            document.getElementById('modalActionBtn').textContent = 'Añadir seleccionados';
+            
+            const grid = available.map(p => {
+                return `<div class="changes-player" onclick="toggleSelection(${p.id}, ${emptySlots})">
+                    <div class="check"><i class="bi bi-check"></i></div>
+                    <div class="dorsal">#${p.dorsal}</div>
+                    <div class="name">${p.name}</div>
+                </div>`;
+            }).join('');
+            
+            document.getElementById('modalContent').innerHTML = '<div class="changes-grid">' + grid + '</div>';
+            new bootstrap.Modal(document.getElementById('changesModal')).show();
+        }
+
+        function openRemoveModal() {
+            selectedPlayers.clear();
+            modalMode = 'remove';
+            lineupBeforeRemove = courtLineup.filter(pid => pid).length;
+            
+            const inCourt = courtLineup.filter(pid => pid).map(pid => fullRoster.find(p => p.id === pid));
+            
+            document.getElementById('modalTitle').innerHTML = '<span class="modal-title-remove"><i class="bi bi-dash-circle"></i> Quitar jugadores de cancha</span>';
+            document.getElementById('modalActionBtn').textContent = 'Quitar seleccionados';
+            
+            const grid = inCourt.map(p => {
+                return `<div class="changes-player" onclick="toggleSelection(${p.id}, 5)">
+                    <div class="check"><i class="bi bi-check"></i></div>
+                    <div class="dorsal">#${p.dorsal}</div>
+                    <div class="name">${p.name}</div>
+                </div>`;
+            }).join('');
+            
+            document.getElementById('modalContent').innerHTML = '<div class="changes-grid">' + grid + '</div>';
+            new bootstrap.Modal(document.getElementById('changesModal')).show();
+        }
+
+        function toggleSelection(pid, maxSelection) {
+            if (selectedPlayers.has(pid)) {
+                selectedPlayers.delete(pid);
+            } else {
+                if (selectedPlayers.size >= maxSelection) {
+                    alert('Máximo ' + maxSelection + ' jugador(es)');
+                    return;
+                }
+                selectedPlayers.add(pid);
+            }
+            
+            document.querySelectorAll('.changes-player').forEach(el => {
+                const id = parseInt(el.getAttribute('onclick').match(/\d+/)[0]);
+                if (selectedPlayers.has(id)) {
+                    el.classList.add('selected');
+                } else {
+                    el.classList.remove('selected');
                 }
             });
         }
 
-        function undoLastEvent() {
-            if(!lastEventId) return;
-            if(!confirm("¿Borrar la última acción?")) return;
-            fetch('/api/undo_event', {
+        function saveState() {
+            fetch('/api/match/' + matchId + '/save_state', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ event_id: lastEventId })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'ok') {
-                    document.getElementById('last-event-text').innerText = "Borrado 🗑️";
-                    document.getElementById('undo-btn').style.display = 'none';
-                    lastEventId = null;
-                }
-            });
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    period: currentPeriod,
+                    lineup: courtLineup.filter(pid => pid)
+                })
+            }).catch(() => {});
         }
+
+        function applyModalAction() {
+            if (selectedPlayers.size === 0) {
+                alert('Selecciona al menos un jugador');
+                return;
+            }
+            
+            const numChanges = selectedPlayers.size;
+            const prevCourtCount = modalMode === 'add' && lineupBeforeRemove > 0 ? 
+                lineupBeforeRemove : 
+                courtLineup.filter(pid => pid).length;
+            
+            if (modalMode === 'add') {
+                Array.from(selectedPlayers).forEach(pid => {
+                    if (courtLineup.length < 5) {
+                        courtLineup.push(pid);
+                    }
+                });
+            } else if (modalMode === 'remove') {
+                courtLineup = courtLineup.filter(pid => !selectedPlayers.has(pid));
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('changesModal')).hide();
+            renderPlayers(stats);
+            saveState();
+            
+            if (modalMode === 'add' && numChanges >= 3 && prevCourtCount >= 3) {
+                checkPeriodChange();
+                lineupBeforeRemove = 0;
+            }
+        }
+
+        function checkPeriodChange() {
+            if (currentPeriod > maxQuarters) {
+                return;
+            }
+            
+            const nextPeriod = currentPeriod + 1;
+            let periodName = '';
+            
+            if (nextPeriod <= maxQuarters) {
+                periodName = 'Q' + nextPeriod;
+            } else if (nextPeriod === maxQuarters + 1) {
+                periodName = 'OT';
+            } else {
+                return;
+            }
+            
+            if (confirm('Has realizado varios cambios. ¿Cambiar a ' + periodName + '?')) {
+                currentPeriod = nextPeriod;
+                document.getElementById('periodSelect').value = currentPeriod;
+                saveState();
+            }
+        }
+
+        document.getElementById('periodSelect').onchange = (e) => { 
+            currentPeriod = parseInt(e.target.value); 
+            saveState();
+        };
+        
+        const scrollContainer = document.getElementById('lastActionsScroll');
+        scrollContainer.addEventListener('scroll', updateScrollButtons);
+        
+        renderActions();
+        loadStats();
+        loadLastActions();
+        setInterval(() => { loadStats(); loadLastActions(); }, 5000);
     </script>
 </body>
 </html>

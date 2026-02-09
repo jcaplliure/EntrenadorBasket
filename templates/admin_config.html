@@ -2,77 +2,973 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Configuración Diseño</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración - CoachApp</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bg-dark: #0a1929;
+            --bg-panel: #132f4c;
+            --bg-card: #1a3a5c;
+            --accent-color: #FFD700;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255,255,255,0.7);
+            --border-color: rgba(255,255,255,0.1);
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #0d2137 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Navbar */
+        .config-navbar {
+            background: rgba(10, 25, 41, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+        }
+        
+        .config-navbar .navbar-brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        
+        /* Tabs */
+        .config-tabs {
+            background: var(--bg-panel);
+            border-radius: 16px;
+            padding: 0.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .config-tabs .nav-link {
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            border: none;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .config-tabs .nav-link:hover {
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .config-tabs .nav-link.active {
+            color: var(--bg-dark);
+            background: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .config-tabs .nav-link i {
+            font-size: 1.1rem;
+        }
+        
+        /* Cards */
+        .config-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        
+        .config-card .card-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .config-card .card-header i {
+            color: var(--accent-color);
+        }
+        
+        .config-card .card-body {
+            padding: 1.5rem;
+        }
+        
+        /* Color Picker */
+        .color-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-card);
+            padding: 0.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .color-input-group input[type="color"] {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 0;
+        }
+        
+        .color-input-group input[type="text"] {
+            width: 100px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: monospace;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+        
+        .color-input-group input[type="text"]:focus {
+            outline: none;
+        }
+        
+        /* Preview Box */
+        .preview-box {
+            background: var(--bg-dark);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        
+        .preview-box .preview-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .preview-btn {
+            padding: 0.75rem 2rem;
+            border-radius: 10px;
+            font-weight: 600;
+            border: none;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        
+        .preview-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Image Cards */
+        .image-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            height: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .image-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        }
+        
+        .image-card .card-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.875rem 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .image-preview {
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-dark);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .image-preview img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+            transition: transform 0.3s;
+        }
+        
+        .image-card:hover .image-preview img {
+            transform: scale(1.05);
+        }
+        
+        .image-preview .no-image {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .image-preview .no-image i {
+            font-size: 2rem;
+            opacity: 0.5;
+        }
+        
+        .image-card .card-footer {
+            background: transparent;
+            border-top: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+        
+        /* Buttons */
+        .btn-accent {
+            background: var(--accent-color);
+            color: var(--bg-dark);
+            font-weight: 600;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-accent:hover {
+            background: #e6c200;
+            color: var(--bg-dark);
+            transform: translateY(-1px);
+        }
+        
+        /* File Upload */
+        .file-upload-wrapper .form-control {
+            background: var(--bg-card);
+            border: 1px dashed var(--border-color);
+            color: var(--text-primary);
+            border-radius: 10px;
+            padding: 0.5rem;
+        }
+        
+        .file-upload-wrapper .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
+        }
+        
+        .file-upload-wrapper .form-control::file-selector-button {
+            background: var(--accent-color);
+            color: var(--bg-dark);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-right: 1rem;
+            cursor: pointer;
+        }
+        
+        /* Alert */
+        .alert-custom {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            color: var(--accent-color);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+        }
+        
+        /* Badge */
+        .color-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .color-badge .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        /* Tags section */
+        .tag-group-header {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .tag-group-header:first-of-type {
+            margin-top: 0;
+        }
+        
+        .tag-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .tag-item:hover {
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+        
+        .tag-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .group-images-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .group-images-card .group-name {
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 0.75rem;
+        }
+        
+        /* Image thumbnails */
+        .img-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        
+        .img-thumb:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .img-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .img-container .btn-delete-img {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border-radius: 50%;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.15s;
+            background: #dc3545;
+            border: none;
+            color: white;
+        }
+        
+        .img-container:hover .btn-delete-img {
+            opacity: 1;
+        }
+        
+        /* Form controls dark */
+        .form-control-dark, .form-select-dark {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 8px;
+        }
+        
+        .form-control-dark:focus, .form-select-dark:focus {
+            background: var(--bg-card);
+            border-color: var(--accent-color);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
+        }
+        
+        .form-select-dark option {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+        }
+        
+        /* Button variations */
+        .btn-outline-accent {
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+            background: transparent;
+            border-radius: 8px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-outline-accent:hover {
+            background: rgba(255, 215, 0, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .btn-outline-danger-dark {
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+            background: transparent;
+            border-radius: 8px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.85rem;
+        }
+        
+        .btn-outline-danger-dark:hover {
+            background: rgba(255, 107, 107, 0.1);
+            color: #ff6b6b;
+        }
+        
+        /* Modal dark */
+        .modal-dark .modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .modal-dark .modal-header {
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-dark .modal-footer {
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .modal-dark .btn-close {
+            filter: invert(1);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .config-tabs {
+                flex-direction: column;
+            }
+            
+            .config-tabs .nav-link {
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
-<body class="bg-dark text-white">
-
-    <nav class="navbar navbar-dark bg-black border-bottom border-secondary mb-4">
+<body>
+    <nav class="config-navbar sticky-top">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">🍌 Panel Banana Admin</span>
-            <div>
-                <a href="/admin/tags" class="btn btn-outline-light btn-sm me-2">Etiquetas</a>
-                <a href="/admin/config" class="btn btn-warning btn-sm me-2 fw-bold">Configuración</a>
-                <a href="/" class="btn btn-outline-light btn-sm">Volver a Web</a>
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="/" class="navbar-brand">🏀 CoachApp</a>
+                <div class="d-flex gap-3 align-items-center">
+                    <a href="/admin/invitations" class="btn btn-outline-accent btn-sm">
+                        <i class="bi bi-envelope-paper me-1"></i> Invitaciones
+                    </a>
+                    <a href="/" class="btn btn-outline-accent btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Volver
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container pb-5">
+    <div class="container py-4">
         
         {% with messages = get_flashed_messages() %}
             {% if messages %}
-                <div class="alert alert-info mb-4">{{ messages[0] }}</div>
+                <div class="alert alert-custom mb-4">
+                    <i class="bi bi-info-circle me-2"></i>{{ messages[0] }}
+                </div>
             {% endif %}
         {% endwith %}
 
-        <h3 class="mb-3 text-warning border-bottom border-secondary pb-2">📂 Gestión de Datos</h3>
-        <div class="card bg-secondary text-white mb-5 border-0 shadow">
-            <div class="card-body">
-                <h5 class="card-title fw-bold"><i class="bi bi-file-earmark-spreadsheet"></i> Importar Ejercicios desde CSV</h5>
-                <p class="small text-light">Sube un archivo CSV con 3 columnas (sin cabecera): <strong>Link, Título, Etiqueta</strong>.</p>
-                
-                <form action="/admin/import_drills" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
-                    <input type="file" name="file" class="form-control" accept=".csv" required>
-                    <button class="btn btn-success fw-bold" type="submit">Importar</button>
-                </form>
-            </div>
-        </div>
+        <!-- Tabs -->
+        <ul class="config-tabs nav" id="configTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="appearance-tab" data-bs-toggle="tab" data-bs-target="#appearance" type="button" role="tab">
+                    <i class="bi bi-palette"></i> Personalizar apariencia
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="origin-tab" data-bs-toggle="tab" data-bs-target="#origin" type="button" role="tab">
+                    <i class="bi bi-image"></i> Personalizar origen
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tags-tab" data-bs-toggle="tab" data-bs-target="#tags" type="button" role="tab">
+                    <i class="bi bi-tags"></i> Personalizar etiquetas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="import-tab" data-bs-toggle="tab" data-bs-target="#import" type="button" role="tab">
+                    <i class="bi bi-cloud-upload"></i> Importar ejercicios
+                </button>
+            </li>
+        </ul>
 
-        <h3 class="mb-3 text-warning border-bottom border-secondary pb-2">🎨 Personalización de Tarjetas</h3>
-        
-        <div class="row row-cols-1 row-cols-md-3 g-4">
-            {% for key, label in keys_needed %}
-            <div class="col">
-                <div class="card bg-secondary text-white h-100 border-0 shadow">
-                    <div class="card-header fw-bold bg-black text-warning">{{ label }}</div>
-                    <div class="card-body text-center">
-                        <div class="mb-3 bg-dark d-flex align-items-center justify-content-center rounded overflow-hidden" style="height: 120px;">
-                            {% set val = config_dict.get(key) %}
-                            {% if val %}
-                                {% if val.startswith('http') %}
-                                    <img src="{{ val }}" style="max-height:100%; max-width:100%;">
-                                {% else %}
-                                    <img src="{{ url_for('static', filename='uploads/' + val) }}" style="max-height:100%; max-width:100%;">
-                                {% endif %}
-                            {% else %}
-                                <span class="text-muted small">Sin configurar</span>
-                            {% endif %}
-                        </div>
+        <!-- Tab Content -->
+        <div class="tab-content" id="configTabContent">
+            
+            <!-- Tab 1: Personalizar apariencia -->
+            <div class="tab-pane fade show active" id="appearance" role="tabpanel">
+                <div class="config-card">
+                    <div class="card-header">
+                        <i class="bi bi-brush"></i>
+                        Color Principal Global
+                    </div>
+                    <div class="card-body">
+                        <p class="text-secondary small mb-4">
+                            Este color se aplicará como tema principal de la aplicación para todos los usuarios.
+                        </p>
                         
-                        <form action="/admin/config" method="POST" enctype="multipart/form-data">
-                            <input type="hidden" name="key" value="{{ key }}">
-                            <div class="input-group input-group-sm">
-                                <input type="file" name="file" class="form-control" accept="image/*" required>
-                                <button class="btn btn-warning" type="submit"><i class="bi bi-upload"></i></button>
+                        <div class="row align-items-center g-4">
+                            <div class="col-lg-6">
+                                <label class="form-label text-secondary small text-uppercase mb-2">Selecciona el color</label>
+                                <div class="d-flex flex-wrap gap-3 align-items-center">
+                                    <div class="color-input-group">
+                                        <input type="color" id="primaryColorPicker" value="{{ theme_color }}">
+                                        <input type="text" id="primaryColorText" value="{{ theme_color }}" placeholder="#FFD700" maxlength="7">
+                                    </div>
+                                    <button class="btn btn-accent" onclick="savePrimaryColor()">
+                                        <i class="bi bi-check-lg me-1"></i> Guardar
+                                    </button>
+                                </div>
+                                <div class="mt-3">
+                                    <span class="text-secondary small">Color actual: </span>
+                                    <span class="color-badge">
+                                        <span class="color-dot" id="currentColorDot" style="background: {{ theme_color }};"></span>
+                                        <span id="currentColorLabel">{{ theme_color }}</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="preview-box">
+                                    <div class="preview-label">Vista previa</div>
+                                    <button class="preview-btn" id="previewBtn" style="background: {{ theme_color }}; color: #0a1929;">
+                                        🏀 Botón de Ejemplo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 2: Personalizar origen -->
+            <div class="tab-pane fade" id="origin" role="tabpanel">
+                <div class="config-card">
+                    <div class="card-header">
+                        <i class="bi bi-card-image"></i>
+                        Fondos según origen del ejercicio
+                    </div>
+                    <div class="card-body">
+                        <p class="text-secondary small mb-4">
+                            Personaliza las imágenes de fondo que se muestran según el origen del ejercicio (TikTok, Instagram, etc.).
+                        </p>
+                        
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                            {% for key, label in keys_needed %}
+                            <div class="col">
+                                <div class="image-card">
+                                    <div class="card-header">
+                                        <i class="bi bi-card-image text-warning me-2"></i>{{ label }}
+                                    </div>
+                                    <div class="image-preview">
+                                        {% set val = config_dict.get(key) %}
+                                        {% if val %}
+                                            {% if val.startswith('http') %}
+                                                <img src="{{ val }}" alt="{{ label }}">
+                                            {% else %}
+                                                <img src="{{ url_for('static', filename='uploads/' + val) }}" alt="{{ label }}">
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="no-image">
+                                                <i class="bi bi-image"></i>
+                                                <span>Sin configurar</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-footer">
+                                        <form action="/admin/config" method="POST" enctype="multipart/form-data">
+                                            <input type="hidden" name="key" value="{{ key }}">
+                                            <div class="d-flex gap-2">
+                                                <input type="file" name="file" class="form-control form-control-sm" 
+                                                       accept="image/*" required 
+                                                       style="background: var(--bg-card); border-color: var(--border-color); color: var(--text-primary); font-size: 0.8rem;">
+                                                <button class="btn btn-accent btn-sm px-3" type="submit">
+                                                    <i class="bi bi-upload"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab 3: Personalizar etiquetas -->
+            <div class="tab-pane fade" id="tags" role="tabpanel">
+                <!-- Añadir etiqueta -->
+                <div class="config-card">
+                    <div class="card-header">
+                        <i class="bi bi-plus-circle"></i>
+                        Añadir nueva etiqueta
+                    </div>
+                    <div class="card-body">
+                        <form action="/admin/tags" method="POST" class="row g-3 align-items-end">
+                            <input type="hidden" name="action" value="add_tag">
+                            <div class="col-12 col-md-5">
+                                <label class="form-label text-secondary small">Nombre</label>
+                                <input type="text" name="tag_name" class="form-control form-control-dark" placeholder="Nombre de etiqueta" required>
+                            </div>
+                            <div class="col-12 col-md-5">
+                                <label class="form-label text-secondary small">Grupo</label>
+                                <select name="group_id" class="form-select form-select-dark" required>
+                                    <option value="">Seleccionar grupo...</option>
+                                    {% for g in groups %}
+                                    <option value="{{ g.id }}">{{ g.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <button type="submit" class="btn btn-accent w-100">
+                                    <i class="bi bi-plus-lg"></i> Añadir
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
+                
+                <!-- Imágenes por grupo -->
+                <div class="config-card">
+                    <div class="card-header">
+                        <i class="bi bi-images"></i>
+                        Imágenes por grupo (máx. 10)
+                    </div>
+                    <div class="card-body">
+                        {% for g in groups %}
+                        <div class="group-images-card">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                <div class="group-name">
+                                    <i class="bi bi-folder me-1"></i> {{ g.name }}
+                                </div>
+                                <form action="/admin/tags" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
+                                    <input type="hidden" name="action" value="add_group_image">
+                                    <input type="hidden" name="group_id" value="{{ g.id }}">
+                                    <input type="file" name="image" class="form-control form-control-sm form-control-dark" accept="image/*" required style="max-width: 200px;">
+                                    <button type="submit" class="btn btn-outline-accent btn-sm">
+                                        <i class="bi bi-upload"></i> Subir
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for img in g.images %}
+                                <div class="img-container">
+                                    <img class="img-thumb" src="{{ url_for('static', filename='uploads/' + img.filename) }}" onclick="previewImage('{{ url_for('static', filename='uploads/' + img.filename) }}')" title="Click para ampliar">
+                                    <form action="/admin/tags" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta imagen?');">
+                                        <input type="hidden" name="action" value="delete_group_image">
+                                        <input type="hidden" name="image_id" value="{{ img.id }}">
+                                        <button type="submit" class="btn-delete-img" title="Eliminar">
+                                            <i class="bi bi-x"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                                {% if not g.images %}
+                                <span class="text-secondary small">Sin imágenes</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Gestionar etiquetas -->
+                <div class="config-card">
+                    <div class="card-header">
+                        <i class="bi bi-tags"></i>
+                        Gestionar etiquetas
+                    </div>
+                    <div class="card-body">
+                        {% set current_group = namespace(id=None) %}
+                        {% for tag in tags %}
+                            {% if tag.group_id != current_group.id %}
+                                {% set current_group.id = tag.group_id %}
+                                <div class="tag-group-header">
+                                    <i class="bi bi-folder-fill"></i>
+                                    {{ tag.group.name if tag.group else 'Sin grupo' }}
+                                </div>
+                            {% endif %}
+                            <div class="tag-item">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm px-1" onclick="reorderTag({{ tag.id }}, 'up')" title="Subir">
+                                            <i class="bi bi-arrow-up"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm px-1" onclick="reorderTag({{ tag.id }}, 'down')" title="Bajar">
+                                            <i class="bi bi-arrow-down"></i>
+                                        </button>
+                                        <span class="tag-name ms-2">{{ tag.name }}</span>
+                                        <button type="button" class="btn btn-outline-accent btn-sm" onclick="openEditTagModal({{ tag.id }}, '{{ tag.name|e }}', {{ tag.group_id or 0 }})" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <form action="/admin/tags" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar la etiqueta &quot;{{ tag.name }}&quot;? Se eliminará de todos los ejercicios.');">
+                                            <input type="hidden" name="action" value="delete_tag">
+                                            <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                                            <button type="submit" class="btn btn-outline-danger-dark btn-sm" title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <form action="/admin/tags" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
+                                        <input type="hidden" name="action" value="add_tag_image">
+                                        <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                                        <input type="file" name="image" class="form-control form-control-sm form-control-dark" accept="image/*" required style="max-width: 180px;">
+                                        <button type="submit" class="btn btn-outline-accent btn-sm">
+                                            <i class="bi bi-upload"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% if tag.images %}
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    {% for img in tag.images %}
+                                    <div class="img-container">
+                                        <img class="img-thumb" src="{{ url_for('static', filename='uploads/' + img.filename) }}" onclick="previewImage('{{ url_for('static', filename='uploads/' + img.filename) }}')" title="Click para ampliar">
+                                        <form action="/admin/tags" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta imagen?');">
+                                            <input type="hidden" name="action" value="delete_tag_image">
+                                            <input type="hidden" name="image_id" value="{{ img.id }}">
+                                            <button type="submit" class="btn-delete-img" title="Eliminar">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
-            {% endfor %}
+            
+            <!-- Tab 4: Importar ejercicios -->
+            <div class="tab-pane fade" id="import" role="tabpanel">
+                <div class="config-card">
+                    <div class="card-header">
+                        <i class="bi bi-file-earmark-spreadsheet"></i>
+                        Importar Ejercicios desde CSV
+                    </div>
+                    <div class="card-body">
+                        <p class="text-secondary small mb-4">
+                            Sube un archivo CSV con 3 columnas (sin cabecera): <strong class="text-white">Link, Título, Etiqueta</strong>
+                        </p>
+                        
+                        <form action="/admin/import_drills" method="POST" enctype="multipart/form-data">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-8">
+                                    <div class="file-upload-wrapper">
+                                        <input type="file" name="file" class="form-control" accept=".csv" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-accent w-100" type="submit">
+                                        <i class="bi bi-upload me-2"></i>Importar
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <div class="mt-4 p-3 rounded" style="background: var(--bg-card);">
+                            <h6 class="text-warning mb-2"><i class="bi bi-info-circle me-1"></i> Formato del archivo</h6>
+                            <p class="text-secondary small mb-2">El archivo CSV debe tener el siguiente formato (usa nombres de etiquetas, no de grupos):</p>
+                            <code class="d-block p-2 rounded" style="background: var(--bg-dark); font-size: 0.8rem;">
+                                https://tiktok.com/video1,Ejercicio de bote,Bote,1x1<br>
+                                https://instagram.com/reel2,Defensa 1x1,Defensa al jugador (1x1)<br>
+                                https://youtube.com/watch3,Tiro libre,Tiro,Finalizaciones
+                            </code>
+                            <p class="text-secondary small mt-2 mb-0"><strong>Columnas:</strong> Link, Título, Etiqueta Principal, Etiquetas Secundarias (opcional, separadas por coma)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Modal para editar etiqueta -->
+    <div class="modal fade modal-dark" id="editTagModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/admin/tags" method="POST">
+                    <input type="hidden" name="action" value="edit_tag">
+                    <input type="hidden" name="tag_id" id="editTagId">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Editar etiqueta</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label text-secondary">Nombre</label>
+                            <input type="text" name="tag_name" id="editTagName" class="form-control form-control-dark" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-secondary">Grupo</label>
+                            <select name="group_id" id="editTagGroup" class="form-select form-select-dark" required>
+                                {% for g in groups %}
+                                <option value="{{ g.id }}">{{ g.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-accent">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para previsualizar imagen -->
+    <div class="modal fade" id="imagePreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content" style="background: var(--bg-panel); border: 1px solid var(--border-color);">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                    <h5 class="modal-title">Vista previa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
+                </div>
+                <div class="modal-body text-center p-0">
+                    <img id="previewImg" src="" style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Color picker
+        const colorPicker = document.getElementById('primaryColorPicker');
+        const colorText = document.getElementById('primaryColorText');
+        const previewBtn = document.getElementById('previewBtn');
+        const currentLabel = document.getElementById('currentColorLabel');
+        const currentDot = document.getElementById('currentColorDot');
+
+        colorPicker.addEventListener('input', (e) => {
+            colorText.value = e.target.value.toUpperCase();
+            updatePreview(e.target.value);
+        });
+
+        colorText.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val.match(/^#[0-9A-Fa-f]{6}$/)) {
+                colorPicker.value = val;
+                updatePreview(val);
+            }
+        });
+
+        function updatePreview(color) {
+            previewBtn.style.background = color;
+        }
+
+        async function savePrimaryColor() {
+            const color = colorText.value.trim();
+            if (!color.match(/^#[0-9A-Fa-f]{6}$/)) {
+                alert('Color inválido. Usa formato #RRGGBB (ej: #FFD700)');
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/update_primary_color', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ color })
+                });
+
+                const data = await response.json();
+                if (data.status === 'ok') {
+                    currentLabel.textContent = data.color;
+                    currentDot.style.backgroundColor = data.color;
+                    alert('✅ Color guardado correctamente.');
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Error desconocido'));
+                }
+            } catch (error) {
+                alert('❌ Error de conexión');
+            }
+        }
+
+        // Edit tag modal
+        function openEditTagModal(tagId, tagName, groupId) {
+            document.getElementById('editTagId').value = tagId;
+            document.getElementById('editTagName').value = tagName;
+            if (groupId) {
+                document.getElementById('editTagGroup').value = groupId;
+            }
+            new bootstrap.Modal(document.getElementById('editTagModal')).show();
+        }
+
+        // Reorder tag
+        function reorderTag(tagId, direction) {
+            fetch('/api/reorder_tag', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tag_id: tagId, direction: direction})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    location.reload();
+                } else {
+                    alert(data.error || 'Error al reordenar');
+                }
+            })
+            .catch(e => alert('Error: ' + e));
+        }
+
+        // Image preview
+        function previewImage(src) {
+            document.getElementById('previewImg').src = src;
+            new bootstrap.Modal(document.getElementById('imagePreviewModal')).show();
+        }
+
+        // Restore tab from URL hash
+        document.addEventListener('DOMContentLoaded', function() {
+            const hash = window.location.hash;
+            if (hash) {
+                const tab = document.querySelector(`[data-bs-target="${hash}"]`);
+                if (tab) {
+                    new bootstrap.Tab(tab).show();
+                }
+            }
+        });
+
+        // Update URL hash when tab changes
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(e) {
+                history.replaceState(null, null, e.target.dataset.bsTarget);
+            });
+        });
+    </script>
 </body>
 </html>

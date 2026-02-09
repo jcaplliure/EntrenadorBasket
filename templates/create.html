@@ -14,6 +14,12 @@
         .btn-check:checked + .btn-outline-primary { background-color: #0d6efd; color: white; }
         .btn-check:checked + .btn-outline-success { background-color: #198754; color: white; }
         .btn-check:checked + .btn-outline-danger { background-color: #dc3545; color: white; }
+        .tag-group-title { font-size: 0.75rem; font-weight: 700; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* Etiquetas personalizadas (turquesa) */
+        .tag-custom .btn-outline-secondary { border-color: #06b6d4; color: #06b6d4; }
+        .tag-custom .btn-outline-secondary::before { content: "★ "; font-size: 0.65rem; }
+        .tag-custom .btn-check:checked + .btn-outline-secondary { background-color: #06b6d4; color: white; border-color: #06b6d4; }
+        .validation-error { background: #fee2e2; border: 1px solid #ef4444; color: #dc2626; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; display: none; }
     </style>
 </head>
 <body class="bg-light">
@@ -36,7 +42,8 @@
             </div>
             <div class="card-body p-4">
                 
-                <form action="/create" method="POST" enctype="multipart/form-data" id="mainForm">
+                <div class="validation-error" id="validationError"></div>
+                <form action="/create" method="POST" enctype="multipart/form-data" id="mainForm" onsubmit="return validateForm()">
                     
                     <div class="mb-3">
                         <label class="fw-bold">Título</label>
@@ -126,14 +133,28 @@
 
                     <div class="mb-3">
                         <label class="fw-bold">Etiquetas (Máx 3)</label>
-                        <div class="d-flex flex-wrap gap-2">
-                            {% for tag in etiquetas %}
-                            <div>
-                                <input type="checkbox" class="btn-check" name="primary_tags" id="tag_{{ tag.id }}" value="{{ tag.id }}">
-                                <label class="btn btn-outline-secondary btn-sm rounded-pill" for="tag_{{ tag.id }}">{{ tag.name }}</label>
-                            </div>
-                            {% endfor %}
+                        <div class="small text-muted mb-2">Si seleccionas más de 1, elige cuál es la principal.</div>
+                        <input type="hidden" name="primary_tag_id" id="primaryTagInput">
+                        <div id="primarySelector" class="mb-3" style="display:none;">
+                            <label class="small text-muted">Etiqueta principal</label>
+                            <select id="primaryTagSelect" class="form-select form-select-sm"></select>
                         </div>
+                        {% for group_item in tag_groups %}
+                        <div class="mb-2">
+                            <div class="tag-group-title mb-1">{{ group_item.group.name }}</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for tag in group_item.tags %}
+                                <div class="{% if tag.is_custom %}tag-custom{% endif %}">
+                                    <input type="checkbox" class="btn-check tag-check" name="tag_ids" id="tag_{{ tag.id }}" value="{{ tag.id }}" data-is-custom="{{ 'true' if tag.is_custom else 'false' }}">
+                                    <label class="btn btn-outline-secondary btn-sm rounded-pill" for="tag_{{ tag.id }}">{{ tag.name }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <button type="button" class="btn btn-sm btn-outline-dark mt-2" data-bs-toggle="modal" data-bs-target="#customTagModal">
+                            <i class="bi bi-plus-circle"></i> Crear etiqueta personalizada
+                        </button>
                     </div>
 
                     <div class="form-check form-switch mb-4">
@@ -150,6 +171,37 @@
         </div>
     </div>
 
+    <div class="modal fade" id="customTagModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva etiqueta personalizada</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de la etiqueta</label>
+                        <input type="text" class="form-control" id="customTagName">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Grupo</label>
+                        <select class="form-select" id="customTagGroup">
+                            {% for group_item in tag_groups %}
+                            <option value="{{ group_item.group.id }}">{{ group_item.group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="small text-muted">Máximo 5 etiquetas personalizadas por usuario.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="createCustomTag()">Crear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const BANANA_IMGS = {
             tiktok: "{{ get_config_url('tiktok_bg') }}",
@@ -196,20 +248,6 @@
             } else {
                 btnPreview.style.display = 'none';
             }
-
-            let finalSrc = BANANA_IMGS.generic;
-            if (url.includes('youtu')) {
-                let vidId = url.split('v=')[1];
-                if(!vidId && url.includes('youtu.be/')) vidId = url.split('youtu.be/')[1];
-                if(vidId) {
-                    vidId = vidId.split('&')[0];
-                    finalSrc = `https://img.youtube.com/vi/${vidId}/mqdefault.jpg`;
-                }
-            } else if (url.includes('tiktok.com')) finalSrc = BANANA_IMGS.tiktok;
-            else if (url.includes('instagram.com')) finalSrc = BANANA_IMGS.instagram;
-            else if (url.includes('facebook.com')) finalSrc = BANANA_IMGS.facebook;
-
-            updatePreview(finalSrc);
         }
 
         function updatePreview(src) {
@@ -276,19 +314,153 @@
             }
         }
 
-        // LÍMITE DE 3 ETIQUETAS
-        document.querySelectorAll('input[name="primary_tags"]').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const checked = document.querySelectorAll('input[name="primary_tags"]:checked');
-                if (checked.length > 3) {
-                    this.checked = false;
-                    alert("⚠️ Solo puedes seleccionar un máximo de 3 etiquetas.");
-                }
+        function getTagChecks() {
+            return Array.from(document.querySelectorAll('.tag-check'));
+        }
+        const primarySelect = document.getElementById('primaryTagSelect');
+        const primaryInput = document.getElementById('primaryTagInput');
+        const primarySelector = document.getElementById('primarySelector');
+
+        function validateForm() {
+            const errorDiv = document.getElementById('validationError');
+            const checked = getTagChecks().filter(cb => cb.checked);
+            
+            if (checked.length === 0) {
+                errorDiv.textContent = 'Debes seleccionar al menos una etiqueta.';
+                errorDiv.style.display = 'block';
+                return false;
+            }
+            
+            const systemTags = checked.filter(cb => cb.dataset.isCustom !== 'true');
+            if (systemTags.length === 0) {
+                errorDiv.textContent = 'Debes seleccionar al menos una etiqueta del sistema (no personalizada).';
+                errorDiv.style.display = 'block';
+                return false;
+            }
+            
+            const primaryId = primaryInput.value;
+            const primaryCheck = checked.find(cb => cb.value === primaryId);
+            if (primaryCheck && primaryCheck.dataset.isCustom === 'true') {
+                errorDiv.textContent = 'La etiqueta principal debe ser del sistema (no personalizada).';
+                errorDiv.style.display = 'block';
+                return false;
+            }
+            
+            errorDiv.style.display = 'none';
+            return true;
+        }
+
+        function syncPrimaryOptions() {
+            const checked = getTagChecks().filter(cb => cb.checked);
+            if (checked.length > 3) {
+                const last = checked[checked.length - 1];
+                last.checked = false;
+                alert("⚠️ Solo puedes seleccionar un máximo de 3 etiquetas.");
+                return syncPrimaryOptions();
+            }
+            
+            // Solo etiquetas del sistema pueden ser principales
+            const systemTags = checked.filter(cb => cb.dataset.isCustom !== 'true');
+            
+            primarySelect.innerHTML = '';
+            systemTags.forEach(cb => {
+                const label = document.querySelector(`label[for="${cb.id}"]`);
+                const option = document.createElement('option');
+                option.value = cb.value;
+                option.textContent = label ? label.textContent : cb.value;
+                primarySelect.appendChild(option);
             });
+            
+            if (checked.length === 0) {
+                primarySelector.style.display = 'none';
+                primaryInput.value = '';
+            } else if (systemTags.length === 1) {
+                primarySelector.style.display = 'none';
+                primaryInput.value = systemTags[0].value;
+            } else if (systemTags.length > 1) {
+                primarySelector.style.display = 'block';
+                if (!primarySelect.value || !systemTags.find(c => c.value === primarySelect.value)) {
+                    primarySelect.value = systemTags[0].value;
+                }
+                primaryInput.value = primarySelect.value;
+            } else {
+                // Solo hay etiquetas personalizadas
+                primarySelector.style.display = 'none';
+                primaryInput.value = checked[0].value;
+            }
+            
+            updatePreviewByTag();
+            
+            // Ocultar error si ya hay etiquetas del sistema
+            if (systemTags.length > 0) {
+                document.getElementById('validationError').style.display = 'none';
+            }
+        }
+
+        primarySelect.addEventListener('change', function() {
+            primaryInput.value = primarySelect.value;
+            updatePreviewByTag();
         });
+
+        getTagChecks().forEach(cb => cb.addEventListener('change', syncPrimaryOptions));
+
+        function updatePreviewByTag() {
+            if (!primaryInput.value) {
+                updatePreview(BANANA_IMGS.generic);
+                return;
+            }
+            fetch(`/api/tag_cover_preview/${primaryInput.value}`)
+                .then(res => res.json())
+                .then(data => { if (data.url) updatePreview(data.url); })
+                .catch(() => updatePreview(BANANA_IMGS.generic));
+        }
+
+        function createCustomTag() {
+            const name = document.getElementById('customTagName').value.trim();
+            const groupId = document.getElementById('customTagGroup').value;
+            if (!name) {
+                alert('Escribe un nombre de etiqueta');
+                return;
+            }
+            fetch('/api/custom_tag', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, group_id: groupId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                const tagId = data.id;
+                const groupOption = document.querySelector(`#customTagGroup option[value="${data.group_id}"]`);
+                const groupName = groupOption ? groupOption.textContent : '';
+                const groupTitle = Array.from(document.querySelectorAll('.tag-group-title'))
+                    .find(el => el.textContent === groupName);
+                let listWrap = groupTitle ? groupTitle.parentElement.querySelector('.d-flex') : null;
+                if (!listWrap) {
+                    listWrap = document.querySelector('.tag-group-title')?.parentElement.querySelector('.d-flex');
+                }
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = `
+                    <input type="checkbox" class="btn-check tag-check" name="tag_ids" id="tag_${tagId}" value="${tagId}" checked>
+                    <label class="btn btn-outline-secondary btn-sm rounded-pill" for="tag_${tagId}">${data.name}</label>
+                `;
+                if (listWrap) {
+                    listWrap.appendChild(wrapper);
+                }
+                const newCheck = wrapper.querySelector('.tag-check');
+                newCheck.addEventListener('change', syncPrimaryOptions);
+                syncPrimaryOptions();
+                document.getElementById('customTagName').value = '';
+                bootstrap.Modal.getInstance(document.getElementById('customTagModal')).hide();
+            });
+        }
         
         // Inicializar
         detectLink();
+        syncPrimaryOptions();
     </script>
 </body>
 </html>

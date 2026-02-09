@@ -2,90 +2,590 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gestión {{ team.name }}</title>
+    <title>{{ team.name }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .nav-tabs .nav-link.active { font-weight: bold; color: #0d6efd; border-bottom: 3px solid #0d6efd; background: transparent; }
-        .nav-tabs .nav-link { color: #6c757d; border: none; }
+        :root {
+            --bg-dark: #0b1424;
+            --bg-panel: #0f1b2e;
+            --bg-input: #0a1220;
+            --cream: #e9e4d2;
+            --accent-color: {{ theme_color }};
+            --text-primary: #ffffff;
+            --text-muted: #8b97ad;
+            --border-color: rgba(233, 228, 210, 0.25);
+        }
+        
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .team-header {
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 0;
+        }
+        
+        .team-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 12px;
+        }
+        
+        .team-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--cream);
+        }
+        
+        .btn-portal {
+            background: var(--accent-color);
+            color: #0a1929;
+            border: none;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+        
+        .btn-portal:hover {
+            filter: brightness(1.1);
+            color: #0a1929;
+        }
+        
+        .btn-back {
+            background: var(--bg-input);
+            color: var(--cream);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+        
+        .btn-back:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--cream);
+        }
+        
+        /* Tabs */
+        .custom-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+        
+        .custom-tab {
+            flex: 1;
+            padding: 14px 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .custom-tab:hover {
+            color: var(--cream);
+        }
+        
+        .custom-tab.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+        
+        .custom-tab i {
+            font-size: 1.1rem;
+        }
+        
+        .tab-content-area {
+            display: none;
+        }
+        
+        .tab-content-area.active {
+            display: block;
+        }
+        
+        /* Nuevo Jugador Section */
+        .new-player-section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--cream);
+        }
+        
+        .btn-import {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-import:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .player-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .input-dorsal {
+            width: 70px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            padding: 12px 14px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .input-name {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            padding: 12px 14px;
+        }
+        
+        .input-dorsal:focus, .input-name:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        }
+        
+        .input-dorsal::placeholder, .input-name::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .btn-add-player {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 10px;
+            color: #0a1929;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-add-player:hover {
+            filter: brightness(1.1);
+        }
+        
+        /* Lista de Jugadores */
+        .players-list-section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .list-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .list-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        .player-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        
+        .player-item:hover {
+            background: rgba(255,255,255,0.03);
+        }
+        
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex: 1;
+        }
+        
+        .player-dorsal {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #4a5568;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        
+        .player-name {
+            font-weight: 600;
+            color: var(--cream);
+            font-size: 0.95rem;
+        }
+        
+        .player-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-action {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--cream);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-action:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .btn-action.delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        
+        /* Modal CSV */
+        .modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .btn-close {
+            filter: invert(1);
+        }
+        
+        .form-control {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .form-control:focus {
+            background: var(--bg-input);
+            border-color: var(--accent-color);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
+        }
+        
+        /* Staff Tab */
+        .staff-form {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .staff-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .staff-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .badge-owner {
+            background: var(--accent-color);
+            color: #0a1929;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        
+        /* Portal Público Tab */
+        .public-section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .public-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--cream);
+            margin-bottom: 8px;
+        }
+        
+        .public-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .btn-save {
+            background: var(--accent-color);
+            color: #0a1929;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 700;
+            margin-top: 12px;
+        }
+        
+        .btn-save:hover {
+            filter: brightness(1.1);
+            color: #0a1929;
+        }
+        
+        /* Ajustes Tab */
+        .settings-section {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+        }
+        
+        .settings-group {
+            margin-bottom: 24px;
+        }
+        
+        .settings-group-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--cream);
+            margin-bottom: 12px;
+        }
+        
+        .form-label {
+            color: var(--cream);
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+        }
+        
+        .form-select {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .form-select:focus {
+            background: var(--bg-input);
+            border-color: var(--accent-color);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
+        }
+        
+        .form-select option {
+            background: var(--bg-input);
+            color: var(--text-primary);
+        }
+        
+        /* Gallery */
+        .drill-card { border: none; overflow: hidden; position: relative; border-radius: 12px; }
+        .card-img-zone { position: relative; height: 160px; cursor: pointer; background: #000; overflow: hidden; }
+        .card-img-zone img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+        .overlay-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; }
+        .stats-badge { position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+        .drill-actions { position: absolute; top: 5px; right: 5px; display: flex; gap: 5px; z-index: 10; }
+        .drill-actions .btn { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.85rem; }
+        .drill-info-btn { position: absolute; top: 5px; left: 5px; z-index: 10; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
     </style>
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
+<body>
+    <!-- Header -->
+    <div class="team-header">
         <div class="container">
-            <span class="navbar-brand fw-bold">
-                {% if team.logo_file %}<img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" width="30" height="30" class="rounded-circle me-2">{% endif %}
-                {{ team.name }}
-            </span>
-            <div>
-                <a href="/team/{{ team.id }}/public" target="_blank" class="btn btn-warning btn-sm fw-bold me-2"><i class="bi bi-trophy-fill"></i> Portal</a>
-                <a href="/my_teams" class="btn btn-light btn-sm text-primary fw-bold">Volver</a>
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    {% if team.logo_file %}
+                    <img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" class="team-logo">
+                    {% else %}
+                    <i class="bi bi-basket text-orange me-2" style="font-size: 1.5rem; color: var(--accent-color);"></i>
+                    {% endif %}
+                    <span class="team-name">{{ team.name }}</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="/team/{{ team.id }}/public" target="_blank" class="btn-portal">
+                        <i class="bi bi-trophy-fill"></i> Portal
+                    </a>
+                    <a href="/my_teams" class="btn-back">Volver</a>
+                </div>
             </div>
         </div>
-    </nav>
-    <div class="container pb-5">
-        <ul class="nav nav-tabs mb-4" id="teamTab" role="tablist">
-            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#players">👥 Plantilla</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#staff">👔 Staff</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings">⚙️ Ajustes</button></li>
-        </ul>
-        <div class="tab-content">
-            <div class="tab-pane fade show active" id="players">
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <div class="card p-3 border-0 shadow-sm h-100">
-                            <h6 class="fw-bold text-muted mb-2">Nuevo Jugador Manual</h6>
-                            <form method="POST" enctype="multipart/form-data" class="d-flex gap-2">
-                                <input type="number" name="dorsal" class="form-control" placeholder="#" style="width: 70px;" required>
-                                <input type="text" name="name" class="form-control" placeholder="Nombre" required>
-                                <button type="submit" class="btn btn-primary fw-bold">+</button>
+    </div>
+    
+    <div class="container pb-5 mt-4">
+        <!-- Tabs -->
+        <div class="custom-tabs">
+            <button class="custom-tab active" data-tab="players">
+                <i class="bi bi-people-fill"></i>
+                <span>Plantilla</span>
+            </button>
+            <button class="custom-tab" data-tab="staff">
+                <i class="bi bi-briefcase-fill"></i>
+                <span>Staff</span>
+            </button>
+            <button class="custom-tab" data-tab="public">
+                <i class="bi bi-globe"></i>
+                <span>Portal Público</span>
+            </button>
+            <button class="custom-tab" data-tab="settings">
+                <i class="bi bi-gear-fill"></i>
+                <span>Ajustes</span>
+            </button>
+                        </div>
+        
+        <!-- Tab Content: Plantilla -->
+        <div class="tab-content-area active" id="tab-players">
+            <!-- Nuevo Jugador -->
+            <div class="new-player-section">
+                <div class="section-header">
+                    <h6 class="section-title">Nuevo Jugador</h6>
+                    <button class="btn-import" data-bs-toggle="modal" data-bs-target="#csvModal">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Importar CSV
+                    </button>
+                    </div>
+                <form method="POST" enctype="multipart/form-data" class="player-form">
+                    <input type="number" name="dorsal" class="input-dorsal" placeholder="#" required>
+                    <input type="text" name="name" class="input-name" placeholder="Nombre completo" required>
+                    <button type="submit" class="btn-add-player">
+                        <i class="bi bi-person-plus-fill"></i>
+                    </button>
                             </form>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card p-3 border-0 shadow-sm h-100 bg-white">
-                            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-file-earmark-spreadsheet"></i> Importar CSV</h6>
-                            <form action="/import_players/{{ team.id }}" method="POST" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
-                                <input type="file" name="csv_file" class="form-control form-control-sm" accept=".csv" required>
-                                <button type="submit" class="btn btn-outline-primary btn-sm fw-bold">Subir</button>
-                            </form>
-                        </div>
-                    </div>
+            
+            <!-- Lista de Jugadores -->
+            <div class="players-list-section">
+                <div class="list-header">
+                    <span class="list-title">LISTA DE JUGADORES ({{ team.players|length }})</span>
+                    <span class="list-subtitle">Dorsal / Nombre</span>
                 </div>
-                <div class="card border-0 shadow-sm">
-                    <div class="list-group list-group-flush">
                         {% for player in team.players|sort(attribute='dorsal') %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center p-3">
-                            <div><span class="badge bg-dark me-3" style="width: 40px;">{{ player.dorsal }}</span>{{ player.name }}</div>
-                            <div class="d-flex gap-2">
-                                <a href="/edit_player/{{ player.id }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a>
-                                <a href="/delete_player/{{ player.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Borrar?')"><i class="bi bi-trash"></i></a>
+                <div class="player-item">
+                    <div class="player-info">
+                        <div class="player-dorsal">{{ player.dorsal }}</div>
+                        <div class="player-name">{{ player.name }}</div>
                             </div>
-                        </div>
-                        {% endfor %}
+                    <div class="player-actions">
+                        <a href="/edit_player/{{ player.id }}" class="btn-action">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="/delete_player/{{ player.id }}" class="btn-action delete" onclick="return confirm('¿Borrar jugador?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            <div class="tab-pane fade" id="staff">
-                <div class="card border-0 shadow-sm p-4">
+        </div>
+        
+        <!-- Tab Content: Staff -->
+        <div class="tab-content-area" id="tab-staff">
+            <div class="players-list-section">
                      {% if is_owner %}
-                    <form action="/manage_staff/{{ team.id }}" method="POST" class="d-flex gap-2 mb-4 bg-light p-3 rounded">
+                <form action="/manage_staff/{{ team.id }}" method="POST" class="staff-form">
                         <input type="hidden" name="action" value="invite">
                         <input type="email" name="email" class="form-control" placeholder="Email del entrenador ayudante" required>
-                        <button type="submit" class="btn btn-primary fw-bold">Invitar</button>
+                    <button type="submit" class="btn-save">Invitar</button>
                     </form>
                     {% endif %}
-                    <ul class="list-group">
-                        <li class="list-group-item bg-light">{{ team.owner.name }} <span class="badge bg-warning text-dark">Owner</span></li>
+                <ul class="staff-list">
+                    <li class="staff-item">
+                        <span>{{ team.owner.name or team.owner.email }}</span>
+                        <span class="badge-owner">Owner</span>
+                    </li>
                         {% for member in team.staff %}
-                        <li class="list-group-item d-flex justify-content-between">
-                            {{ member.email }}
+                    <li class="staff-item">
+                        <span>{{ member.email }}</span>
                             {% if is_owner %}
                             <form action="/manage_staff/{{ team.id }}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar?')">
                                 <input type="hidden" name="action" value="remove">
                                 <input type="hidden" name="staff_id" value="{{ member.id }}">
-                                <button class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-x-lg"></i></button>
+                            <button class="btn-action delete" style="border: none;">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
                             </form>
                             {% endif %}
                         </li>
@@ -93,38 +593,537 @@
                     </ul>
                 </div>
             </div>
-            <div class="tab-pane fade" id="settings">
-                <div class="card border-0 shadow-sm p-4">
-                    <form action="/edit_team_settings/{{ team.id }}" method="POST" enctype="multipart/form-data">
-                        <h6 class="fw-bold text-primary mb-3">Datos Básicos</h6>
-                        <div class="mb-3"><input type="text" name="name" class="form-control" value="{{ team.name }}" required></div>
-                        <div class="mb-4"><input type="file" name="logo" class="form-control"></div>
+        
+        <!-- Tab Content: Portal Público -->
+        <div class="tab-content-area" id="tab-public">
+            <!-- Notas del Entrenador -->
+            <div class="public-section">
+                <h6 class="public-title"><i class="bi bi-pencil-square"></i> Notas del Entrenador</h6>
+                <p class="public-subtitle">Estas notas serán visibles para todos los jugadores en el portal público</p>
+                <form id="notesForm" onsubmit="savePublicNotes(event)">
+                    <textarea id="publicNotes" class="form-control" rows="6" placeholder="Escribe notas, ejercicios propuestos, conceptos a trabajar...">{{ team.public_notes or '' }}</textarea>
+                    <button type="submit" class="btn-save">Guardar Notas</button>
+                </form>
+            </div>
+            
+            <!-- Configuración de Analytics -->
+            <div class="public-section">
+                <h6 class="public-title"><i class="bi bi-bar-chart-fill"></i> Gráficos de Estadísticas</h6>
+                <p class="public-subtitle">Configura qué gráficos de estadísticas son visibles en el portal público</p>
+                
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="analyticsVisible" 
+                               {% if team.analytics_visible %}checked{% endif %}
+                               onchange="saveAnalyticsSettings()">
+                        <label class="form-check-label" for="analyticsVisible" style="color: var(--cream);">
+                            Mostrar estadísticas en portal público
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Gráficos individuales -->
+                <div id="chartsConfig" class="mb-3" style="{% if not team.analytics_visible %}display: none;{% endif %}">
+                    <label class="form-label mb-2">Gráficos a mostrar:</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chartAll" 
+                                   {% if team.chart_all_visible %}checked{% endif %}
+                                   onchange="saveAnalyticsSettings()">
+                            <label class="form-check-label" for="chartAll" style="color: var(--cream); font-size: 0.9rem;">
+                                Ataque y Defensa
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chartAttack" 
+                                   {% if team.chart_attack_visible %}checked{% endif %}
+                                   onchange="saveAnalyticsSettings()">
+                            <label class="form-check-label" for="chartAttack" style="color: var(--cream); font-size: 0.9rem;">
+                                Ataque
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chartAttackNoShots" 
+                                   {% if team.chart_attack_no_shots_visible %}checked{% endif %}
+                                   onchange="saveAnalyticsSettings()">
+                            <label class="form-check-label" for="chartAttackNoShots" style="color: var(--cream); font-size: 0.9rem;">
+                                Ataque (sin puntos)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chartDefense" 
+                                   {% if team.chart_defense_visible %}checked{% endif %}
+                                   onchange="saveAnalyticsSettings()">
+                            <label class="form-check-label" for="chartDefense" style="color: var(--cream); font-size: 0.9rem;">
+                                Defensa
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row g-3 align-items-end" id="playersCountConfig" style="{% if not team.analytics_visible %}display: none;{% endif %}">
+                    <div class="col-auto">
+                        <label class="form-label">Número de jugadores a mostrar</label>
+                        <select id="analyticsPlayersCount" class="form-select" style="width: 120px;" onchange="saveAnalyticsSettings()">
+                            {% for i in range(3, 16) %}
+                            <option value="{{ i }}" {% if team.analytics_players_count == i %}selected{% endif %}>Top {{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <span class="text-muted small">Los usuarios del portal podrán elegir qué partidos filtrar</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Galería de Ejercicios -->
+            <div class="public-section">
+                <h6 class="public-title"><i class="bi bi-collection-play"></i> Galería de Ejercicios</h6>
+                <p class="public-subtitle">Añade ejercicios que los jugadores puedan ver y practicar en casa. Arrastra para reordenar.</p>
+                
+                <div class="mb-3">
+                    <button type="button" class="btn w-100" style="background: var(--bg-input); border: 1px dashed var(--accent-color); color: var(--accent-color); padding: 12px;" onclick="openLibraryModal()">
+                        <i class="bi bi-plus-circle"></i> Añadir ejercicio de la biblioteca
+                    </button>
+                </div>
+                
+                <div id="galleryDrills" class="row row-cols-1 row-cols-md-2 g-3">
+                    {% for drill in gallery_items_ordered %}
+                    <div class="col gallery-item" data-drill-id="{{ drill.id }}">
+                        <div class="card h-100 shadow-sm position-relative" style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px;">
+                            <div class="row g-0 align-items-stretch">
+                                <!-- Imagen del ejercicio -->
+                                <div class="col-4">
+                                    <div class="card-img-zone h-100" style="min-height: 120px; border-radius: 12px 0 0 12px;" 
+                                         onclick="openDrillContent({{ drill.id }}, '{{ drill.media_type }}', '{{ drill.external_link or '' }}', '{{ drill.media_file or '' }}')">
+                                        {% if drill.cover_image %}
+                                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}" style="border-radius: 12px 0 0 12px;">
+                                        {% elif drill.cover_fallback %}
+                                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_fallback) }}" style="border-radius: 12px 0 0 12px;">
+                                        {% elif drill.media_type == 'image' and drill.media_file %}
+                                            <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" style="border-radius: 12px 0 0 12px;">
+                                        {% else %}
+                                            <img src="{{ get_config_url('generic_bg') }}" style="border-radius: 12px 0 0 12px;">
+                                        {% endif %}
 
-                        <h6 class="fw-bold text-primary mb-3">Configuración de Partidos</h6>
-                        <div class="mb-4 bg-light p-3 rounded">
-                            <label class="form-label fw-bold">Número de Periodos</label>
+                                        {% if drill.origin == 'youtube' %}
+                                            <img src="{{ get_config_url('youtube_overlay') }}" class="overlay-img">
+                                        {% elif drill.origin == 'pdf' %}
+                                            <img src="{{ get_config_url('pdf_overlay') }}" class="overlay-img">
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <!-- Contenido -->
+                                <div class="col-8">
+                                    <div class="card-body p-3 d-flex flex-column h-100">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="card-title fw-bold mb-0" style="font-size: 0.95rem; color: var(--cream);">{{ drill.title }}</h6>
+                                            <div class="d-flex gap-1">
+                                                <button class="btn btn-sm btn-outline-secondary drag-handle" title="Arrastrar para reordenar" style="cursor: grab;">
+                                                    <i class="bi bi-grip-vertical"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" 
+                                                        onclick="removeFromGallery({{ drill.id }})" 
+                                                        title="Eliminar">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <textarea class="form-control form-control-sm drill-note" 
+                                                      data-drill-id="{{ drill.id }}"
+                                                      placeholder="Añade una nota para los jugadores..."
+                                                      style="font-size: 0.85rem; resize: none; height: 60px;"
+                                                      onblur="saveDrillNote({{ drill.id }}, this.value)">{{ drill.gallery_note or '' }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab Content: Ajustes -->
+        <div class="tab-content-area" id="tab-settings">
+            <div class="settings-section">
+                    <form action="/edit_team_settings/{{ team.id }}" method="POST" enctype="multipart/form-data">
+                    <div class="settings-group">
+                        <h6 class="settings-group-title">Datos Básicos</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del Equipo</label>
+                            <input type="text" name="name" class="form-control" value="{{ team.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Logo del Equipo</label>
+                            <input type="file" name="logo" class="form-control" accept="image/*">
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h6 class="settings-group-title">Configuración de Partidos</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Número de Periodos</label>
                             <select name="quarters" class="form-select">
                                 {% for i in range(2, 9) %}
                                 <option value="{{ i }}" {% if team.quarters == i %}selected{% endif %}>{{ i }} Periodos</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <h6 class="fw-bold text-primary mb-3">Ranking Público</h6>
-                         <div class="row g-2 mb-4">
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h6 class="settings-group-title">Ranking Público</h6>
+                        <div class="row g-2 mb-3">
                             <div class="col-6">
-                                <select name="visibility_mode" class="form-select form-select-sm">
+                                <label class="form-label">Modo</label>
+                                <select name="visibility_mode" class="form-select">
                                     <option value="fixed" {% if team.visibility_mode == 'fixed' %}selected{% endif %}>Top Fijo</option>
                                     <option value="percent" {% if team.visibility_mode == 'percent' %}selected{% endif %}>Porcentaje</option>
                                 </select>
                             </div>
-                            <div class="col-6"><input type="number" name="visibility_top_x" class="form-control form-control-sm" value="{{ team.visibility_top_x }}"></div>
+                            <div class="col-6">
+                                <label class="form-label">Valor</label>
+                                <input type="number" name="visibility_top_x" class="form-control" value="{{ team.visibility_top_x }}">
+                            </div>
                         </div>
-                        <div class="d-grid"><button type="submit" class="btn btn-success fw-bold">Guardar Cambios</button></div>
+                    </div>
+                    
+                    <button type="submit" class="btn-save w-100">Guardar Cambios</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal CSV -->
+    <div class="modal fade" id="csvModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-file-earmark-spreadsheet"></i> Importar Jugadores desde CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Formato: Dorsal, Nombre (una línea por jugador)</p>
+                    <form action="/import_players/{{ team.id }}" method="POST" enctype="multipart/form-data">
+                        <input type="file" name="csv_file" class="form-control mb-3" accept=".csv" required>
+                        <button type="submit" class="btn-save w-100">Subir CSV</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- Modal Biblioteca de Ejercicios -->
+    <div class="modal fade" id="libraryModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="background: var(--bg-panel); border: 1px solid var(--border-color);">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                    <h5 class="modal-title" style="color: var(--cream);"><i class="bi bi-collection-play"></i> Añadir ejercicio de la biblioteca</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <input type="text" id="librarySearchInput" class="form-control" placeholder="Buscar por nombre o etiqueta..." onkeyup="searchLibrary()">
+                    </div>
+                    <div id="libraryResults" style="max-height: 400px; overflow-y: auto;">
+                        <div class="text-center text-muted py-4">Busca ejercicios por nombre o etiqueta</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para ver ficha completa del ejercicio -->
+    <div class="modal fade" id="drillModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content"></div>
+        </div>
+    </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Tab switching
+        document.querySelectorAll('.custom-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const targetTab = this.dataset.tab;
+                
+                // Remove active from all tabs
+                document.querySelectorAll('.custom-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content-area').forEach(c => c.classList.remove('active'));
+                
+                // Add active to clicked tab
+                this.classList.add('active');
+                document.getElementById('tab-' + targetTab).classList.add('active');
+            });
+        });
+        
+        
+        // Portal Público functions
+        
+        async function removeFromGallery(drillId) {
+            if (!confirm('¿Eliminar este ejercicio de la galería?')) return;
+            
+            const response = await fetch('/api/remove_from_gallery', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({team_id: {{ team.id }}, drill_id: drillId})
+            });
+            
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error al eliminar el ejercicio');
+            }
+        }
+        
+        async function savePublicNotes(event) {
+            event.preventDefault();
+            const notes = document.getElementById('publicNotes').value;
+            
+            const response = await fetch('/api/save_team_notes', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({team_id: {{ team.id }}, notes: notes})
+            });
+            
+            if (response.ok) {
+                alert('Notas guardadas correctamente');
+            } else {
+                alert('Error al guardar las notas');
+            }
+        }
+        
+        // Analytics Settings
+        async function saveAnalyticsSettings() {
+            const visible = document.getElementById('analyticsVisible').checked;
+            const count = document.getElementById('analyticsPlayersCount').value;
+            
+            // Mostrar/ocultar opciones de gráficos
+            document.getElementById('chartsConfig').style.display = visible ? 'block' : 'none';
+            document.getElementById('playersCountConfig').style.display = visible ? 'flex' : 'none';
+            
+            // Obtener estado de los gráficos individuales
+            const chartAll = document.getElementById('chartAll').checked;
+            const chartAttack = document.getElementById('chartAttack').checked;
+            const chartAttackNoShots = document.getElementById('chartAttackNoShots').checked;
+            const chartDefense = document.getElementById('chartDefense').checked;
+            
+            const response = await fetch('/api/save_analytics_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    team_id: {{ team.id }},
+                    analytics_visible: visible,
+                    analytics_players_count: parseInt(count),
+                    chart_all_visible: chartAll,
+                    chart_attack_visible: chartAttack,
+                    chart_attack_no_shots_visible: chartAttackNoShots,
+                    chart_defense_visible: chartDefense
+                })
+            });
+            
+            if (!response.ok) {
+                alert('Error al guardar la configuración');
+            }
+        }
+        
+        // Drill Notes
+        async function saveDrillNote(drillId, note) {
+            const response = await fetch('/api/save_gallery_item_note', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    team_id: {{ team.id }},
+                    drill_id: drillId,
+                    note: note
+                })
+            });
+            
+            if (!response.ok) {
+                alert('Error al guardar la nota');
+            }
+        }
+        
+        // Drag and drop reordering
+        function initSortable() {
+            const gallery = document.getElementById('galleryDrills');
+            if (!gallery) return;
+            
+            let draggedItem = null;
+            
+            gallery.querySelectorAll('.gallery-item').forEach(item => {
+                item.setAttribute('draggable', 'true');
+                
+                item.addEventListener('dragstart', function(e) {
+                    draggedItem = this;
+                    this.style.opacity = '0.5';
+                });
+                
+                item.addEventListener('dragend', function(e) {
+                    this.style.opacity = '1';
+                    draggedItem = null;
+                    saveGalleryOrder();
+                });
+                
+                item.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                });
+                
+                item.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    if (draggedItem !== this) {
+                        const allItems = Array.from(gallery.querySelectorAll('.gallery-item'));
+                        const draggedIdx = allItems.indexOf(draggedItem);
+                        const targetIdx = allItems.indexOf(this);
+                        
+                        if (draggedIdx < targetIdx) {
+                            this.parentNode.insertBefore(draggedItem, this.nextSibling);
+                        } else {
+                            this.parentNode.insertBefore(draggedItem, this);
+                        }
+                    }
+                });
+            });
+        }
+        
+        async function saveGalleryOrder() {
+            const items = document.querySelectorAll('.gallery-item');
+            const order = Array.from(items).map(item => parseInt(item.dataset.drillId));
+            
+            const response = await fetch('/api/reorder_gallery', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    team_id: {{ team.id }},
+                    order: order
+                })
+            });
+            
+            if (!response.ok) {
+                alert('Error al guardar el orden');
+            }
+        }
+        
+        // Initialize sortable on page load
+        document.addEventListener('DOMContentLoaded', initSortable);
+        
+        // Library Modal
+        let librarySearchTimeout = null;
+        
+        function openLibraryModal() {
+            document.getElementById('librarySearchInput').value = '';
+            document.getElementById('libraryResults').innerHTML = '<div class="text-center text-muted py-4">Busca ejercicios por nombre o etiqueta</div>';
+            new bootstrap.Modal(document.getElementById('libraryModal')).show();
+        }
+        
+        function searchLibrary() {
+            clearTimeout(librarySearchTimeout);
+            const query = document.getElementById('librarySearchInput').value.trim();
+            const resultsDiv = document.getElementById('libraryResults');
+            
+            if (query.length < 2) {
+                resultsDiv.innerHTML = '<div class="text-center text-muted py-4">Escribe al menos 2 caracteres</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm" style="color: var(--accent-color);"></div></div>';
+            
+            librarySearchTimeout = setTimeout(async () => {
+                const response = await fetch(`/api/get_drills?q=${encodeURIComponent(query)}&limit=20`);
+                const data = await response.json();
+                
+                if (data.drills.length === 0) {
+                    resultsDiv.innerHTML = '<div class="text-center text-muted py-4">No se encontraron ejercicios</div>';
+                } else {
+                    resultsDiv.innerHTML = data.drills.map(drill => {
+                        const coverUrl = drill.cover_image ? `/static/uploads/${drill.cover_image}` : '';
+                        return `
+                        <div class="library-item d-flex align-items-center gap-3 p-2 rounded mb-2" style="background: var(--bg-input); cursor: pointer;" onclick="addDrillToGallery(${drill.id})">
+                            <div style="width: 60px; height: 45px; background: #333; border-radius: 6px; overflow: hidden; flex-shrink: 0;">
+                                ${coverUrl ? `<img src="${coverUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div class="h-100 d-flex align-items-center justify-content-center"><i class="bi bi-play-circle text-muted"></i></div>'}
+                            </div>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="fw-bold text-truncate" style="color: var(--cream); font-size: 0.9rem;">${drill.title}</div>
+                                <div class="small text-muted">${drill.tags.slice(0, 2).join(', ')}</div>
+                            </div>
+                            <button class="btn btn-sm" style="background: var(--accent-color); color: #0a1929;">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    `}).join('');
+                }
+            }, 300);
+        }
+        
+        async function addDrillToGallery(drillId) {
+            const response = await fetch('/api/add_to_gallery', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({team_id: {{ team.id }}, drill_id: drillId})
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('libraryModal')).hide();
+                location.reload();
+            } else {
+                alert('Error al añadir el ejercicio');
+            }
+        }
+        
+        // Drill functions
+        function openDrillContent(drillId, mediaType, externalLink, mediaFile) {
+            if (mediaType === 'link' && externalLink) {
+                if (externalLink.includes('youtu')) {
+                    const videoId = extractYouTubeId(externalLink);
+                    if (videoId) {
+                        window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
+                        return;
+                    }
+                }
+                window.open(externalLink, '_blank');
+            } else if (mediaType === 'pdf' && mediaFile) {
+                window.open('/static/uploads/' + mediaFile, '_blank');
+            } else if (mediaType === 'image' && mediaFile) {
+                window.open('/static/uploads/' + mediaFile, '_blank');
+            } else if (mediaType === 'video_file' && mediaFile) {
+                window.open('/static/uploads/' + mediaFile, '_blank');
+            } else {
+                openDrillInfo(drillId);
+            }
+        }
+
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            if (url.includes('/shorts/')) {
+                const parts = url.split('/shorts/');
+                return parts[parts.length - 1].split('?')[0];
+            }
+            if (url.includes('youtu.be/')) {
+                const parts = url.split('youtu.be/');
+                return parts[parts.length - 1].split('?')[0];
+            }
+            if (url.includes('v=')) {
+                return url.split('v=')[1].split('&')[0];
+            }
+            return null;
+        }
+
+        function openDrillInfo(drillId) {
+            const modal = document.getElementById('drillModal');
+            const modalContent = modal.querySelector('.modal-content');
+            modalContent.innerHTML = '<div class="p-5 text-center"><div class="spinner-border" style="color: var(--accent-color);"></div></div>';
+            fetch('/drill/' + drillId)
+                .then(r => r.text())
+                .then(html => {
+                    modalContent.innerHTML = html;
+                    const bootstrapModal = new bootstrap.Modal(modal);
+                    bootstrapModal.show();
+                });
+        }
+        
+    </script>
 </body>
 </html>

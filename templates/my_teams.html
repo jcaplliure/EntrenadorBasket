@@ -6,41 +6,115 @@
     <title>Mis Equipos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --accent-color: {{ theme_color }};
+            --bg-dark: #0b1424;
+            --bg-panel: #0f1b2e;
+            --bg-panel-2: #111f35;
+            --cream: #e9e4d2;
+        }
+        body { background: var(--bg-dark); color: #e9edf2; }
+        .navbar { background: #0d172a !important; }
+        .nav-link { color: #cfd6e3 !important; font-weight: 600; font-size: 0.85rem; }
+        .nav-link.active, .nav-link:hover { color: #ffffff !important; }
+        .page-title { color: #e7edf7; }
+        .btn-accent { background: var(--accent-color); color: #0a1929; border: none; }
+        .btn-accent:hover { filter: brightness(1.05); }
+        .team-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--cream);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.25);
+        }
+        .team-logo {
+            width: 120px;
+            height: 120px;
+            border-radius: 16px;
+            border: 1px solid var(--cream);
+            background: rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin: 0 auto 14px;
+        }
+        .team-name { color: var(--cream); font-weight: 700; }
+        .team-season { color: var(--cream); opacity: 0.85; }
+        .new-team-card {
+            background: var(--bg-panel);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .new-team-card .form-control { background: #0e1b2f; border: 1px solid rgba(255,255,255,0.08); color: #dfe6f2; }
+        .new-team-card .form-control::placeholder { color: #8c97ad; }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-    <nav class="navbar navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm p-1 mb-4">
         <div class="container">
-            <span class="navbar-brand mb-0 h1"><i class="bi bi-people-fill text-warning"></i> Mis Equipos</span>
-            <a href="/" class="btn btn-outline-light btn-sm">Volver al Inicio</a>
+            <a class="navbar-brand fw-bold fs-6" href="/">
+                <i class="bi bi-basket text-warning"></i> Coach<span class="text-warning">App</span>
+            </a>
+            <ul class="navbar-nav flex-row gap-3 ms-3">
+                <li class="nav-item"><a class="nav-link" href="/">Biblioteca</a></li>
+                <li class="nav-item"><a class="nav-link active" href="/my_teams">Equipos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/my_plans">Entrenamientos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/matches">Partidos</a></li>
+                <li class="nav-item"><a class="nav-link" href="/analytics">Analytics</a></li>
+            </ul>
+            <div class="d-flex align-items-center gap-2">
+                {% if current_user.is_authenticated %}
+                    {% if current_user.is_admin %}
+                        <a class="btn btn-outline-light btn-sm" href="/admin/config" title="Configuración">
+                            <i class="bi bi-gear"></i>
+                        </a>
+                    {% endif %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.7rem;">
+                            <i class="bi bi-person-circle"></i> Usuario
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="/user/tags">
+                                    <i class="bi bi-tags-fill"></i> Mis Etiquetas
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a></li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </nav>
 
     <div class="container">
-        
-        <div class="d-grid gap-2 mb-4">
-            <button class="btn btn-primary fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#newTeamForm">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold page-title mb-0">Mis Equipos</h4>
+            <button class="btn btn-accent fw-bold rounded-pill px-4" type="button" data-bs-toggle="collapse" data-bs-target="#newTeamForm">
                 <i class="bi bi-plus-circle"></i> Crear Nuevo Equipo
             </button>
         </div>
 
         <div class="collapse mb-4" id="newTeamForm">
-            <div class="card card-body shadow-sm border-0">
-                <h5 class="mb-3">Nuevo Equipo</h5>
+            <div class="card card-body shadow-sm border-0 new-team-card">
+                <h5 class="mb-3 text-light">Nuevo Equipo</h5>
                 <form action="/my_teams" method="POST" enctype="multipart/form-data">
                     <div class="mb-3">
-                        <label class="form-label">Nombre del Equipo</label>
+                        <label class="form-label text-light">Nombre del Equipo</label>
                         <input type="text" name="name" class="form-control" placeholder="Ej: Cadete A, Los Bulls..." required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Categoría / Temporada</label>
+                        <label class="form-label text-light">Categoría / Temporada</label>
                         <input type="text" name="category" class="form-control" placeholder="Ej: 2023-2024 Preferente">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Escudo / Logo (Opcional)</label>
+                        <label class="form-label text-light">Escudo / Logo (Opcional)</label>
                         <input type="file" name="logo" class="form-control" accept="image/*">
                     </div>
-                    <button type="submit" class="btn btn-success w-100">Guardar Equipo</button>
+                    <button type="submit" class="btn btn-accent w-100">Guardar Equipo</button>
                 </form>
             </div>
         </div>
@@ -48,19 +122,19 @@
         <div class="row row-cols-1 row-cols-md-3 g-4">
             {% for team in teams %}
             <div class="col">
-                <div class="card h-100 shadow-sm border-0 text-center p-3">
-                    <div class="mx-auto mb-3" style="width: 80px; height: 80px; background: #eee; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                <div class="team-card text-center h-100">
+                    <div class="team-logo">
                         {% if team.logo_file %}
                             <img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" style="width: 100%; height: 100%; object-fit: cover;">
                         {% else %}
-                            <i class="bi bi-shield-shaded fs-1 text-secondary"></i>
+                            <i class="bi bi-shield-shaded fs-1 text-light"></i>
                         {% endif %}
                     </div>
-                    <h4 class="fw-bold mb-1">{{ team.name }}</h4>
-                    <p class="text-muted small mb-3">{{ team.category }}</p>
+                    <h4 class="fw-bold mb-1 team-name">{{ team.name }}</h4>
+                    <p class="small mb-3 team-season">{{ team.category }}</p>
                     <div class="d-grid gap-2">
-                        <a href="/team/{{ team.id }}" class="btn btn-outline-primary"><i class="bi bi-person-lines-fill"></i> Gestionar Plantilla</a>
-                        <a href="/delete_team/{{ team.id }}" class="btn btn-sm btn-link text-danger text-decoration-none" onclick="return confirm('¿Borrar equipo y jugadores?')">Eliminar</a>
+                        <a href="/team/{{ team.id }}" class="btn btn-accent"><i class="bi bi-person-lines-fill"></i> Gestionar Plantilla</a>
+                        <a href="/delete_team/{{ team.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Borrar equipo y jugadores?')">Eliminar</a>
                     </div>
                 </div>
             </div>

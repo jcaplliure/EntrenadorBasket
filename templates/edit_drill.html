@@ -7,249 +7,857 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        .cover-selector input:checked + label { border-color: #ffc107; background-color: #fff3cd; box-shadow: 0 0 0 2px #ffc107; }
-        .preview-box { height: 120px; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; }
-        .paste-zone:hover { border-color: #ffc107 !important; background: #fff3cd; cursor: pointer; }
+        :root {
+            --bg-dark: #0b1424;
+            --bg-panel: #0f1b2e;
+            --bg-input: #0a1220;
+            --cream: #e9e4d2;
+            --accent-color: {{ theme_color }};
+            --text-primary: #ffffff;
+            --text-muted: #8b97ad;
+            --border-color: rgba(233, 228, 210, 0.25);
+            
+            /* Colores por categoría */
+            --cat-fisico: #f97316;
+            --cat-tecnica: #22c55e;
+            --cat-defensa: #ef4444;
+            --cat-ataque: #a855f7;
+            --cat-situacion: #3b82f6;
+            --cat-custom: #06b6d4;
+        }
+        
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .page-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        
+        .edit-panel {
+            background: var(--bg-panel);
+            border: 2px solid var(--cream);
+            border-radius: 24px;
+            padding: 32px;
+            width: 100%;
+            max-width: 900px;
+            box-shadow: 0 0 40px rgba(233, 228, 210, 0.08);
+        }
+        
+        .panel-title {
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+        
+        .form-label {
+            color: var(--cream);
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .form-control, .form-select {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            padding: 12px 14px;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-input);
+            border-color: var(--cream);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 2px rgba(233, 228, 210, 0.15);
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-muted);
+        }
+        
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        /* Botones de tipo de contenido */
+        .content-type-btns {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        
+        .content-type-btn {
+            padding: 14px 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-input);
+            color: var(--cream);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        
+        .content-type-btn:hover {
+            border-color: var(--cream);
+        }
+        
+        .content-type-btn.active {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            color: #0a1929;
+        }
+        
+        .content-type-btn i {
+            display: block;
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+        }
+        
+        /* Sección de contenido */
+        .content-section {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .content-section label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        /* Portada */
+        .cover-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .cover-option {
+            background: var(--bg-input);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .cover-option:hover {
+            border-color: var(--cream);
+        }
+        
+        .cover-option.selected {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .cover-preview {
+            height: 80px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .cover-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .cover-label {
+            font-size: 0.8rem;
+            color: var(--cream);
+            font-weight: 500;
+        }
+        
+        /* Tags Section */
+        .tags-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .tags-header {
+            color: var(--cream);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        /* Área de chips seleccionados */
+        .selected-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 40px;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            border: 1px dashed var(--border-color);
+        }
+        
+        .tag-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tag-chip.primary-tag {
+            box-shadow: 0 0 0 2px #fbbf24, 0 0 8px rgba(251, 191, 36, 0.4);
+        }
+        
+        .tag-chip .remove-icon {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+        
+        .tag-chip:hover .remove-icon {
+            opacity: 1;
+        }
+        
+        /* Colores de chips por categoría */
+        .tag-chip[data-category="fisico"] {
+            background: rgba(249, 115, 22, 0.25);
+            border: 1px solid var(--cat-fisico);
+            color: var(--cat-fisico);
+        }
+        .tag-chip[data-category="tecnica"], .tag-chip[data-category="tecnicaindividual"] {
+            background: rgba(34, 197, 94, 0.25);
+            border: 1px solid var(--cat-tecnica);
+            color: var(--cat-tecnica);
+        }
+        .tag-chip[data-category="defensa"] {
+            background: rgba(239, 68, 68, 0.25);
+            border: 1px solid var(--cat-defensa);
+            color: var(--cat-defensa);
+        }
+        .tag-chip[data-category="ataque"] {
+            background: rgba(168, 85, 247, 0.25);
+            border: 1px solid var(--cat-ataque);
+            color: var(--cat-ataque);
+        }
+        .tag-chip[data-category="situacion"], .tag-chip[data-category="situaciondejuego"] {
+            background: rgba(59, 130, 246, 0.25);
+            border: 1px solid var(--cat-situacion);
+            color: var(--cat-situacion);
+        }
+        .tag-chip[data-category="categoria"], .tag-chip[data-category="categoria/nivel"] {
+            background: rgba(233, 228, 210, 0.15);
+            border: 1px solid var(--cream);
+            color: var(--cream);
+        }
+        
+        /* Color para etiquetas personalizadas (turquesa) */
+        .tag-chip[data-is-custom="true"] {
+            background: rgba(6, 182, 212, 0.25) !important;
+            border: 1px solid var(--cat-custom) !important;
+            color: var(--cat-custom) !important;
+        }
+        
+        .tag-chip[data-is-custom="true"]::before {
+            content: "★ ";
+            font-size: 0.7rem;
+        }
+        
+        /* Default color for unknown categories */
+        .tag-chip:not([data-category]) {
+            background: rgba(233, 228, 210, 0.15);
+            border: 1px solid var(--cream);
+            color: var(--cream);
+        }
+        
+        /* Acordeones de categorías */
+        .category-accordion {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .category-item {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .category-header:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .category-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .category-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .category-badge {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: white;
+        }
+        
+        .category-arrow {
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        
+        .category-item.open .category-arrow {
+            transform: rotate(180deg);
+        }
+        
+        .category-tags {
+            display: none;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.15);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .category-item.open .category-tags {
+            display: flex;
+        }
+        
+        .tag-btn {
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--cream);
+        }
+        
+        .tag-btn:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        
+        .tag-btn.selected {
+            background: var(--cream);
+            color: var(--bg-dark);
+            border-color: var(--cream);
+        }
+        
+        /* Etiquetas personalizadas en los acordeones */
+        .tag-btn[data-is-custom="true"] {
+            border-color: var(--cat-custom);
+            color: var(--cat-custom);
+        }
+        
+        .tag-btn[data-is-custom="true"]::before {
+            content: "★ ";
+            font-size: 0.65rem;
+        }
+        
+        .tag-btn[data-is-custom="true"].selected {
+            background: var(--cat-custom);
+            color: #0a1929;
+            border-color: var(--cat-custom);
+        }
+        
+        /* Colores de bordes por categoría */
+        .category-item[data-category="fisico"] {
+            border-left: 3px solid var(--cat-fisico);
+        }
+        .category-item[data-category="tecnica"], .category-item[data-category="tecnicaindividual"] {
+            border-left: 3px solid var(--cat-tecnica);
+        }
+        .category-item[data-category="defensa"] {
+            border-left: 3px solid var(--cat-defensa);
+        }
+        .category-item[data-category="ataque"] {
+            border-left: 3px solid var(--cat-ataque);
+        }
+        .category-item[data-category="situacion"], .category-item[data-category="situaciondejuego"] {
+            border-left: 3px solid var(--cat-situacion);
+        }
+        
+        /* Switch toggle */
+        .form-check-input:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        
+        /* Botones principales */
+        .btn-submit {
+            background: var(--accent-color);
+            color: #0a1929;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 24px;
+            font-weight: 700;
+            font-size: 1rem;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        
+        .btn-submit:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-delete {
+            background: transparent;
+            color: #ef4444;
+            border: none;
+            padding: 10px 20px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border-radius: 8px;
+        }
+        
+        .btn-cancel {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            text-align: center;
+            display: block;
+            margin-top: 12px;
+        }
+        
+        .btn-cancel:hover {
+            color: var(--cream);
+        }
+        
+        .btn-test {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--cream);
+            padding: 10px 16px;
+            border-radius: 8px;
+        }
+        
+        .btn-test:hover {
+            background: rgba(255,255,255,0.05);
+            color: var(--cream);
+        }
+        
+        /* Modal dark */
+        .modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .btn-close {
+            filter: invert(1);
+        }
+        
+        /* File info */
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        .file-info a {
+            color: var(--accent-color);
+            margin-left: auto;
+        }
+        
+        /* Validation error */
+        .validation-error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            display: none;
+        }
     </style>
 </head>
-<body class="bg-light">
+<body>
     
-    <div class="container mt-5 mb-5" style="max-width: 700px;">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-warning text-dark">
-                <h4 class="mb-0 fw-bold"><i class="bi bi-pencil-square"></i> Editar Ejercicio</h4>
-            </div>
-            <div class="card-body p-4">
-                
-                <form action="/edit/{{ drill.id }}" method="POST" enctype="multipart/form-data">
-                    
+    <div class="page-wrapper">
+        <div class="edit-panel">
+            <h2 class="panel-title">{% if is_new %}Nuevo Ejercicio{% else %}Editar Ejercicio{% endif %}</h2>
+            
+            <div class="validation-error" id="validationError"></div>
+            
+            <form action="/edit/{{ drill.id }}" method="POST" enctype="multipart/form-data" id="mainForm" onsubmit="return validateForm()">
+                <div class="form-row">
+                    <!-- Columna Izquierda -->
+                    <div class="left-column">
                     <div class="mb-3">
-                        <label class="fw-bold">Título</label>
-                        <input type="text" name="titulo" class="form-control" value="{{ drill.title }}" required>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="fw-bold">Descripción</label>
-                        <textarea name="descripcion" class="form-control" rows="3">{{ drill.description }}</textarea>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <label class="fw-bold mb-3">Tipo de Contenido</label>
-                    <div class="row g-2 mb-3">
-                        <div class="col-4">
-                            <input type="radio" class="btn-check" name="content_type" id="type_link" value="link" {% if drill.media_type == 'link' %}checked{% endif %} onchange="toggleContent(true)">
-                            <label class="btn btn-outline-primary w-100 p-3" for="type_link"><i class="bi bi-link-45deg"></i> Link</label>
+                            <label class="form-label">Nombre</label>
+                            <input type="text" name="titulo" class="form-control" value="{{ drill.title }}" placeholder="Ej: Salida de presión 1-2-1-1" required>
                         </div>
-                        <div class="col-4">
-                            <input type="radio" class="btn-check" name="content_type" id="type_image" value="image" {% if drill.media_type == 'image' %}checked{% endif %} onchange="toggleContent(true)">
-                            <label class="btn btn-outline-success w-100 p-3" for="type_image"><i class="bi bi-image"></i> Imagen</label>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea name="descripcion" class="form-control" placeholder="Descripción">{{ drill.description }}</textarea>
                         </div>
-                        <div class="col-4">
-                            <input type="radio" class="btn-check" name="content_type" id="type_pdf" value="pdf" {% if drill.media_type == 'pdf' %}checked{% endif %} onchange="toggleContent(true)">
-                            <label class="btn btn-outline-danger w-100 p-3" for="type_pdf"><i class="bi bi-file-pdf"></i> PDF</label>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">¿Qué vas a subir?</label>
+                            <div class="content-type-btns">
+                                <div class="content-type-btn {% if drill.media_type == 'link' or not drill.media_type %}active{% endif %}" data-type="link" onclick="selectContentType('link')">
+                                    <i class="bi bi-link-45deg"></i>
+                                    Link
+                                </div>
+                                <div class="content-type-btn {% if drill.media_type == 'image' %}active{% endif %}" data-type="image" onclick="selectContentType('image')">
+                                    <i class="bi bi-image"></i>
+                                    Imagen
+                                </div>
+                                <div class="content-type-btn {% if drill.media_type == 'pdf' %}active{% endif %}" data-type="pdf" onclick="selectContentType('pdf')">
+                                    <i class="bi bi-file-pdf"></i>
+                                    PDF
+                                </div>
                         </div>
                         {% if current_user.is_admin %}
-                        <div class="col-12 mt-2">
-                            <input type="radio" class="btn-check" name="content_type" id="type_video" value="video_file" {% if drill.media_type == 'video_file' %}checked{% endif %} onchange="toggleContent(true)">
-                            <label class="btn btn-outline-dark w-100 p-2 border-dashed" for="type_video">Archivo MP4 (Admin)</label>
+                            <div class="content-type-btn {% if drill.media_type == 'video_file' %}active{% endif %}" data-type="video_file" onclick="selectContentType('video_file')" style="width: 100%;">
+                                <i class="bi bi-camera-video"></i> MP4 (Admin)
                         </div>
                         {% endif %}
+                            <input type="hidden" name="content_type" id="contentTypeInput" value="{{ drill.media_type or 'link' }}">
                     </div>
 
-                    <div class="bg-light p-3 rounded border mb-4">
+                        <div class="content-section">
                         <div id="section-link" style="display:none;">
-                            <label class="small text-muted">Enlace Actual</label>
-                            <div class="input-group mb-2">
-                                <input type="url" name="external_link" id="linkField" class="form-control" value="{{ drill.external_link or '' }}" oninput="detectLink()">
-                                <a id="btnPreviewLink" href="#" target="_blank" class="btn btn-warning" style="display:none;" title="Abrir"><i class="bi bi-eye-fill"></i></a>
-                                <button type="button" class="btn btn-outline-secondary" onclick="testLink()">Testear</button>
+                                <label>Enlace (YouTube, TikTok, Instagram...)</label>
+                                <div class="d-flex gap-2">
+                                    <input type="url" name="external_link" id="linkField" class="form-control" value="{{ drill.external_link or '' }}" placeholder="https://...">
+                                    <button type="button" class="btn btn-test" onclick="testLink()">Testear</button>
                             </div>
-                            <div id="linkFeedback" class="small mb-2"></div>
+                                <div id="linkFeedback" class="small mt-2"></div>
                         </div>
 
                         <div id="section-file" style="display:none;">
                             {% if drill.media_file %}
-                                <div class="alert alert-secondary py-2 small mb-2 d-flex justify-content-between align-items-center">
-                                    <span><i class="bi bi-paperclip"></i> Archivo actual: <strong>{{ drill.media_file }}</strong></span>
-                                    <a href="/static/uploads/{{ drill.media_file }}" target="_blank" class="btn btn-sm btn-outline-dark">Abrir</a>
+                                <div class="file-info">
+                                    <i class="bi bi-paperclip"></i>
+                                    <span>{{ drill.media_file }}</span>
+                                    <a href="/static/uploads/{{ drill.media_file }}" target="_blank">Abrir</a>
                                 </div>
                             {% endif %}
-                            <label class="small text-muted" id="fileLabel">Subir nuevo archivo (Reemplazar)</label>
+                                <label id="fileLabel">Subir nuevo archivo (reemplazar)</label>
                             <input type="file" name="archivo" id="fileField" class="form-control">
-                            <div class="form-text small" id="fileHelp"></div>
                         </div>
                     </div>
 
-                    <label class="fw-bold">Imagen de Portada</label>
-                    <div class="row g-3 mb-4 cover-selector">
-                        <div class="col-6">
-                            <input type="radio" class="btn-check" name="cover_option" id="cover_default" value="default" {% if not drill.cover_image %}checked{% endif %} onchange="toggleCoverInput(false)">
-                            <label class="card h-100 cursor-pointer" for="cover_default">
-                                <div class="card-body p-2 text-center">
-                                    <div class="preview-box mb-2">
-                                        <img id="previewDefault" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
-                                        <i id="iconDefault" class="bi bi-image text-muted display-4"></i>
+                        <div class="mb-3">
+                            <label class="form-label">Imagen de Portada</label>
+                            <div class="cover-options">
+                                <div class="cover-option {% if not drill.cover_image %}selected{% endif %}" id="coverDefault" onclick="selectCover('default')">
+                                    <div class="cover-preview">
+                                        <img id="previewDefault" src="" style="display:none;">
+                                        <i id="iconDefault" class="bi bi-image text-muted" style="font-size: 2rem;"></i>
                                     </div>
-                                    <small class="fw-bold d-block">Automática</small>
+                                    <span class="cover-label">Automática</span>
                                 </div>
-                            </label>
-                        </div>
-                        <div class="col-6">
-                            <input type="radio" class="btn-check" name="cover_option" id="cover_custom" value="custom" {% if drill.cover_image %}checked{% endif %} onchange="toggleCoverInput(true)">
-                            <label class="card h-100 cursor-pointer paste-zone" for="cover_custom" id="pasteZoneLabel">
-                                <div class="card-body p-2 text-center">
-                                    <div class="preview-box mb-2 bg-white border">
+                                <div class="cover-option {% if drill.cover_image %}selected{% endif %}" id="coverCustom" onclick="selectCover('custom')">
+                                    <div class="cover-preview">
                                         {% if drill.cover_image %}
-                                            <img id="customPreviewImg" src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}" style="width:100%; height:100%; object-fit:cover;">
-                                            <i id="customIcon" class="bi bi-cloud-upload display-4 text-primary" style="display:none;"></i>
+                                        <img id="customPreviewImg" src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}">
+                                        <i id="customIcon" class="bi bi-cloud-upload" style="font-size: 2rem; display:none;"></i>
                                         {% else %}
-                                            <img id="customPreviewImg" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
-                                            <i id="customIcon" class="bi bi-cloud-upload display-4 text-primary"></i>
+                                        <img id="customPreviewImg" src="" style="display:none;">
+                                        <i id="customIcon" class="bi bi-cloud-upload text-muted" style="font-size: 2rem;"></i>
                                         {% endif %}
                                     </div>
-                                    <small class="fw-bold d-block">Click o Pega (Ctrl+V)</small>
+                                    <span class="cover-label">Click o Pega (Ctrl+V)</span>
                                 </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div id="customCoverInput" class="mb-4" style="display:none;">
-                        <input type="file" name="custom_cover_file" id="customCoverFileField" class="form-control" accept="image/*" onchange="previewCustomFile(this)">
-                        <div class="form-text small text-success" id="pasteMsg" style="display:none;">¡Imagen pegada!</div>
-                    </div>
-
-                    <hr class="my-4">
-
-                    <div class="mb-3">
-                        <label class="fw-bold">Etiquetas (Máx 3)</label>
-                        <div class="d-flex flex-wrap gap-2">
-                            {% for tag in etiquetas %}
-                            <div>
-                                <input type="checkbox" class="btn-check" name="primary_tags" id="tag_{{ tag.id }}" value="{{ tag.id }}" 
-                                    {% if tag in drill.primary_tags %}checked{% endif %}>
-                                <label class="btn btn-outline-secondary btn-sm rounded-pill" for="tag_{{ tag.id }}">{{ tag.name }}</label>
                             </div>
-                            {% endfor %}
+                            <input type="hidden" name="cover_option" id="coverOptionInput" value="{% if drill.cover_image %}custom{% else %}default{% endif %}">
+                            <div id="customCoverInput" style="display:{% if drill.cover_image %}block{% else %}none{% endif %};">
+                                <input type="file" name="custom_cover_file" id="customCoverFileField" class="form-control" accept="image/*" onchange="previewCustomFile(this)">
+                            </div>
+                        </div>
+                        
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" name="is_public" id="isPublic" {% if drill.is_public %}checked{% endif %}>
+                            <label class="form-check-label" for="isPublic" style="color: var(--cream);">Hacer público</label>
                         </div>
                     </div>
 
-                    <div class="form-check form-switch mb-4">
-                        <input class="form-check-input" type="checkbox" name="is_public" id="isPublic" {% if drill.is_public %}checked{% endif %}>
-                        <label class="form-check-label" for="isPublic">Hacer público</label>
+                    <!-- Columna Derecha: Tags -->
+                    <div class="right-column">
+                        <div class="tags-section">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="tags-header">Etiquetas: <span id="tagCount">0</span> (Mín. 1, Máx. 3)</span>
                     </div>
 
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-warning btn-lg fw-bold">Actualizar Ejercicio</button>
-                        <a href="/" class="btn btn-link text-decoration-none text-muted text-center">Cancelar</a>
+                            <!-- Chips de etiquetas seleccionadas -->
+                            <div class="selected-tags" id="selectedTagsContainer">
+                                <!-- Los chips se renderizan dinámicamente -->
+                            </div>
+                            
+                            <!-- Acordeones de categorías -->
+                            <div class="category-accordion" id="categoryAccordion">
+                                {% for group_item in tag_groups %}
+                                {% set cat_key = group_item.group.name|lower|replace(' ', '')|replace('í','i')|replace('á','a')|replace('é','e')|replace('/','') %}
+                                <div class="category-item" data-category="{{ cat_key }}" data-group-id="{{ group_item.group.id }}">
+                                    <div class="category-header" onclick="toggleCategory(this)">
+                                        <span class="category-name">{{ group_item.group.name }}</span>
+                                        <div class="category-right">
+                                            <span class="category-badge" id="badge-{{ group_item.group.id }}" style="display: none; background: var(--cat-{{ cat_key }}, #666);">0</span>
+                                            <i class="bi bi-chevron-down category-arrow"></i>
+                                        </div>
+                                    </div>
+                                    <div class="category-tags">
+                                        {% for tag in group_item.tags %}
+                                        {% set is_checked = (tag.id == drill.primary_tag_id) or (tag in drill.secondary_tags) %}
+                                        <button type="button" class="tag-btn {% if is_checked %}selected{% endif %}" 
+                                                data-tag-id="{{ tag.id }}" 
+                                                data-tag-name="{{ tag.name }}"
+                                                data-group-id="{{ group_item.group.id }}"
+                                                data-category="{{ cat_key }}"
+                                                data-is-custom="{{ 'true' if tag.is_custom else 'false' }}"
+                                                onclick="toggleTag(this)">
+                                            {{ tag.name }}
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <button type="button" class="btn btn-sm" style="border: 1px dashed var(--border-color); color: var(--text-muted); width: 100%; padding: 10px;" data-bs-toggle="modal" data-bs-target="#customTagModal">
+                                <i class="bi bi-plus-circle"></i> Crear etiqueta personalizada
+                            </button>
+                        </div>
                     </div>
+                </div>
+                
+                <!-- Hidden inputs para tags -->
+                <div id="hiddenTagInputs"></div>
+                <input type="hidden" name="primary_tag_id" id="primaryTagInput" value="{{ drill.primary_tag_id or '' }}">
+                
+                <!-- Botones de acción -->
+                <div class="mt-4">
+                    <button type="submit" class="btn-submit">{% if is_new %}Guardar Ejercicio{% else %}Actualizar Ejercicio{% endif %}</button>
+                    <a href="/" class="btn-cancel">Cancelar</a>
+                    {% if not is_new %}
+                    <div class="text-center mt-4 pt-3" style="border-top: 1px solid var(--border-color);">
+                        <a href="/delete/{{ drill.id }}" class="btn-delete" onclick="return confirm('¿Seguro que quieres eliminar este ejercicio? Esta acción no se puede deshacer.');">
+                            <i class="bi bi-trash"></i> Eliminar ejercicio
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
 
-                </form>
+    <!-- Modal crear etiqueta -->
+    <div class="modal fade" id="customTagModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva etiqueta personalizada</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de la etiqueta</label>
+                        <input type="text" class="form-control" id="customTagName">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Grupo</label>
+                        <select class="form-select" id="customTagGroup">
+                            {% for group_item in tag_groups %}
+                            <option value="{{ group_item.group.id }}">{{ group_item.group.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="small" style="color: var(--text-muted);">
+                        <i class="bi bi-info-circle"></i> Las etiquetas personalizadas son privadas y solo tú puedes verlas.
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn" style="background: #06b6d4; color: #0a1929;" onclick="createCustomTag()">Crear</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const BANANA_IMGS = {
-            tiktok: "{{ get_config_url('tiktok_bg') }}",
-            instagram: "{{ get_config_url('instagram_bg') }}",
-            facebook: "{{ get_config_url('facebook_bg') }}",
-            generic: "{{ get_config_url('generic_bg') }}",
-            pdf: "{{ get_config_url('pdf_bg') }}",
-            image: "https://placehold.co/600x400/198754/FFF?text=Imagen"
-        };
-
-        document.addEventListener("DOMContentLoaded", function() {
-            toggleContent(false); 
-            toggleCoverInput(false);
-            const type = document.querySelector('input[name="content_type"]:checked').value;
-            if (type === 'link') detectLink();
-            else if (type === 'image') updatePreview(BANANA_IMGS.image);
-            else if (type === 'pdf') updatePreview(BANANA_IMGS.pdf);
+        // Estado de etiquetas seleccionadas
+        let selectedTags = [];
+        const MAX_TAGS = 3;
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Recoger etiquetas ya seleccionadas del HTML
+            document.querySelectorAll('.tag-btn.selected').forEach(btn => {
+                selectedTags.push({
+                    id: btn.dataset.tagId,
+                    name: btn.dataset.tagName,
+                    category: btn.dataset.category,
+                    groupId: btn.dataset.groupId,
+                    isCustom: btn.dataset.isCustom === 'true'
+                });
+            });
+            
+            updateUI();
+            
+            // Mostrar sección correcta según tipo de contenido
+            const contentType = document.getElementById('contentTypeInput').value;
+            if (contentType === 'link' || !contentType) {
+                document.getElementById('section-link').style.display = 'block';
+            } else {
+                document.getElementById('section-file').style.display = 'block';
+            }
         });
-
-        function toggleContent(autoOpen = false) {
-            const type = document.querySelector('input[name="content_type"]:checked').value;
-            const secLink = document.getElementById('section-link');
-            const secFile = document.getElementById('section-file');
-            const fileField = document.getElementById('fileField');
+        
+        // Validación del formulario
+        function validateForm() {
+            const errorDiv = document.getElementById('validationError');
             
-            if (type === 'link') {
-                secLink.style.display = 'block'; secFile.style.display = 'none';
-                detectLink();
-            } else {
-                secLink.style.display = 'none'; secFile.style.display = 'block';
-                if(type === 'image') {
-                    fileField.accept = "image/*";
-                    document.getElementById('fileHelp').innerText = "Subir nueva para reemplazar.";
-                    updatePreview(BANANA_IMGS.image);
-                } else if(type === 'pdf') {
-                    fileField.accept = "application/pdf";
-                    document.getElementById('fileHelp').innerText = "Subir nuevo PDF (Máx 5MB).";
-                    updatePreview(BANANA_IMGS.pdf);
-                } else { 
-                    fileField.accept = "video/mp4"; 
-                }
-                if (autoOpen) setTimeout(() => fileField.click(), 100);
+            // Verificar que hay al menos una etiqueta
+            if (selectedTags.length === 0) {
+                errorDiv.textContent = 'Debes seleccionar al menos una etiqueta.';
+                errorDiv.style.display = 'block';
+                return false;
             }
-        }
-
-        function detectLink() {
-            const url = document.getElementById('linkField').value;
-            const btnPreview = document.getElementById('btnPreviewLink');
             
-            if (url) {
-                btnPreview.href = url;
-                btnPreview.style.display = 'inline-block';
-            } else {
-                btnPreview.style.display = 'none';
+            // Verificar que hay al menos una etiqueta del sistema
+            const systemTags = selectedTags.filter(t => !t.isCustom);
+            if (systemTags.length === 0) {
+                errorDiv.textContent = 'Debes seleccionar al menos una etiqueta del sistema (no personalizada).';
+                errorDiv.style.display = 'block';
+                return false;
             }
-
-            let finalSrc = BANANA_IMGS.generic;
-            if (url.includes('youtu')) {
-                let vidId = url.split('v=')[1];
-                if(!vidId && url.includes('youtu.be/')) vidId = url.split('youtu.be/')[1];
-                if(vidId) {
-                    vidId = vidId.split('&')[0];
-                    finalSrc = `https://img.youtube.com/vi/${vidId}/mqdefault.jpg`;
-                }
-            } else if (url.includes('tiktok.com')) finalSrc = BANANA_IMGS.tiktok;
-            else if (url.includes('instagram.com')) finalSrc = BANANA_IMGS.instagram;
-            else if (url.includes('facebook.com')) finalSrc = BANANA_IMGS.facebook;
-
-            updatePreview(finalSrc);
-        }
-
-        function updatePreview(src) {
-            const img = document.getElementById('previewDefault');
-            const icon = document.getElementById('iconDefault');
-            img.src = src; img.style.display = 'block'; icon.style.display = 'none';
-        }
-
-        function toggleCoverInput(autoOpen = false) {
-            const isCustom = document.getElementById('cover_custom').checked;
-            document.getElementById('customCoverInput').style.display = isCustom ? 'block' : 'none';
-            if (isCustom && autoOpen) setTimeout(() => document.getElementById('customCoverFileField').click(), 100);
+            
+            // Verificar que la etiqueta principal es del sistema
+            const primaryTagId = document.getElementById('primaryTagInput').value;
+            const primaryTag = selectedTags.find(t => t.id === primaryTagId);
+            if (primaryTag && primaryTag.isCustom) {
+                errorDiv.textContent = 'La etiqueta principal debe ser del sistema (no personalizada). Reordena las etiquetas.';
+                errorDiv.style.display = 'block';
+                return false;
+            }
+            
+            errorDiv.style.display = 'none';
+            return true;
         }
         
-        function testLink() {
-            const url = document.getElementById('linkField').value;
-            const feedback = document.getElementById('linkFeedback');
-            if (!url) return;
-            feedback.innerHTML = '<span class="text-muted">Probando...</span>';
-            fetch('/check_link', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({url: url})
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'ok') feedback.innerHTML = '<span class="text-success fw-bold">✅ Link válido</span>';
-                else feedback.innerHTML = '<span class="text-danger fw-bold">❌ Error al acceder</span>';
-            });
+        // Tipo de contenido
+        function selectContentType(type) {
+            document.querySelectorAll('.content-type-btn').forEach(btn => btn.classList.remove('active'));
+            const selectedBtn = document.querySelector(`.content-type-btn[data-type="${type}"]`);
+            if (selectedBtn) selectedBtn.classList.add('active');
+            document.getElementById('contentTypeInput').value = type;
+            
+            if (type === 'link') {
+                document.getElementById('section-link').style.display = 'block';
+                document.getElementById('section-file').style.display = 'none';
+            } else {
+                document.getElementById('section-link').style.display = 'none';
+                document.getElementById('section-file').style.display = 'block';
+                
+                const fileField = document.getElementById('fileField');
+                if (type === 'image') fileField.accept = 'image/*';
+                else if (type === 'pdf') fileField.accept = 'application/pdf';
+                else if (type === 'video_file') fileField.accept = 'video/mp4';
+            }
         }
-
-        // --- PEGADO MÁGICO ---
+        
+        // Cover
+        function selectCover(type) {
+            document.querySelectorAll('.cover-option').forEach(opt => opt.classList.remove('selected'));
+            document.getElementById(type === 'default' ? 'coverDefault' : 'coverCustom').classList.add('selected');
+            document.getElementById('coverOptionInput').value = type;
+            document.getElementById('customCoverInput').style.display = type === 'custom' ? 'block' : 'none';
+            
+            if (type === 'custom') {
+                setTimeout(() => document.getElementById('customCoverFileField').click(), 100);
+            }
+        }
+        
+        function previewCustomFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('customPreviewImg').src = e.target.result;
+                    document.getElementById('customPreviewImg').style.display = 'block';
+                    document.getElementById('customIcon').style.display = 'none';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+        
+        // Pegado mágico
         document.addEventListener('paste', function(event) {
             const items = (event.clipboardData || event.originalEvent.clipboardData).items;
             for (let index in items) {
@@ -262,38 +870,170 @@
                     dataTransfer.items.add(file);
                     fileInput.files = dataTransfer.files;
 
-                    document.getElementById('cover_custom').checked = true;
-                    toggleCoverInput(false);
+                    selectCover('custom');
                     previewCustomFile(fileInput);
-                    
-                    document.getElementById('pasteMsg').style.display = 'block';
-                    setTimeout(() => document.getElementById('pasteMsg').style.display = 'none', 3000);
                 }
             }
         });
 
-        function previewCustomFile(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('customPreviewImg').src = e.target.result;
-                    document.getElementById('customPreviewImg').style.display = 'block';
-                    document.getElementById('customIcon').style.display = 'none';
-                }
-                reader.readAsDataURL(input.files[0]);
-            }
+        function testLink() {
+            const url = document.getElementById('linkField').value;
+            const feedback = document.getElementById('linkFeedback');
+            if (!url) return;
+            feedback.innerHTML = '<span style="color: var(--text-muted);">Probando...</span>';
+            fetch('/check_link', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url: url})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') feedback.innerHTML = '<span style="color: #22c55e;">✅ Link válido</span>';
+                else feedback.innerHTML = '<span style="color: #ef4444;">❌ Error al acceder</span>';
+            });
         }
-
-        // LÍMITE DE 3 ETIQUETAS
-        document.querySelectorAll('input[name="primary_tags"]').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const checked = document.querySelectorAll('input[name="primary_tags"]:checked');
-                if (checked.length > 3) {
-                    this.checked = false;
-                    alert("⚠️ Solo puedes seleccionar un máximo de 3 etiquetas.");
+        
+        // Tags
+        function toggleCategory(header) {
+            const item = header.closest('.category-item');
+            item.classList.toggle('open');
+        }
+        
+        function toggleTag(btn) {
+            const tagId = btn.dataset.tagId;
+            const tagName = btn.dataset.tagName;
+            const category = btn.dataset.category;
+            const groupId = btn.dataset.groupId;
+            const isCustom = btn.dataset.isCustom === 'true';
+            
+            const existingIndex = selectedTags.findIndex(t => t.id === tagId);
+            
+            if (existingIndex >= 0) {
+                selectedTags.splice(existingIndex, 1);
+                btn.classList.remove('selected');
+            } else {
+                if (selectedTags.length >= MAX_TAGS) {
+                    alert('Máximo 3 etiquetas permitidas');
+                    return;
+                }
+                selectedTags.push({ id: tagId, name: tagName, category: category, groupId: groupId, isCustom: isCustom });
+                btn.classList.add('selected');
+            }
+            
+            updateUI();
+        }
+        
+        function removeTag(tagId) {
+            selectedTags = selectedTags.filter(t => t.id !== tagId);
+            const btn = document.querySelector(`.tag-btn[data-tag-id="${tagId}"]`);
+            if (btn) btn.classList.remove('selected');
+            updateUI();
+        }
+        
+        function updateUI() {
+            document.getElementById('tagCount').textContent = selectedTags.length;
+            
+            const primaryTagId = document.getElementById('primaryTagInput').value;
+            
+            const container = document.getElementById('selectedTagsContainer');
+            if (selectedTags.length === 0) {
+                container.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Selecciona etiquetas de las categorías</span>';
+            } else {
+                // Ordenar: etiqueta preferente primero, luego el resto
+                const sortedTags = [...selectedTags].sort((a, b) => {
+                    if (a.id === primaryTagId) return -1;
+                    if (b.id === primaryTagId) return 1;
+                    return 0;
+                });
+                
+                container.innerHTML = sortedTags.map(tag => {
+                    const isPrimary = tag.id === primaryTagId;
+                    return `
+                    <span class="tag-chip ${isPrimary ? 'primary-tag' : ''}" 
+                          data-category="${tag.category}" 
+                          data-is-custom="${tag.isCustom}"
+                          data-tag-id="${tag.id}"
+                          title="${isPrimary ? 'Etiqueta preferente' : 'Clic para hacer preferente'}">
+                        ${isPrimary ? '<i class="bi bi-star-fill" style="margin-right: 4px; font-size: 0.7rem;"></i>' : ''}
+                        <span onclick="setPrimaryTag('${tag.id}')">${tag.name}</span>
+                        <i class="bi bi-x remove-icon" onclick="event.stopPropagation(); removeTag('${tag.id}')"></i>
+                    </span>
+                `}).join('');
+            }
+            
+            // Badges
+            const groupCounts = {};
+            selectedTags.forEach(tag => {
+                groupCounts[tag.groupId] = (groupCounts[tag.groupId] || 0) + 1;
+            });
+            
+            document.querySelectorAll('.category-badge').forEach(badge => {
+                const groupId = badge.id.replace('badge-', '');
+                const count = groupCounts[groupId] || 0;
+                if (count > 0) {
+                    badge.style.display = 'flex';
+                    badge.textContent = count;
+                } else {
+                    badge.style.display = 'none';
                 }
             });
-        });
+            
+            // Si no hay primary tag definido, usar la primera etiqueta del sistema
+            if (!primaryTagId || !selectedTags.find(t => t.id === primaryTagId)) {
+                const systemTags = selectedTags.filter(t => !t.isCustom);
+                if (systemTags.length > 0) {
+                    document.getElementById('primaryTagInput').value = systemTags[0].id;
+                } else if (selectedTags.length > 0) {
+                    document.getElementById('primaryTagInput').value = selectedTags[0].id;
+                } else {
+                    document.getElementById('primaryTagInput').value = '';
+                }
+            }
+            
+            // Hidden inputs
+            const hiddenContainer = document.getElementById('hiddenTagInputs');
+            hiddenContainer.innerHTML = selectedTags.map(tag => 
+                `<input type="hidden" name="tag_ids" value="${tag.id}">`
+            ).join('');
+            
+            // Ocultar error si ya hay etiquetas del sistema
+            const systemTags = selectedTags.filter(t => !t.isCustom);
+            if (systemTags.length > 0) {
+                document.getElementById('validationError').style.display = 'none';
+            }
+        }
+        
+        function setPrimaryTag(tagId) {
+            const tag = selectedTags.find(t => t.id === tagId);
+            if (tag && !tag.isCustom) {
+                document.getElementById('primaryTagInput').value = tagId;
+                updateUI();
+            } else if (tag && tag.isCustom) {
+                alert('La etiqueta preferente debe ser del sistema (no personalizada)');
+            }
+        }
+        
+        function createCustomTag() {
+            const name = document.getElementById('customTagName').value.trim();
+            const groupId = document.getElementById('customTagGroup').value;
+            if (!name) {
+                alert('Escribe un nombre de etiqueta');
+                return;
+            }
+            fetch('/api/custom_tag', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, group_id: groupId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                location.reload();
+            });
+        }
     </script>
 </body>
 </html>

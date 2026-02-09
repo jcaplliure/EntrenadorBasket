@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Editar Sesión</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; padding-bottom: 80px; }
+        .nav-pills .nav-link.active { background-color: #fd7e14; color: white; font-weight: bold; }
+        .nav-pills .nav-link { color: #495057; }
+        .attendance-card { transition: all 0.2s; border: 2px solid transparent; }
+        .attendance-card.absent { opacity: 0.5; filter: grayscale(1); }
+        .attendance-card.present { border-color: #198754; background-color: #d1e7dd; }
+        .exercise-card { border-left: 5px solid #0d6efd; }
+        .exercise-card.not-done { border-left-color: #dc3545; opacity: 0.6; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm px-3 justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <a href="/team/{{ session.team_id }}" class="text-white text-decoration-none"><i class="bi bi-arrow-left"></i></a>
+            <span class="fw-bold text-white">Editar Sesión</span>
+        </div>
+        <button class="btn btn-success btn-sm fw-bold" onclick="saveAll()">Guardar</button>
+    </nav>
+
+    <div class="container mt-3">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="fw-bold mb-1">📅 {{ session.date.strftime('%d/%m/%Y %H:%M') if session.date else 'Sin fecha' }}</h6>
+                <p class="text-muted small mb-0">📋 Plan: <strong>{{ plan.name if plan else 'Sin plan' }}</strong></p>
+            </div>
+        </div>
+        
+        <ul class="nav nav-pills nav-fill mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="pills-att-tab" data-bs-toggle="pill" data-bs-target="#pills-att" type="button">🙋‍♂️ Asistencia</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="pills-exercises-tab" data-bs-toggle="pill" data-bs-target="#pills-exercises" type="button">🏀 Ejercicios</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="pills-gamification-tab" data-bs-toggle="pill" data-bs-target="#pills-gamification" type="button">🎮 Gamificación</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="pills-tabContent">
+            
+            <div class="tab-pane fade show active" id="pills-att">
+                <p class="text-muted small text-center mb-3">Toca para marcar Ausente/Presente.</p>
+                
+                <div class="row g-2" id="attendance-list">
+                    {% for att in session.attendance %}
+                    {% set p = att.player %}
+                    <div class="col-6 col-md-4">
+                        <div class="card p-2 text-center attendance-card {% if att.is_present %}present{% else %}absent{% endif %}" 
+                             onclick="toggleAttendance(this, {{ session.id }}, {{ p.id }})">
+                            <h5 class="mb-0 fw-bold">{{ p.name }}</h5>
+                            <small class="text-muted">#{{ p.dorsal }}</small>
+                            <div class="status-icon mt-1">
+                                {% if att.is_present %}
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                {% else %}
+                                    <i class="bi bi-x-circle-fill text-danger"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="pills-exercises">
+                {% if plan %}
+                    {% for item in plan.items|sort(attribute='order') %}
+                    {% set ex = executions.get(item.id) %}
+                    <div class="card shadow-sm mb-3 exercise-card {% if ex and not ex.was_completed %}not-done{% endif %}" id="exercise-{{ item.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="card-title fw-bold mb-1">{{ item.drill.title }}</h5>
+                                    <span class="badge bg-secondary">{{ item.block_name }}</span>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="done-{{ item.id }}" 
+                                           {% if not ex or ex.was_completed %}checked{% endif %}
+                                           onchange="toggleExerciseDone({{ item.id }})">
+                                    <label class="form-check-label" for="done-{{ item.id }}">Realizado</label>
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label small">Tiempo planificado (min)</label>
+                                    <input type="number" class="form-control form-control-sm" 
+                                           value="{{ item.duration }}" disabled>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">Tiempo real (min)</label>
+                                    <input type="number" class="form-control form-control-sm" 
+                                           id="duration-{{ item.id }}"
+                                           value="{{ ex.actual_duration if ex and ex.actual_duration else item.duration }}"
+                                           onchange="updateExerciseDuration({{ item.id }})">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <p>Sesión sin plan vinculado.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="tab-pane fade" id="pills-gamification">
+                {% if plan %}
+                    {% for item in plan.items|sort(attribute='order') %}
+                    {% set scores = gamifications.get(item.id, []) %}
+                    {% if scores %}
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header bg-warning text-dark fw-bold">
+                            <i class="bi bi-trophy-fill"></i> {{ item.drill.title }}
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Pos</th>
+                                        <th>Jugador</th>
+                                        <th>Resultado</th>
+                                        <th>Puntos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for score in scores %}
+                                    {% set player = score.player %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>#{{ player.dorsal }} {{ player.name }}</td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm" 
+                                                   id="score-{{ score.id }}"
+                                                   value="{{ score.raw_score }}"
+                                                   step="0.01"
+                                                   style="width: 100px;">
+                                        </td>
+                                        <td>{{ score.points }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            <button class="btn btn-sm btn-primary" onclick="recalculateGamification({{ item.drill_id }}, {{ item.id }}, this)">
+                                <i class="bi bi-arrow-clockwise"></i> Recalcular Puntos
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if not gamifications %}
+                    <div class="text-center py-5 text-muted">
+                        <p>No hay ejercicios gamificados en esta sesión.</p>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <p>Sesión sin plan vinculado.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const sessionId = {{ session.id }};
+        const attendanceMap = {{ attendance_map|tojson }};
+        
+        function toggleAttendance(card, sessionId, playerId) {
+            const isPresent = !card.classList.contains('present');
+            
+            if (isPresent) {
+                card.classList.remove('absent'); card.classList.add('present');
+                card.querySelector('.status-icon').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+            } else {
+                card.classList.remove('present'); card.classList.add('absent');
+                card.querySelector('.status-icon').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i>';
+            }
+            
+            fetch('/api/save_attendance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ session_id: sessionId, player_id: playerId, is_present: isPresent })
+            }).then(r => {
+                if(r.ok) attendanceMap[playerId.toString()] = isPresent;
+            });
+        }
+        
+        function toggleExerciseDone(itemId) {
+            const checkbox = document.getElementById(`done-${itemId}`);
+            const card = document.getElementById(`exercise-${itemId}`);
+            const durationInput = document.getElementById(`duration-${itemId}`);
+            
+            if (checkbox.checked) {
+                card.classList.remove('not-done');
+                durationInput.disabled = false;
+            } else {
+                card.classList.add('not-done');
+                durationInput.disabled = true;
+                durationInput.value = '';
+            }
+            
+            saveExerciseExecution(itemId);
+        }
+        
+        function updateExerciseDuration(itemId) {
+            saveExerciseExecution(itemId);
+        }
+        
+        async function saveExerciseExecution(itemId) {
+            const checkbox = document.getElementById(`done-${itemId}`);
+            const durationInput = document.getElementById(`duration-${itemId}`);
+            const wasCompleted = checkbox.checked;
+            const actualDuration = wasCompleted ? parseInt(durationInput.value) || null : null;
+            
+            await fetch('/api/save_exercise_execution', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    training_item_id: itemId,
+                    was_completed: wasCompleted,
+                    actual_duration: actualDuration
+                })
+            });
+        }
+        
+        async function recalculateGamification(drillId, itemId, button) {
+            // Obtener todos los resultados del ejercicio desde la tarjeta que contiene el botón
+            const card = button.closest('.card');
+            const scores = [];
+            card.querySelectorAll('input[id^="score-"]').forEach(input => {
+                const scoreId = parseInt(input.id.split('-')[1]);
+                const rawScore = parseFloat(input.value) || 0;
+                scores.push({ score_id: scoreId, raw_score: rawScore });
+            });
+            
+            const response = await fetch('/api/recalculate_gamification', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    drill_id: drillId,
+                    scores: scores
+                })
+            });
+            
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error al recalcular');
+            }
+        }
+        
+        async function saveAll() {
+            // Guardar todas las ejecuciones
+            const checkboxes = document.querySelectorAll('input[id^="done-"]');
+            for (const checkbox of checkboxes) {
+                const itemId = parseInt(checkbox.id.split('-')[1]);
+                await saveExerciseExecution(itemId);
+            }
+            
+            alert('Cambios guardados correctamente');
+        }
+    </script>
+</body>
+</html>

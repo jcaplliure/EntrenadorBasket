@@ -3,96 +3,601 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Configuración</title>
+    <title>Configuración de acciones</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bg-dark: #0a1929;
+            --bg-panel: #0d2137;
+            --bg-card: #132f4c;
+            --border-color: #1e4976;
+            --text-primary: #e3f2fd;
+            --text-secondary: #90caf9;
+            --accent-color: {{ theme_color }};
+            --pos-bg: #1b4332;
+            --pos-border: #2d6a4f;
+            --pos-text: #95d5b2;
+            --neg-bg: #5c1b1b;
+            --neg-border: #8b2e2e;
+            --neg-text: #f8a0a0;
+            --neutral-bg: #3d3d3d;
+            --neutral-border: #5a5a5a;
+            --neutral-text: #d4d4d4;
+        }
+        body { 
+            background: var(--bg-dark); 
+            color: var(--text-primary); 
+            min-height: 100vh;
+        }
+        .navbar { 
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%) !important; 
+        }
+        .navbar-brand { color: #fff !important; }
+        
+        .container-main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .info-text {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+        
+        .nav-pills .nav-link {
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            margin-right: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .nav-pills .nav-link.active {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+        
+        .admin-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .admin-card h6 { color: var(--accent-color); font-weight: 700; }
+        .admin-card .form-control {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .admin-card .form-control::placeholder { color: var(--text-secondary); }
+        
+        /* Sección de acciones */
+        .action-map-section { margin-bottom: 24px; }
+        .action-map-section h6 { 
+            font-weight: 700; 
+            margin-bottom: 10px; 
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .action-grid-config {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            padding: 10px;
+            background: var(--bg-panel);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            list-style: none;
+            margin: 0;
+        }
+        .action-grid-config.ataque-slots .action-card.first-action {
+            grid-column: 1 / span 2;
+        }
+        
+        /* Botones de acción - estilo elegante y estrecho */
+        .action-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 10px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            min-height: 38px;
+            transition: all 0.2s;
+        }
+        .action-card:hover { 
+            border-color: var(--accent-color); 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .action-card:active { cursor: grabbing; }
+        .action-card.sortable-ghost { opacity: 0.4; }
+        .action-card.sortable-drag { box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+        
+        .action-card .label { 
+            font-size: 0.9rem; 
+            font-weight: 600; 
+            flex: 1; 
+            min-width: 0; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        }
+        .action-card .val { 
+            font-size: 0.82rem; 
+            opacity: 0.9;
+            font-weight: 500;
+        }
+        
+        /* Colores por tipo */
+        .action-card.pos { 
+            background: var(--pos-bg); 
+            border-color: var(--pos-border); 
+            color: #fff;
+        }
+        .action-card.neg { 
+            background: var(--neg-bg); 
+            border-color: var(--neg-border); 
+            color: #fff;
+        }
+        .action-card.neutral { 
+            background: var(--neutral-bg); 
+            border-color: var(--neutral-border); 
+            color: #fff;
+        }
+        
+        /* Estado oculto - atenuado */
+        .action-card.hidden-action {
+            opacity: 0.4;
+            border-style: dashed;
+        }
+        .action-card.hidden-action:hover {
+            opacity: 0.7;
+        }
+        
+        /* Botones de acción en la tarjeta */
+        .action-card .btn-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            background: transparent;
+            border: none;
+            color: inherit;
+            opacity: 0.7;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .action-card .btn-icon:hover { 
+            opacity: 1; 
+            background: rgba(255,255,255,0.1); 
+        }
+        .action-card .btn-visibility {
+            color: var(--accent-color);
+        }
+        .action-card.hidden-action .btn-visibility {
+            color: var(--text-secondary);
+        }
+        
+        /* Rankings tab */
+        .rankings-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .rankings-card h6 { color: var(--accent-color); }
+        .rankings-card .form-control {
+            background: var(--bg-card);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        .rankings-card .form-check {
+            padding-left: 1.75rem;
+            margin-bottom: 0.25rem;
+        }
+        .rankings-card .form-check-input {
+            background-color: var(--bg-card);
+            border-color: var(--border-color);
+            width: 1.1rem;
+            height: 1.1rem;
+            margin-top: 0.15rem;
+            cursor: pointer;
+        }
+        .rankings-card .form-check-input:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        .rankings-card .form-check-input:focus {
+            box-shadow: 0 0 0 0.2rem rgba(255, 215, 0, 0.25);
+            border-color: var(--accent-color);
+        }
+        .rankings-card .form-check-label { 
+            color: var(--text-secondary); 
+            font-size: 0.85rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .ranking-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+        .ranking-item strong { color: var(--text-primary); }
+        .ranking-item small { color: var(--text-secondary); }
+        
+        /* Modal */
+        .modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .modal-header { border-bottom-color: var(--border-color); }
+        .modal-footer { border-top-color: var(--border-color); }
+        .modal-content .form-control {
+            background: var(--bg-card);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        .modal-content .form-label { color: var(--text-secondary); }
+        .modal-content .form-check-label { color: var(--text-secondary); }
+        .btn-close { filter: invert(1); }
+    </style>
 </head>
-<body class="bg-light">
-    
-    <nav class="navbar navbar-dark bg-dark mb-4">
+<body>
+
+    <nav class="navbar navbar-dark mb-4">
         <div class="container">
-            <span class="navbar-brand fw-bold">Configuración</span>
-            <a href="/" class="btn btn-outline-light btn-sm">Volver</a>
+            <span class="navbar-brand fw-bold">Configuración de acciones del partido</span>
+            <a href="/matches" class="btn btn-outline-light btn-sm">Volver</a>
         </div>
     </nav>
 
-    <div class="container pb-5">
-        
-        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+    <div class="container-main">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <p class="info-text mb-0" style="flex: 1;">
+                Arrastra los botones para cambiar el orden. Usa el icono <i class="bi bi-eye"></i> para mostrar/ocultar y <i class="bi bi-pencil-square"></i> para editar.
+            </p>
+            <form action="/game_config_reset" method="POST" class="ms-3" onsubmit="return confirm('¿Restaurar todas las acciones a valores por defecto?');">
+                <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Restaurar</button>
+            </form>
+        </div>
+
+        <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
             <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#actions">Botones (Acciones)</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#rankings">🏆 Rankings</button></li>
         </ul>
 
         <div class="tab-content">
             <div class="tab-pane fade show active" id="actions">
-                <div class="card shadow-sm border-0 mb-4 bg-white">
-                    <div class="card-body">
-                        <h6 class="fw-bold text-primary">Crear Acción</h6>
-                        <form action="/game_config_add" method="POST" class="row g-2 align-items-end">
-                            <div class="col-7"><input type="text" name="name" class="form-control form-control-sm" placeholder="Ej: Mate" required></div>
-                            <div class="col-3"><input type="number" name="value" step="0.1" class="form-control form-control-sm" value="1.0" required></div>
-                            <div class="col-2"><button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">+</button></div>
-                        </form>
-                    </div>
+                {% if current_user.is_admin %}
+                <div class="admin-card">
+                    <h6><i class="bi bi-plus-circle"></i> Añadir acción (solo admin)</h6>
+                    <form action="/game_config_add" method="POST" class="row g-2 align-items-end mt-2">
+                        <div class="col-7"><input type="text" name="name" class="form-control form-control-sm" placeholder="Nombre (máx. 10)" maxlength="10" required></div>
+                        <div class="col-3"><input type="number" name="value" step="0.1" class="form-control form-control-sm" value="1.0" required></div>
+                        <div class="col-2"><button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">+</button></div>
+                    </form>
                 </div>
-                <form action="/game_config" method="POST">
-                    <ul class="list-group shadow-sm">
-                        {% for action in actions %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <a href="/game_config_delete/{{ action.id }}" class="text-danger me-2" onclick="return confirm('¿Borrar?')"><i class="bi bi-trash"></i></a>
-                                <span class="fw-bold {% if action.is_positive %}text-success{% else %}text-danger{% endif %}">{{ action.name }}</span>
-                            </div>
-                            <input type="number" step="0.05" name="val_{{ action.id }}" class="form-control form-control-sm text-center" style="width: 80px;" value="{{ action.value }}">
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    <div class="d-grid mt-3"><button type="submit" class="btn btn-success fw-bold">Guardar Valores</button></div>
-                </form>
+                {% endif %}
+
+                <div id="action-map-container">
+                    {% for block_label, section, is_pos, slots in blocks_with_slots %}
+                    {% set by_section = actions|selectattr('display_section', 'equalto', section)|list %}
+                    {% set block_actions = (by_section|selectattr('is_positive') if is_pos else by_section|rejectattr('is_positive'))|list %}
+                    {% set block_id = 'ataque-pos' if section == 'ATAQUE' and is_pos else ('ataque-neg' if section == 'ATAQUE' and not is_pos else ('defensa-pos' if section == 'DEFENSA' and is_pos else 'defensa-neg')) %}
+                    <div class="action-map-section" data-block="{{ block_id }}">
+                        <h6>{{ block_label }}</h6>
+                        <ul class="action-grid-config {{ 'ataque-slots' if block_id == 'ataque-pos' or block_id == 'ataque-neg' else '' }}" id="grid-{{ block_id }}" data-block="{{ block_id }}" data-slots='{{ slots|tojson }}'>
+                            {% for action in block_actions %}
+                            {% set can_name = (action.custom_slot is not none) or (current_user.is_admin and action.is_system) %}
+                            {% set can_desc = (action.custom_slot is not none) or current_user.is_admin %}
+                            {% set is_first = loop.index0 == 0 %}
+                            {% set is_hidden = not action.visible %}
+                            <li class="action-card {{ 'pos' if action.is_positive else ('neutral' if action.name == 'Falta' else 'neg') }} {{ 'first-action' if is_first else '' }} {{ 'hidden-action' if is_hidden else '' }}" 
+                                data-action-id="{{ action.id }}" 
+                                data-grid-row="{{ action.grid_row or 1 }}" 
+                                data-grid-col="{{ action.grid_col or 1 }}" 
+                                data-pos="{{ action.grid_row or 1 }}-{{ action.grid_col or 1 }}" 
+                                data-can-name="{{ 'true' if can_name else 'false' }}" 
+                                data-can-desc="{{ 'true' if can_desc else 'false' }}" 
+                                data-name="{{ action.name|e }}" 
+                                data-value="{{ action.value }}" 
+                                data-description="{{ (action.description or '')|e }}" 
+                                data-visible="{{ 'true' if action.visible else 'false' }}">
+                                <span class="label">{{ action.name }}</span>
+                                <span class="val">{% if action.value > 0 %}+{{ action.value }}{% else %}{{ action.value }}{% endif %}</span>
+                                <button type="button" class="btn-icon btn-visibility" title="Mostrar/Ocultar" onclick="event.stopPropagation(); toggleVisibility(this);">
+                                    <i class="bi {{ 'bi-eye' if action.visible else 'bi-eye-slash' }}"></i>
+                                </button>
+                                <button type="button" class="btn-icon" title="Editar" onclick="event.stopPropagation(); openEditModal(this);">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
 
             <div class="tab-pane fade" id="rankings">
-                <div class="card shadow-sm border-0 mb-4 bg-white">
-                    <div class="card-body">
-                        <h6 class="fw-bold text-warning">Crear Concepto Agrupado</h6>
-                        <p class="small text-muted">Ej: "Mejor Defensor" = Rebotes + Robos + Tapones</p>
-                        <form action="/ranking_add" method="POST">
-                            <div class="mb-2">
-                                <input type="text" name="name" class="form-control form-control-sm" placeholder="Nombre del Ranking (Ej: Defensor Top)" required>
-                            </div>
-                            <label class="small fw-bold">Incluir estas acciones:</label>
-                            <div class="row g-2 mb-3" style="max-height: 150px; overflow-y: auto;">
-                                {% for action in actions %}
-                                <div class="col-6">
+                <div class="rankings-card mb-4">
+                    <h6 class="fw-bold"><i class="bi bi-trophy"></i> Crear concepto agrupado (KPI)</h6>
+                    <p class="info-text">Ej: "Muro Defensivo" = Reb.Def + Robo + Tapón</p>
+                    <form action="/ranking_add" method="POST" id="rankingForm">
+                        <div class="mb-3">
+                            <input type="text" name="name" class="form-control" placeholder="Nombre del ranking" required>
+                        </div>
+                        <label class="small fw-bold text-secondary d-block mb-2">Incluir estas acciones:</label>
+                        
+                        <!-- Ataque + -->
+                        <div class="mb-2">
+                            <small class="text-warning fw-bold">ATAQUE +</small>
+                            <div class="row g-1 mt-1">
+                                {% for action in actions if action.display_section == 'ATAQUE' and action.value >= 0 and action.name != 'Personali.' %}
+                                <div class="col-6 col-md-4">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="action_ids" value="{{ action.id }}" id="chk{{ action.id }}">
-                                        <label class="form-check-label small" for="chk{{ action.id }}">{{ action.name }}</label>
+                                        <input class="form-check-input" type="checkbox" name="action_ids" value="{{ action.id }}" id="rank_{{ action.id }}">
+                                        <label class="form-check-label" for="rank_{{ action.id }}">{{ action.name }}</label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
-                            <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold">Crear Ranking</button>
-                        </form>
-                    </div>
+                        </div>
+                        
+                        <!-- Ataque - -->
+                        <div class="mb-2">
+                            <small class="text-warning fw-bold">ATAQUE -</small>
+                            <div class="row g-1 mt-1">
+                                {% for action in actions if action.display_section == 'ATAQUE' and action.value < 0 and action.name != 'Personali.' %}
+                                <div class="col-6 col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="action_ids" value="{{ action.id }}" id="rank_{{ action.id }}">
+                                        <label class="form-check-label" for="rank_{{ action.id }}">{{ action.name }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Defensa + -->
+                        <div class="mb-2">
+                            <small class="text-info fw-bold">DEFENSA +</small>
+                            <div class="row g-1 mt-1">
+                                {% for action in actions if action.display_section == 'DEFENSA' and action.value >= 0 and action.name != 'Personali.' %}
+                                <div class="col-6 col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="action_ids" value="{{ action.id }}" id="rank_{{ action.id }}">
+                                        <label class="form-check-label" for="rank_{{ action.id }}">{{ action.name }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Defensa - -->
+                        <div class="mb-3">
+                            <small class="text-info fw-bold">DEFENSA -</small>
+                            <div class="row g-1 mt-1">
+                                {% for action in actions if action.display_section == 'DEFENSA' and action.value < 0 and action.name != 'Personali.' %}
+                                <div class="col-6 col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="action_ids" value="{{ action.id }}" id="rank_{{ action.id }}">
+                                        <label class="form-check-label" for="rank_{{ action.id }}">{{ action.name }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-warning w-100 fw-bold">Crear ranking</button>
+                    </form>
                 </div>
 
-                <h6 class="fw-bold">Mis Rankings</h6>
-                <ul class="list-group shadow-sm">
-                    {% for rank in rankings %}
-                    <li class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <strong>{{ rank.name }}</strong>
-                            <a href="/ranking_delete/{{ rank.id }}" class="text-danger btn btn-sm"><i class="bi bi-trash"></i></a>
-                        </div>
-                        <small class="text-muted">
-                            Incluye: {% for ing in rank.ingredients %}{{ ing.name }}{% if not loop.last %}, {% endif %}{% endfor %}
-                        </small>
-                    </li>
-                    {% endfor %}
-                </ul>
+                <h6 class="fw-bold text-secondary mb-3">Mis rankings</h6>
+                {% for rank in rankings %}
+                <div class="ranking-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>{{ rank.name }}</strong>
+                        <a href="/ranking_delete/{{ rank.id }}" class="btn btn-sm text-danger" onclick="return confirm('¿Eliminar?')"><i class="bi bi-trash"></i></a>
+                    </div>
+                    <small>Incluye: {% for ing in rank.ingredients %}{{ ing.name }}{% if not loop.last %}, {% endif %}{% endfor %}</small>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="editActionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar acción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editActionId">
+                    <div class="mb-3" id="editNameWrap">
+                        <label class="form-label small">Nombre (máx. 10)</label>
+                        <input type="text" id="editActionName" class="form-control form-control-sm" maxlength="10" placeholder="Nombre">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Valor</label>
+                        <input type="number" id="editActionValue" class="form-control form-control-sm" step="0.05" min="-10" max="10">
+                    </div>
+                    <div class="mb-3" id="editDescWrap">
+                        <label class="form-label small">Descripción</label>
+                        <input type="text" id="editActionDesc" class="form-control form-control-sm" maxlength="255" placeholder="Descripción">
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="editActionVisible" class="form-check-input" checked>
+                        <label class="form-check-label small" for="editActionVisible">Visible en el tracker</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="editActionSave">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initSortables();
+            document.getElementById('editActionSave').addEventListener('click', saveEditAction);
+        });
+
+        function initSortables() {
+            ['ataque-pos', 'ataque-neg', 'defensa-pos', 'defensa-neg'].forEach(function(blockId) {
+                var el = document.getElementById('grid-' + blockId);
+                if (!el) return;
+                new Sortable(el, {
+                    group: { name: blockId, pull: true, put: [blockId] },
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    onEnd: function(evt) {
+                        updatePositionsForBlock(blockId);
+                    }
+                });
+            });
+        }
+
+        function updatePositionsForBlock(blockId) {
+            var list = document.getElementById('grid-' + blockId);
+            if (!list) return;
+            var slots = [];
+            try { slots = JSON.parse(list.getAttribute('data-slots') || '[]'); } catch (e) {}
+            var items = list.querySelectorAll('.action-card');
+            var updates = [];
+            items.forEach(function(item, index) {
+                var row = slots[index] ? slots[index][0] : (Math.floor(index / 2) + 1);
+                var col = slots[index] ? slots[index][1] : ((index % 2) + 1);
+                updates.push({ id: parseInt(item.dataset.actionId, 10), grid_row: row, grid_col: col });
+            });
+            fetch('/api/game_config/positions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ updates: updates })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.status === 'ok' && slots.length) {
+                    items.forEach(function(item, index) {
+                        var row = slots[index][0], col = slots[index][1];
+                        item.dataset.gridRow = row;
+                        item.dataset.gridCol = col;
+                        item.dataset.pos = row + '-' + col;
+                    });
+                }
+            });
+        }
+
+        function toggleVisibility(btn) {
+            var card = btn.closest('.action-card');
+            if (!card) return;
+            var id = card.dataset.actionId;
+            var currentVisible = card.dataset.visible === 'true';
+            var newVisible = !currentVisible;
+            
+            fetch('/api/action/' + id, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ visible: newVisible })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.status === 'ok') {
+                    card.dataset.visible = data.action.visible ? 'true' : 'false';
+                    var icon = btn.querySelector('i');
+                    if (data.action.visible) {
+                        card.classList.remove('hidden-action');
+                        icon.classList.remove('bi-eye-slash');
+                        icon.classList.add('bi-eye');
+                    } else {
+                        card.classList.add('hidden-action');
+                        icon.classList.remove('bi-eye');
+                        icon.classList.add('bi-eye-slash');
+                    }
+                }
+            });
+        }
+
+        function openEditModal(btn) {
+            var card = btn && btn.closest ? btn.closest('.action-card') : null;
+            if (!card) return;
+            var id = card.dataset.actionId;
+            var name = card.dataset.name || '';
+            var value = parseFloat(card.dataset.value) || 0;
+            var description = card.dataset.description || '';
+            var visible = card.dataset.visible === 'true';
+            var canName = card.dataset.canName === 'true';
+            var canDesc = card.dataset.canDesc === 'true';
+            document.getElementById('editActionId').value = id;
+            document.getElementById('editActionName').value = name;
+            document.getElementById('editActionValue').value = value;
+            document.getElementById('editActionDesc').value = description;
+            document.getElementById('editActionVisible').checked = visible;
+            document.getElementById('editNameWrap').style.display = canName ? 'block' : 'none';
+            document.getElementById('editDescWrap').style.display = canDesc ? 'block' : 'none';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('editActionModal')).show();
+        }
+
+        function saveEditAction() {
+            var id = document.getElementById('editActionId').value;
+            var payload = {
+                name: document.getElementById('editActionName').value,
+                value: parseFloat(document.getElementById('editActionValue').value) || 0,
+                description: document.getElementById('editActionDesc').value,
+                visible: document.getElementById('editActionVisible').checked
+            };
+            fetch('/api/action/' + id, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify(payload)
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.status === 'ok') {
+                    var card = document.querySelector('.action-card[data-action-id="' + id + '"]');
+                    if (card) {
+                        card.querySelector('.label').textContent = data.action.name;
+                        card.querySelector('.val').textContent = data.action.value > 0 ? '+' + data.action.value : data.action.value;
+                        card.dataset.name = data.action.name;
+                        card.dataset.value = data.action.value;
+                        card.dataset.description = data.action.description || '';
+                        card.dataset.visible = data.action.visible ? 'true' : 'false';
+                        var visIcon = card.querySelector('.btn-visibility i');
+                        if (data.action.visible) {
+                            card.classList.remove('hidden-action');
+                            visIcon.classList.remove('bi-eye-slash');
+                            visIcon.classList.add('bi-eye');
+                        } else {
+                            card.classList.add('hidden-action');
+                            visIcon.classList.remove('bi-eye');
+                            visIcon.classList.add('bi-eye-slash');
+                        }
+                    }
+                    bootstrap.Modal.getInstance(document.getElementById('editActionModal')).hide();
+                }
+            });
+        }
+    </script>
 </body>
 </html>
