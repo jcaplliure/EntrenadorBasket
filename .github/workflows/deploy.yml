@@ -1,0 +1,43 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Permite ejecutar manualmente
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT }}
+        script: |
+          cd /var/www/basketball-coach
+          
+          # Actualizar código
+          git pull origin main
+          
+          # Instalar nuevas dependencias si las hay
+          /var/www/basketball-coach/venv/bin/pip install -r requirements.txt
+          
+          # Ajustar permisos
+          chown -R basketballcoach:basketballcoach /var/www/basketball-coach
+          
+          # Reiniciar servicio
+          systemctl restart basketball-coach
+          
+          # Verificar que está corriendo
+          sleep 2
+          systemctl status basketball-coach --no-pager || exit 1
+          
+          echo "✅ Despliegue completado exitosamente"
