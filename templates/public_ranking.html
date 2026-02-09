@@ -3,81 +3,515 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ranking - {{ team.name }}</title>
+    <title>Portal - {{ team.name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        body { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); min-height: 100vh; color: white; }
-        .podium-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 15px; backdrop-filter: blur(5px); }
-        .rank-1 { border: 2px solid #ffd700; background: linear-gradient(to bottom, rgba(255, 215, 0, 0.2), rgba(0,0,0,0)); transform: scale(1.05); }
-        .rank-2 { border: 2px solid #c0c0c0; }
-        .rank-3 { border: 2px solid #cd7f32; }
-        .player-img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid white; background: #333; }
-        .rank-badge { 
-            width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        body { 
+            background: #0a1929; 
+            min-height: 100vh; 
+            color: white; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
-        .bg-gold { background: #ffd700; color: black; }
-        .bg-silver { background: #c0c0c0; color: black; }
-        .bg-bronze { background: #cd7f32; color: white; }
+        .section-card { 
+            background: linear-gradient(135deg, rgba(13, 31, 45, 0.95) 0%, rgba(10, 25, 41, 0.95) 100%);
+            border: 2px solid rgba(59, 130, 246, 0.3); 
+            border-radius: 16px; 
+            padding: 1.2rem; 
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .section-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #ffffff;
+            margin-bottom: 1rem;
+        }
+        /* Gráfico estilo Analytics */
+        .chart-card {
+            background: linear-gradient(135deg, rgba(13, 31, 45, 0.95) 0%, rgba(10, 25, 41, 0.95) 100%);
+            border: 2px solid rgba(59, 130, 246, 0.4);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        .chart-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        .chart-title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.2rem;
+            text-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+        .chart-subtitle {
+            text-align: center;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 0.8rem;
+            position: relative;
+            z-index: 1;
+        }
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        .player-row {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .player-name {
+            min-width: 70px;
+            max-width: 80px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .bar-container {
+            flex: 1;
+            height: 28px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .bar-neon {
+            height: 100%;
+            border-radius: 10px;
+            position: relative;
+            background: rgba(0, 0, 0, 0.2);
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .bar-neon.gold {
+            border: 3px solid #FFD700;
+            background: rgba(255, 215, 0, 0.15);
+            box-shadow: 
+                inset 0 0 20px rgba(255, 215, 0, 0.9),
+                inset 0 0 10px rgba(255, 215, 0, 0.7),
+                inset 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+        .bar-neon.blue {
+            border: 3px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.15);
+            box-shadow: 
+                inset 0 0 18px rgba(59, 130, 246, 0.9),
+                inset 0 0 10px rgba(59, 130, 246, 0.7),
+                inset 0 0 5px rgba(255, 255, 255, 0.4);
+        }
+        .player-value {
+            min-width: 55px;
+            text-align: right;
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .player-value.gold {
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+        .player-value.blue {
+            color: #3b82f6;
+            text-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+        }
+        .sparkle {
+            position: absolute;
+            bottom: 0.5rem;
+            right: 0.5rem;
+            font-size: 1.2rem;
+            opacity: 0.2;
+            animation: sparkle-rotate 3s linear infinite;
+            z-index: 2;
+        }
+        @keyframes sparkle-rotate {
+            0%, 100% { transform: rotate(0deg) scale(1); opacity: 0.2; }
+            50% { transform: rotate(180deg) scale(1.1); opacity: 0.4; }
+        }
+        @media (max-width: 360px) {
+            .sparkle { display: none; }
+            .player-name { min-width: 60px; max-width: 70px; font-size: 0.8rem; }
+            .player-value { min-width: 50px; font-size: 0.75rem; }
+        }
+        /* Ejercicios */
+        .drill-card { border: none; overflow: hidden; position: relative; border-radius: 12px; }
+        .card-img-zone { position: relative; height: 120px; cursor: pointer; background: #000; overflow: hidden; }
+        .card-img-zone img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
+        .overlay-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; }
+        /* Filtros */
+        .filters-container {
+            background: rgba(13, 31, 45, 0.95);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 10px;
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        .filter-label {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-right: 0.3rem;
+        }
+        .filter-select {
+            background: #162838;
+            border: 1px solid #3b82f6;
+            color: #ffffff;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .filter-select:focus {
+            outline: none;
+            border-color: #60a5fa;
+        }
+        .btn-edit-filter {
+            background: transparent;
+            border: 1px solid #3b82f6;
+            color: #60a5fa;
+            padding: 0.35rem 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-edit-filter:hover {
+            background: rgba(59, 130, 246, 0.2);
+        }
+        .modal-content {
+            background: #0d1f2d;
+            color: #ffffff;
+            border: 2px solid rgba(59, 130, 246, 0.4);
+        }
+        .modal-header { border-bottom: 1px solid rgba(59, 130, 246, 0.3); }
+        .modal-footer { border-top: 1px solid rgba(59, 130, 246, 0.3); }
+        .match-checkbox {
+            background: #162838;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 0.3rem;
+        }
+        .match-checkbox:hover {
+            background: #1a2f42;
+            border-color: #3b82f6;
+        }
+        .match-checkbox input[type="checkbox"] { accent-color: #3b82f6; }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            border: none;
+            font-weight: 600;
+        }
+        .btn-secondary {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid #3b82f6;
+            color: #60a5fa;
+        }
     </style>
 </head>
 <body>
-    <div class="container py-4">
+    <div class="container py-4" style="max-width: 480px;">
         
         <div class="text-center mb-4">
             {% if team.logo_file %}
                 <img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" width="80" class="rounded-circle mb-2 shadow">
             {% endif %}
             <h2 class="fw-bold">{{ team.name }}</h2>
-            <p class="opacity-75">🏆 Clasificación de Entrenamiento</p>
+            <p class="opacity-75">🏆 Portal del Equipo</p>
         </div>
 
-        <div class="row g-3 justify-content-center">
-            {% for p in ranking %}
-            <div class="col-12 col-md-8">
-                <div class="d-flex align-items-center p-3 podium-card 
-                    {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% endif %}">
-                    
-                    <div class="position-relative me-3">
-                        {% if p.photo %}
-                            <img src="{{ url_for('static', filename='uploads/' + p.photo) }}" class="player-img">
-                        {% else %}
-                            <div class="player-img d-flex align-items-center justify-content-center fw-bold text-white small">
-                                {{ p.dorsal }}
+        <!-- Notas del Entrenador (PRIMERO) -->
+        {% if team.public_notes %}
+        <div class="section-card">
+            <h4 class="mb-3 fw-bold"><i class="bi bi-sticky-fill"></i> Notas del Entrenador</h4>
+            <div class="opacity-90" style="white-space: pre-line; line-height: 1.6;">
+                {{ team.public_notes }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Gráficos de Analytics (solo si analytics_visible y hay gráficos habilitados) -->
+        {% if team.analytics_visible and charts %}
+        
+        <!-- Filtro de partidos -->
+        {% if all_matches %}
+        <div class="filters-container">
+            <span class="filter-label"><i class="bi bi-funnel"></i> PARTIDOS:</span>
+            <select class="filter-select" id="filterSelect" onchange="handleFilterChange()">
+                <option value="all" {% if filter_type == 'all' %}selected{% endif %}>Todos</option>
+                <option value="last1" {% if filter_type == 'last1' %}selected{% endif %}>Último</option>
+                <option value="last5" {% if filter_type == 'last5' %}selected{% endif %}>Últimos 5</option>
+                <option value="last10" {% if filter_type == 'last10' %}selected{% endif %}>Últimos 10</option>
+                <option value="custom" {% if filter_type == 'custom' %}selected{% endif %}>Seleccionar...</option>
+            </select>
+            {% if filter_type == 'custom' %}
+            <button type="button" class="btn-edit-filter" onclick="openMatchesModal()" title="Editar selección">
+                <i class="bi bi-pencil-square"></i>
+            </button>
+            {% endif %}
+            <span class="filter-label ms-2" style="font-size: 0.7rem; opacity: 0.6;">
+                ({{ num_matches }} partido{% if num_matches != 1 %}s{% endif %})
+            </span>
+        </div>
+        {% endif %}
+        
+        <!-- Mostrar todos los gráficos habilitados -->
+        {% for chart_type, chart in charts.items() %}
+        {% if chart.data %}
+        <div class="chart-card">
+            <h2 class="chart-title">{{ chart.title }}</h2>
+            <div class="chart-subtitle">Top {{ team.analytics_players_count }} jugadores{% if num_matches > 1 %} (promedio){% endif %}</div>
+            
+            <div class="ranking-list">
+                {% set max_val = chart.data[0].points if chart.data else 1 %}
+                {% for p in chart.data %}
+                <div class="player-row">
+                    <span class="player-name">{{ p.name }}</span>
+                    <div class="bar-container">
+                        {% set width = (p.points / max_val * 100) if max_val > 0 else 0 %}
+                        <div class="bar-neon {% if loop.first %}gold{% else %}blue{% endif %}" style="width: {{ width }}%"></div>
+                    </div>
+                    <span class="player-value {% if loop.first %}gold{% else %}blue{% endif %}">Val: {{ p.points|round(1) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="sparkle">✨</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+        
+        {% elif team.analytics_visible and not charts %}
+        <div class="chart-card">
+            <div class="text-center py-4 opacity-50">
+                <i class="bi bi-bar-chart" style="font-size: 2rem;"></i>
+                <p class="mt-2 mb-0">No hay gráficos configurados.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Galería de Ejercicios -->
+        {% if gallery_drills %}
+        <div class="section-card">
+            <h4 class="mb-3 fw-bold"><i class="bi bi-collection-play-fill"></i> Ejercicios Recomendados</h4>
+            <p class="opacity-75 small mb-3">Material para entrenar en casa</p>
+            <div class="row g-3">
+                {% for drill in gallery_drills %}
+                <div class="col-12 col-md-6">
+                    <div class="card h-100 shadow-sm" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px;">
+                        <div class="row g-0 align-items-stretch">
+                            <!-- Imagen del ejercicio -->
+                            <div class="col-4">
+                                <div class="card-img-zone h-100" style="min-height: 120px; border-radius: 12px 0 0 12px;" 
+                                     onclick="openDrillContent({{ drill.id }}, '{{ drill.media_type }}', '{{ drill.external_link or '' }}', '{{ drill.media_file or '' }}')">
+                                    {% if drill.cover_image %}
+                                        <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}" style="border-radius: 12px 0 0 12px;">
+                                    {% elif drill.cover_fallback %}
+                                        <img src="{{ url_for('static', filename='uploads/' + drill.cover_fallback) }}" style="border-radius: 12px 0 0 12px;">
+                                    {% elif drill.media_type == 'image' and drill.media_file %}
+                                        <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" style="border-radius: 12px 0 0 12px;">
+                                    {% else %}
+                                        <img src="{{ get_config_url('generic_bg') }}" style="border-radius: 12px 0 0 12px;">
+                                    {% endif %}
+
+                                    {% if drill.origin == 'youtube' %}
+                                        <img src="{{ get_config_url('youtube_overlay') }}" class="overlay-img">
+                                    {% elif drill.origin == 'pdf' %}
+                                        <img src="{{ get_config_url('pdf_overlay') }}" class="overlay-img">
+                                    {% elif drill.origin == 'tiktok' %}
+                                        <img src="{{ get_config_url('tiktok_overlay') }}" class="overlay-img">
+                                    {% elif drill.origin == 'instagram' %}
+                                        <img src="{{ get_config_url('instagram_overlay') }}" class="overlay-img">
+                                    {% endif %}
+                                </div>
                             </div>
-                        {% endif %}
-                        
-                        <div class="rank-badge 
-                            {% if loop.index == 1 %}bg-gold{% elif loop.index == 2 %}bg-silver{% elif loop.index == 3 %}bg-bronze{% else %}bg-dark text-white border border-light{% endif %}">
-                            {{ loop.index }}
+                            <!-- Contenido -->
+                            <div class="col-8">
+                                <div class="card-body p-3 d-flex flex-column h-100">
+                                    <h6 class="card-title fw-bold mb-2" style="color: white;">{{ drill.title }}</h6>
+                                    {% if drill.gallery_note %}
+                                    <div class="flex-grow-1">
+                                        <p class="small mb-0 opacity-90" style="line-height: 1.4;">
+                                            <i class="bi bi-chat-left-text me-1"></i>{{ drill.gallery_note }}
+                                        </p>
+                                    </div>
+                                    {% endif %}
+                                    <div class="mt-2">
+                                        {% if drill.primary_tag %}
+                                            <span class="badge bg-light text-secondary me-1" style="font-size: 0.65rem;">{{ drill.primary_tag.name }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="flex-grow-1">
-                        <h5 class="mb-0 fw-bold">{{ p.name }}</h5>
-                        <small class="opacity-75">Dorsal #{{ p.dorsal }}</small>
-                    </div>
-
-                    <div class="text-end">
-                        <span class="fs-4 fw-bold">{{ p.points|int }}</span>
-                        <small class="d-block opacity-75" style="font-size: 0.7rem;">PTS</small>
-                    </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-            
-            {% if not ranking %}
-            <div class="text-center opacity-50 mt-5">
-                <p>Aún no hay datos registrados.</p>
-            </div>
-            {% endif %}
         </div>
+        {% endif %}
         
         <div class="text-center mt-5 opacity-50 small">
             <p>EntrenadorBasket App</p>
         </div>
 
+    </div>
+    
+    <!-- Modal Seleccionar Partidos -->
+    <div class="modal fade" id="matchesModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Seleccionar Partidos</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                    <form id="matchesForm">
+                        {% for match in all_matches %}
+                        <div class="match-checkbox">
+                            <input class="form-check-input" type="checkbox" name="match_ids" value="{{ match.id }}" 
+                                   id="m{{ match.id }}" {% if match.id in selected_match_ids %}checked{% endif %}>
+                            <label class="form-check-label" for="m{{ match.id }}">
+                                vs {{ match.opponent }} - {{ match.date.strftime('%d/%m/%Y') }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="applyMatchesFilter()">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const teamId = {{ team.id }};
+        
+        function handleFilterChange() {
+            const filterType = document.getElementById('filterSelect').value;
+            if (filterType === 'custom') {
+                openMatchesModal();
+                return;
+            }
+            window.location.href = `/team/${teamId}/public?filter=${filterType}`;
+        }
+        
+        function openMatchesModal() {
+            new bootstrap.Modal(document.getElementById('matchesModal')).show();
+        }
+        
+        function applyMatchesFilter() {
+            const form = document.getElementById('matchesForm');
+            const checkboxes = form.querySelectorAll('input[name="match_ids"]:checked');
+            const matchIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (matchIds.length === 0) {
+                alert('Selecciona al menos un partido');
+                return;
+            }
+            
+            const params = new URLSearchParams();
+            params.append('filter', 'custom');
+            matchIds.forEach(id => params.append('match_ids', id));
+            
+            window.location.href = `/team/${teamId}/public?${params.toString()}`;
+        }
+        
+        // Funciones para abrir ejercicios (igual que en index.html)
+        function openDrillContent(drillId, mediaType, externalLink, mediaFile) {
+            if (mediaType === 'link' && externalLink) {
+                // Si es YouTube, abrir en embed
+                if (externalLink.includes('youtu')) {
+                    const videoId = extractYouTubeId(externalLink);
+                    if (videoId) {
+                        window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
+                        return;
+                    }
+                }
+                // Otros enlaces externos
+                window.open(externalLink, '_blank');
+            } else if (mediaType === 'pdf' && mediaFile) {
+                // Abrir PDF en nueva pestaña
+                window.open('/static/uploads/' + mediaFile, '_blank');
+            } else if (mediaType === 'image' && mediaFile) {
+                // Abrir imagen en nueva pestaña
+                window.open('/static/uploads/' + mediaFile, '_blank');
+            } else if (mediaType === 'video_file' && mediaFile) {
+                // Abrir video en nueva pestaña
+                window.open('/static/uploads/' + mediaFile, '_blank');
+            } else {
+                // Por defecto, abrir la ficha completa
+                openDrillInfo(drillId);
+            }
+        }
+
+        // Función para extraer ID de YouTube
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            if (url.includes('/shorts/')) {
+                const parts = url.split('/shorts/');
+                return parts[parts.length - 1].split('?')[0];
+            }
+            if (url.includes('youtu.be/')) {
+                const parts = url.split('youtu.be/');
+                return parts[parts.length - 1].split('?')[0];
+            }
+            if (url.includes('v=')) {
+                return url.split('v=')[1].split('&')[0];
+            }
+            return null;
+        }
+
+        // Función para abrir la ficha completa
+        function openDrillInfo(drillId) {
+            const modal = document.getElementById('drillModal');
+            const modalContent = modal.querySelector('.modal-content');
+            modalContent.innerHTML = '<div class="p-5 text-center"><div class="spinner-border text-warning"></div></div>';
+            fetch('/drill/' + drillId)
+                .then(r => r.text())
+                .then(html => {
+                    modalContent.innerHTML = html;
+                    const bootstrapModal = new bootstrap.Modal(modal);
+                    bootstrapModal.show();
+                });
+        }
+    </script>
+    
+    <!-- Modal para ver ficha completa del ejercicio -->
+    <div class="modal fade" id="drillModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content"></div>
+        </div>
     </div>
 </body>
 </html>

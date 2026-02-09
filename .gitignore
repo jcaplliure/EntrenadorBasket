@@ -4,3 +4,7 @@ __pycache__/
 .DS_Store
 basket.db
 static/uploads/
+.env
+*.log
+gunicorn.pid
+logs/

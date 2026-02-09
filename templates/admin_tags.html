@@ -6,6 +6,28 @@
     <title>Admin - Etiquetas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .img-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #dee2e6; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+        .img-thumb:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .section-title { font-weight: 700; margin-bottom: 0.75rem; }
+        .img-container { position: relative; display: inline-block; }
+        .img-container .btn-delete-img {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border-radius: 50%;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .img-container:hover .btn-delete-img { opacity: 1; }
+    </style>
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-expand navbar-dark bg-dark mb-4">
@@ -19,26 +41,178 @@
         </div>
     </nav>
 
-    <div class="container" style="max-width: 600px;">
-        <h4 class="mb-3">🏷️ Gestionar Etiquetas</h4>
-        
+    <div class="container" style="max-width: 900px;">
+        <h4 class="mb-3">🏷️ Gestionar Etiquetas y Imágenes</h4>
+
         <div class="card p-3 mb-4 shadow-sm">
-            <form action="/admin/tags" method="POST" class="d-flex gap-2">
-                <input type="text" name="tag_name" class="form-control" placeholder="Nueva etiqueta..." required>
-                <button type="submit" class="btn btn-primary">Añadir</button>
+            <div class="section-title">Añadir etiqueta</div>
+            <form action="/admin/tags" method="POST" class="row g-2 align-items-center">
+                <input type="hidden" name="action" value="add_tag">
+                <div class="col-12 col-md-5">
+                    <input type="text" name="tag_name" class="form-control" placeholder="Nombre de etiqueta" required>
+                </div>
+                <div class="col-12 col-md-5">
+                    <select name="group_id" class="form-select" required>
+                        <option value="">Grupo...</option>
+                        {% for g in groups %}
+                        <option value="{{ g.id }}">{{ g.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Añadir</button>
+                </div>
             </form>
         </div>
 
-        <div class="list-group shadow-sm">
-            {% for tag in tags %}
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-                <span class="fw-bold">{{ tag.name }}</span>
-                <a href="/admin/delete_tag/{{ tag.id }}" class="btn btn-outline-danger btn-sm border-0" onclick="return confirm('¿Borrar etiqueta?');">
-                    <i class="bi bi-trash"></i>
-                </a>
+        <div class="card p-3 mb-4 shadow-sm">
+            <div class="section-title">Imágenes por grupo (máx 10)</div>
+            {% for g in groups %}
+            <div class="border rounded p-3 mb-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="fw-bold">{{ g.name }}</div>
+                    <form action="/admin/tags" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
+                        <input type="hidden" name="action" value="add_group_image">
+                        <input type="hidden" name="group_id" value="{{ g.id }}">
+                        <input type="file" name="image" class="form-control form-control-sm" accept="image/*" required>
+                        <button type="submit" class="btn btn-sm btn-outline-primary">Subir</button>
+                    </form>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for img in g.images %}
+                    <div class="img-container">
+                        <img class="img-thumb" src="{{ url_for('static', filename='uploads/' + img.filename) }}" onclick="previewImage('{{ url_for('static', filename='uploads/' + img.filename) }}')" title="Click para ampliar">
+                        <form action="/admin/tags" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta imagen?');">
+                            <input type="hidden" name="action" value="delete_group_image">
+                            <input type="hidden" name="image_id" value="{{ img.id }}">
+                            <button type="submit" class="btn btn-danger btn-delete-img" title="Eliminar">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
             {% endfor %}
         </div>
+
+        <div class="card p-3 mb-4 shadow-sm">
+            <div class="section-title">Gestionar etiquetas</div>
+            {% set current_group = namespace(id=None) %}
+            {% for tag in tags %}
+                {% if tag.group_id != current_group.id %}
+                    {% set current_group.id = tag.group_id %}
+                    <div class="bg-secondary bg-opacity-10 rounded px-3 py-2 mb-2 mt-3 fw-bold text-secondary">
+                        {{ tag.group.name if tag.group else 'Sin grupo' }}
+                    </div>
+                {% endif %}
+                <div class="border rounded p-3 mb-2 bg-white">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center gap-3 flex-grow-1">
+                            <div class="fw-bold" style="min-width: 150px;">{{ tag.name }}</div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditTagModal({{ tag.id }}, '{{ tag.name|e }}', {{ tag.group_id or 0 }})" title="Editar">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form action="/admin/tags" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar la etiqueta &quot;{{ tag.name }}&quot;? Se eliminará de todos los ejercicios que la usen.');">
+                                <input type="hidden" name="action" value="delete_tag">
+                                <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                        <form action="/admin/tags" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
+                            <input type="hidden" name="action" value="add_tag_image">
+                            <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                            <input type="file" name="image" class="form-control form-control-sm" accept="image/*" required>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Subir</button>
+                        </form>
+                    </div>
+                    {% if tag.images %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for img in tag.images %}
+                        <div class="img-container">
+                            <img class="img-thumb" src="{{ url_for('static', filename='uploads/' + img.filename) }}" onclick="previewImage('{{ url_for('static', filename='uploads/' + img.filename) }}')" title="Click para ampliar">
+                            <form action="/admin/tags" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta imagen?');">
+                                <input type="hidden" name="action" value="delete_tag_image">
+                                <input type="hidden" name="image_id" value="{{ img.id }}">
+                                <button type="submit" class="btn btn-danger btn-delete-img" title="Eliminar">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Modal para editar etiqueta -->
+        <div class="modal fade" id="editTagModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="/admin/tags" method="POST">
+                        <input type="hidden" name="action" value="edit_tag">
+                        <input type="hidden" name="tag_id" id="editTagId">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Editar etiqueta</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Nombre</label>
+                                <input type="text" name="tag_name" id="editTagName" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Grupo</label>
+                                <select name="group_id" id="editTagGroup" class="form-select" required>
+                                    {% for g in groups %}
+                                    <option value="{{ g.id }}">{{ g.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Modal para previsualizar imagen -->
+    <div class="modal fade" id="imagePreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Vista previa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-0">
+                    <img id="previewImg" src="" style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function openEditTagModal(tagId, tagName, groupId) {
+            document.getElementById('editTagId').value = tagId;
+            document.getElementById('editTagName').value = tagName;
+            if (groupId) {
+                document.getElementById('editTagGroup').value = groupId;
+            }
+            new bootstrap.Modal(document.getElementById('editTagModal')).show();
+        }
+
+        function previewImage(src) {
+            document.getElementById('previewImg').src = src;
+            new bootstrap.Modal(document.getElementById('imagePreviewModal')).show();
+        }
+    </script>
 </body>
 </html>

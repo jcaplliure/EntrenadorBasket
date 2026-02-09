@@ -3,87 +3,381 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Modo Pista Pro - {{ plan.name }}</title>
+    <title>Modo Pista - {{ plan.name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        body { background-color: #000; color: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
+        :root {
+            --bg-primary: #0b1424;
+            --bg-secondary: #0f1b2e;
+            --bg-elevated: #111f35;
+            --text-primary: #ffffff;
+            --text-secondary: #c7d2e3;
+            --text-muted: #8b97ad;
+            --accent: #4aa3ff;
+            --accent-hover: #2f8bff;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: rgba(233, 228, 210, 0.35);
+            --cream: #e9e4d2;
+        }
         
-        /* OVERLAYS (INICIO Y FIN) */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            background: radial-gradient(1200px 600px at 50% -100px, rgba(74,163,255,0.12), transparent 70%), var(--bg-primary);
+            color: var(--text-primary); 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* OVERLAY INICIO */
         .fullscreen-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999; display: flex; flex-direction: column;
+            background: var(--bg-primary); 
+            z-index: 1040; display: flex; flex-direction: column;
             align-items: center; justify-content: center; text-align: center;
-            padding: 20px; overflow-y: auto;
+            padding: 20px;
         }
         
-        /* BOTÓN START */
         .big-start-btn {
-            width: 150px; height: 150px; border-radius: 50%; font-size: 1.5rem;
-            background: #28a745; color: white; border: none; box-shadow: 0 0 30px rgba(40, 167, 69, 0.5);
-            animation: pulse 2s infinite; margin-bottom: 30px;
+            width: 120px; height: 120px; border-radius: 50%; 
+            background: var(--accent); 
+            color: white; border: none; 
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 2.5rem;
+            display: flex; align-items: center; justify-content: center;
         }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-        /* TABLA RESUMEN FIN */
-        .summary-table { width: 100%; max-width: 500px; margin-bottom: 20px; text-align: left; font-size: 0.9rem; }
-        .summary-table th { color: #888; border-bottom: 1px solid #444; padding: 5px; }
-        .summary-table td { border-bottom: 1px solid #222; padding: 8px 5px; }
-        .time-diff-good { color: #28a745; } /* Ahorro tiempo */
-        .time-diff-bad { color: #dc3545; }  /* Me pasé */
-
-        /* DASHBOARD SUPERIOR */
-        .dashboard-bar {
-            background: #1a1a1a; border-bottom: 1px solid #333; padding: 10px;
-            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; text-align: center;
-            font-size: 0.8rem;
+        .big-start-btn:active { transform: scale(0.95); box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3); }
+        
+        /* HEADER MINIMALISTA */
+        .top-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 12px 16px;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .dash-item { display: flex; flex-direction: column; }
-        .dash-label { color: #888; font-size: 0.7rem; text-transform: uppercase; }
-        .dash-value { font-weight: bold; font-size: 1.1rem; font-family: monospace; }
-        .text-lag-good { color: #28a745; } 
-        .text-lag-bad { color: #dc3545; }   
-
-        /* CONTENIDO CENTRAL */
-        .drill-container { flex-grow: 1; display: none; flex-direction: column; padding: 15px; overflow-y: auto; text-align: center; }
+        .header-stats {
+            display: flex; gap: 20px; font-size: 0.75rem;
+        }
+        .stat-item {
+            display: flex; flex-direction: column; gap: 2px;
+        }
+        .stat-label {
+            color: var(--text-muted); text-transform: uppercase; 
+            letter-spacing: 0.5px; font-size: 0.65rem;
+        }
+        .stat-value {
+            color: var(--text-primary); font-weight: 600; 
+            font-family: 'SF Mono', 'Monaco', monospace; font-size: 0.9rem;
+        }
+        .stat-value.good { color: var(--success); }
+        .stat-value.bad { color: var(--danger); }
+        
+        .exercise-badge {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 6px 14px; border-radius: 20px;
+            font-size: 0.7rem; font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+        }
+        
+        /* CONTENIDO PRINCIPAL */
+        .main-content {
+            flex: 1; overflow-y: auto; padding: 24px 16px;
+            display: flex; flex-direction: column; gap: 24px;
+        }
+        
+        .drill-container { 
+            display: none; flex-direction: column; gap: 24px;
+        }
         .drill-container.active { display: flex; }
         
-        /* CRONÓMETRO */
-        .timer-section { margin: 15px 0; background: #111; padding: 15px; border-radius: 15px; border: 1px solid #333; }
-        .timer-display { font-size: 3.5rem; font-weight: bold; font-family: monospace; color: #0d6efd; line-height: 1; }
-        .timer-controls button { width: 50px; height: 50px; border-radius: 50%; font-size: 1.2rem; margin: 5px; }
-        
-        /* MEDIA */
-        .media-box { 
-            width: 100%; height: 200px; background: #222; margin-bottom: 10px; border-radius: 12px; 
-            display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
+        /* BLOQUE Y TÍTULO */
+        .block-tag {
+            display: inline-block;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.6);
+            padding: 4px 12px; border-radius: 12px;
+            font-size: 0.7rem; font-weight: 700;
+            color: #f59e0b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .media-box img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
-        .play-overlay { position: absolute; font-size: 4rem; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.5); pointer-events: none; }
+        
+        .exercise-title {
+            font-size: 2rem; font-weight: 700; 
+            color: var(--text-primary); 
+            line-height: 1.2;
+            margin: 0;
+        }
+        
+        /* MEDIA BOX ELEGANTE */
+        .media-box { 
+            width: 100%; height: 320px; 
+            background: var(--bg-elevated); 
+            border-radius: 18px; 
+            display: flex; align-items: center; justify-content: center; 
+            overflow: hidden; position: relative;
+            border: 2px solid var(--cream);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 18px rgba(233,228,210,0.15);
+        }
+        .media-box:active { transform: scale(0.98); }
+        .media-box:hover { border-color: rgba(255,255,255,0.2); }
+        .media-box img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .platform-logo {
+            position: absolute; bottom: 16px; right: 16px;
+            width: 44px; height: 44px; 
+            background: rgba(0,0,0,0.6); 
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 5;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .platform-logo img { width: 28px; height: 28px; object-fit: contain; }
+        
+        .play-overlay { 
+            position: absolute; font-size: 4rem; color: white; 
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5); 
+            pointer-events: none; 
+            opacity: 0.9;
+            transition: transform 0.3s;
+        }
+        .media-box:hover .play-overlay { transform: scale(1.1); }
+        
+        /* TIMER ELEGANTE */
+        .timer-section { 
+            background: transparent;
+            border: none;
+            padding: 8px 0; 
+        }
+        .timer-label {
+            color: var(--text-muted); font-size: 0.65rem; 
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 12px; text-align: center;
+        }
+        .timer-display { 
+            font-size: 4rem; font-weight: 700; 
+            font-family: 'SF Mono', 'Monaco', monospace; 
+            color: #64b5ff; 
+            text-align: center; line-height: 1;
+            margin: 16px 0;
+            text-shadow: 0 0 14px rgba(74,163,255,0.5);
+        }
+        .timer-display.running { 
+            color: var(--success); 
+        }
+        .timer-display.finished { color: var(--danger); }
+        
+        .timer-controls { 
+            display: flex; justify-content: center; gap: 12px; 
+            margin-top: 8px; 
+        }
+        .timer-controls button { 
+            width: 54px; height: 54px; border-radius: 50%; 
+            font-size: 1.25rem; 
+            border: 2px solid rgba(255,255,255,0.15);
+            background: transparent;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+        .timer-controls button:active { transform: scale(0.95); }
+        .timer-controls .btn-success { 
+            border-color: #22c55e; color: #22c55e; 
+        }
+        .timer-controls .btn-warning { 
+            border-color: #facc15; color: #facc15; 
+        }
+        .timer-controls .btn-danger { 
+            border-color: #ef4444; color: #ef4444; 
+        }
+        
+        /* BOTÓN GAMIFICAR ELEGANTE */
+        .gamify-btn {
+            background: linear-gradient(180deg, #4aa3ff 0%, #2b7eea 100%);
+            color: #eaf3ff; border: 1px solid rgba(255,255,255,0.12); 
+            padding: 14px 20px; border-radius: 14px; 
+            font-weight: 600; font-size: 1rem;
+            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            box-shadow: 0 6px 18px rgba(43,126,234,0.35);
+        }
+        .gamify-btn:active { transform: scale(0.98); }
+        .gamify-btn:hover { background: var(--accent-hover); }
+        
+        /* DESCRIPCIÓN */
+        .exercise-description {
+            padding: 16px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            color: var(--text-secondary);
+            font-size: 0.875rem; line-height: 1.6;
+        }
 
-        /* FOOTER */
-        .nav-bar { background: #1a1a1a; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #333; }
-        .nav-btn { flex-grow: 1; height: 50px; font-weight: bold; font-size: 1.1rem; border-radius: 8px; }
+        /* NAVEGACIÓN INFERIOR */
+        .nav-bar { 
+            background: var(--bg-secondary); 
+            padding: 14px 16px; display: flex; gap: 12px; 
+            border-top: 1px solid rgba(255,255,255,0.08); 
+        }
+        .nav-btn { 
+            flex: 1; height: 52px; font-weight: 600; 
+            font-size: 0.95rem; border-radius: 14px; 
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(18,35,59,0.6);
+            color: var(--text-primary);
+            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            box-shadow: inset 0 0 14px rgba(74,163,255,0.12);
+        }
+        .nav-btn:active { transform: scale(0.98); }
+        .nav-btn.btn-primary { 
+            background: linear-gradient(180deg, #4aa3ff 0%, #2b7eea 100%);
+            border-color: rgba(255,255,255,0.12);
+        }
+        .nav-btn.btn-success { 
+            background: linear-gradient(180deg, #4aa3ff 0%, #2b7eea 100%);
+            border-color: rgba(255,255,255,0.12);
+        }
+        
+        /* BOTONES FLOTANTES */
+        .floating-btn {
+            position: fixed; right: 16px;
+            width: 52px; height: 52px; border-radius: 50%;
+            background: #4aa3ff; color: white;
+            border: none; box-shadow: 0 4px 16px rgba(74, 163, 255, 0.4);
+            z-index: 99; display: none;
+            transition: all 0.2s;
+            font-size: 1.2rem;
+        }
+        .floating-btn:active { transform: scale(0.9); }
+        .floating-btn.show { display: flex; align-items: center; justify-content: center; }
+        .floating-btn.ranking { bottom: 80px; }
+        .floating-btn.add-player { bottom: 140px; background: #22c55e; box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4); }
+
+        .done-btn {
+            background: rgba(18,35,59,0.6);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #e9edf2;
+        }
+
+        @media (max-width: 767px) {
+            .main-content { padding: 16px 12px; gap: 16px; }
+            .exercise-title { font-size: 1.5rem; }
+            .media-box { height: 240px; border-radius: 16px; }
+            .timer-display { font-size: 3rem; }
+            .nav-btn { height: 48px; font-size: 0.9rem; }
+        }
+        
+        /* GRÁFICO RANKING */
+        .ranking-chart-container {
+            position: fixed; bottom: 70px; left: 0; right: 0;
+            background: var(--bg-elevated); 
+            border-top: 1px solid var(--border);
+            padding: 16px; max-height: 220px;
+            z-index: 100; display: none;
+        }
+        .ranking-chart-container.show { display: block; }
+        .ranking-chart-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px;
+        }
+        .ranking-chart-title {
+            font-size: 0.875rem; font-weight: 600; color: var(--text-primary);
+        }
+        .ranking-chart-controls {
+            display: flex; gap: 8px; align-items: center;
+        }
+        .ranking-chart-controls input {
+            width: 60px; padding: 6px 10px; border-radius: 8px;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            color: var(--text-primary); font-size: 0.75rem;
+        }
+        .ranking-chart-wrapper { height: 160px; position: relative; }
+        
+        /* MODALES ELEGANTES */
+        .modal-content {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+        .modal-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+        .modal-body {
+            background: var(--bg-elevated);
+        }
+        .form-control, .form-select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        /* LISTA DE JUGADORES EN GAMIFICACIÓN */
+        .player-score-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .player-score-item.absent {
+            display: none;
+        }
+        .add-absent-btn {
+            background: var(--bg-elevated);
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        .add-absent-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
     </style>
 </head>
 <body>
 
     <div id="start-overlay" class="fullscreen-overlay">
-        <h1 class="mb-4 fw-bold">Modo Pista</h1>
-        <button class="big-start-btn fw-bold" onclick="startSession()">
-            <i class="bi bi-play-fill display-3"></i><br>START
+        <h1 class="mb-4 fw-bold" style="font-size: 1.75rem; font-weight: 700;">Modo Pista</h1>
+        <button class="big-start-btn" onclick="startSession()">
+            <i class="bi bi-play-fill"></i>
         </button>
-        <a href="/plan/{{ plan.id }}" class="text-white text-decoration-none border-bottom">Salir / Cancelar</a>
+        <a href="/plan/{{ plan.id }}" class="text-white text-decoration-none mt-4" style="font-size: 0.875rem; opacity: 0.7;">Salir</a>
     </div>
 
     <div id="finish-overlay" class="fullscreen-overlay" style="display: none;">
-        <h2 class="mb-3 text-success fw-bold">¡Entrenamiento Finalizado! 🎉</h2>
+        <h2 class="mb-4 fw-bold" style="font-size: 1.5rem; color: var(--success);">¡Entrenamiento Finalizado!</h2>
         <div class="mb-4">
-            <span class="text-muted">Tiempo Total Real:</span>
-            <h1 class="fw-bold" id="finalTotalTime">00:00</h1>
+            <span style="font-size: 0.875rem; color: var(--text-muted);">Tiempo Total:</span>
+            <h1 class="fw-bold" id="finalTotalTime" style="font-size: 2.5rem; margin-top: 8px;">00:00</h1>
         </div>
-
-        <h5 class="text-start w-100 max-width-500 mb-2">Resumen por Ejercicio</h5>
         <table class="summary-table">
             <thead>
                 <tr>
@@ -92,29 +386,30 @@
                     <th>Real</th>
                 </tr>
             </thead>
-            <tbody id="summaryTableBody">
-                </tbody>
+            <tbody id="summaryTableBody"></tbody>
         </table>
-
-        <button class="btn btn-primary btn-lg w-100 mb-3 fw-bold" onclick="saveAndExit()">
-            <i class="bi bi-save"></i> Guardar Tiempos y Salir
+        <button class="btn btn-primary btn-lg w-100 mb-3 fw-bold" onclick="saveAndExit()" style="max-width: 500px; background: var(--accent); border: none; padding: 14px;">
+            <i class="bi bi-save"></i> Guardar y Salir
         </button>
-        <a href="/plan/{{ plan.id }}" class="text-muted text-decoration-none">Salir sin guardar cambios</a>
+        <a href="/plan/{{ plan.id }}" class="text-muted text-decoration-none" style="font-size: 0.875rem;">Salir sin guardar</a>
     </div>
 
-    <div class="dashboard-bar">
-        <div class="dash-item">
-            <span class="dash-label">⏱️ Total</span>
-            <span class="dash-value" id="totalSessionTime">00:00</span>
+    <div class="top-header">
+        <div class="header-stats">
+            <div class="stat-item">
+                <span class="stat-label">Total</span>
+                <span class="stat-value" id="totalSessionTime">00:00</span>
         </div>
-        <div class="dash-item">
-            <span class="dash-label">⚠️ Desfase</span>
-            <span class="dash-value text-muted" id="lagTime">--:--</span>
+            <div class="stat-item">
+                <span class="stat-label">Desfase</span>
+                <span class="stat-value" id="lagTime">--:--</span>
         </div>
-        <div class="dash-item">
-            <span class="dash-label">🏁 Fin Plan</span>
-            <span class="dash-value text-primary" id="nextFinishTime">--:--</span>
+            <div class="stat-item">
+                <span class="stat-label">Fin Plan</span>
+                <span class="stat-value" id="nextFinishTime">--:--</span>
         </div>
+        </div>
+        <div class="exercise-badge" id="exerciseBadge">1 / {{ plan.items|length }}</div>
     </div>
 
     {% set ns = namespace(cumulative=0) %}
@@ -125,75 +420,223 @@
          data-item-id="{{ item.id }}"
          data-title="{{ item.drill.title }}"
          data-duration="{{ item.duration }}"
+         data-drill-id="{{ item.drill.id }}"
          data-planned-start="{{ ns.cumulative }}">
         
-        <div class="d-flex justify-content-between text-secondary small text-uppercase fw-bold mb-1">
-            <span>{{ item.block_name }}</span>
-            <span>{{ loop.index }} / {{ plan.items|length }}</span>
+        <div class="main-content">
+            <div>
+                <span class="block-tag">{{ item.block_name }}</span>
+                <h1 class="exercise-title mt-3">{{ item.drill.title }}</h1>
         </div>
-        
-        <h3 class="fw-bold mb-2 text-warning">{{ item.drill.title }}</h3>
 
         <div class="media-box" onclick="openMedia('{{ item.drill.media_type }}', '{{ item.drill.media_file }}', '{{ item.drill.external_link }}')">
-            {% if item.drill.media_type == 'image' and item.drill.media_file %}
+                {% if item.drill.cover_image %}
+                    <img src="{{ url_for('static', filename='uploads/' + item.drill.cover_image) }}">
+                {% elif item.drill.media_type == 'image' and item.drill.media_file %}
                 <img src="{{ url_for('static', filename='uploads/' + item.drill.media_file) }}">
             {% elif item.drill.media_type == 'link' and 'youtu' in (item.drill.external_link or '') %}
                 <img src="{{ item.drill.external_link|youtube_thumb }}">
                 <i class="bi bi-play-circle-fill play-overlay"></i>
             {% elif item.drill.media_type == 'pdf' %}
-                <div class="text-center"><i class="bi bi-file-pdf display-1 text-danger"></i><br>Ver PDF</div>
+                    <div class="text-center">
+                        <i class="bi bi-file-pdf" style="font-size: 4rem; color: var(--danger);"></i>
+                        <p class="mt-2" style="font-size: 0.875rem; color: var(--text-muted);">Toca para ver PDF</p>
+                    </div>
             {% else %}
-                <div class="text-center"><i class="bi bi-image display-1 text-muted"></i></div>
+                    <div class="text-center">
+                        <i class="bi bi-image" style="font-size: 4rem; color: var(--text-muted);"></i>
+                        <p class="mt-2" style="font-size: 0.875rem; color: var(--text-muted);">Sin imagen</p>
+                    </div>
+                {% endif %}
+                
+                {% if item.drill.media_type == 'link' %}
+                    <div class="platform-logo">
+                        {% if 'youtu' in (item.drill.external_link or '') %}
+                            <img src="{{ url_for('static', filename='uploads/' + get_config_url('youtube_overlay')) }}" alt="YouTube">
+                        {% elif 'facebook' in (item.drill.external_link or '') %}
+                            <img src="{{ url_for('static', filename='uploads/' + get_config_url('facebook_overlay')) }}" alt="Facebook">
+                        {% elif 'tiktok' in (item.drill.external_link or '') %}
+                            <img src="{{ url_for('static', filename='uploads/' + get_config_url('tiktok_overlay')) }}" alt="TikTok">
+                        {% elif 'instagram' in (item.drill.external_link or '') %}
+                            <img src="{{ url_for('static', filename='uploads/' + get_config_url('instagram_overlay')) }}" alt="Instagram">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='uploads/' + get_config_url('generic_overlay')) }}" alt="Web">
+                        {% endif %}
+                    </div>
+                {% elif item.drill.media_type == 'pdf' %}
+                    <div class="platform-logo">
+                        <img src="{{ url_for('static', filename='uploads/' + get_config_url('pdf_overlay')) }}" alt="PDF">
+                    </div>
             {% endif %}
         </div>
 
         <div class="timer-section">
-            <div class="text-muted small mb-1">TIEMPO EJERCICIO ({{ item.duration }}')</div>
-            <div class="timer-display" id="timer-{{ loop.index0 }}">{{ "%02d" % item.duration }}:00</div>
-            <div class="timer-controls mt-2">
-                <button class="btn btn-success" onclick="startTimer({{ loop.index0 }})"><i class="bi bi-play-fill"></i></button>
-                <button class="btn btn-warning" onclick="pauseTimer({{ loop.index0 }})"><i class="bi bi-pause-fill"></i></button>
-                <button class="btn btn-danger" onclick="resetTimer({{ loop.index0 }}, {{ item.duration }})"><i class="bi bi-arrow-counterclockwise"></i></button>
+                <div class="timer-label">Tiempo del Ejercicio ({{ item.duration }} min)</div>
+                <div class="timer-display" id="timer-{{ loop.index0 }}" data-planned="{{ item.duration }}">{{ "%02d" % item.duration }}:00</div>
+                <div class="timer-controls">
+                    <button class="btn btn-success" onclick="startTimer({{ loop.index0 }})" title="Iniciar">
+                        <i class="bi bi-play-fill"></i>
+                    </button>
+                    <button class="btn btn-warning" onclick="pauseTimer({{ loop.index0 }})" title="Pausar">
+                        <i class="bi bi-pause-fill"></i>
+                    </button>
+                    <button class="btn btn-danger" onclick="resetTimer({{ loop.index0 }}, {{ item.duration }})" title="Reiniciar">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
             </div>
         </div>
 
-        <div class="mt-2 text-center">
-            <button class="btn btn-outline-warning btn-sm" onclick="openGamificationModal('{{ item.drill.title }}')">
+            <div class="d-flex gap-2">
+                <button class="btn gamify-btn flex-grow-1" onclick="openGamificationModal({{ item.drill.id }}, '{{ item.drill.title }}', {{ loop.index0 }})">
                 <i class="bi bi-trophy-fill"></i> Gamificar
+            </button>
+                <button class="btn done-btn" id="notDoneBtn-{{ loop.index0 }}" onclick="toggleExerciseDone({{ loop.index0 }}, {{ item.id }})" style="min-width: 120px;">
+                    <i class="bi bi-check-circle-fill"></i> <span id="notDoneText-{{ loop.index0 }}">Realizado</span>
             </button>
         </div>
 
-        <p class="mt-3 text-start text-light opacity-75 small" style="white-space: pre-wrap;">{{ item.drill.description }}</p>
+            {% if item.drill.description %}
+            <div class="exercise-description">
+                {{ item.drill.description }}
+            </div>
+            {% endif %}
+        </div>
     </div>
     
     {% set ns.cumulative = ns.cumulative + item.duration %}
     {% endfor %}
 
     <div class="nav-bar">
-        <button class="btn btn-secondary nav-btn" onclick="prevDrill()"><i class="bi bi-chevron-left"></i> Anterior</button>
-        <button class="btn btn-primary nav-btn" id="nextBtn" onclick="nextDrill()">Siguiente <i class="bi bi-chevron-right"></i></button>
+        <button class="btn btn-secondary nav-btn" onclick="prevDrill()">
+            <i class="bi bi-chevron-left"></i> Anterior
+        </button>
+        <button class="btn btn-primary nav-btn" id="nextBtn" onclick="nextDrill()">
+            Siguiente <i class="bi bi-chevron-right"></i>
+        </button>
     </div>
 
-    <div class="modal fade text-dark" id="gameModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+    <!-- Botones flotantes -->
+    <button class="floating-btn ranking" id="rankingToggleBtn" onclick="toggleRankingChart()" title="Ver Ranking">
+        <i class="bi bi-bar-chart-fill"></i>
+    </button>
+    <button class="floating-btn add-player" id="addPlayerBtn" onclick="openAddPlayerModal()" title="Añadir Jugador Tardío">
+        <i class="bi bi-person-plus-fill"></i>
+    </button>
+
+    <!-- Gráfico de Ranking -->
+    <div class="ranking-chart-container" id="rankingChartContainer">
+        <div class="ranking-chart-header">
+            <span class="ranking-chart-title">📊 Ranking en Vivo</span>
+            <div class="ranking-chart-controls">
+                <label style="font-size: 0.7rem; color: var(--text-secondary);">Top:</label>
+                <input type="number" id="rankingTopX" value="6" min="1" max="20" onchange="updateRankingChart()">
+                <button class="btn btn-sm" style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); padding: 4px 10px; font-size: 0.7rem;" onclick="toggleRankingChart()">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        </div>
+        <div class="ranking-chart-wrapper">
+            <canvas id="rankingChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Modal Inicio Sesión -->
+    <div class="modal fade text-dark" id="startSessionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="gameTitle">Gamificar</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title fw-bold">Iniciar Sesión de Entrenamiento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-warning small">
-                        <i class="bi bi-info-circle"></i> Estás en <strong>Modo Pista (Solo Ver)</strong>.
-                        <br>Para guardar puntuaciones reales de jugadores, debes iniciar una sesión desde "Mis Equipos".
-                    </div>
-                    <div class="mt-3 text-center">
-                        <p class="small text-muted">Si estás en una sesión de equipo, puedes ver el ranking aquí:</p>
+                    {% if teams|length > 1 %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Selecciona el Equipo</label>
+                        <select class="form-select" id="sessionTeamSelect" onchange="loadTeamPlayers()">
                         {% for t in teams %}
-                        <a href="/team/{{ t.id }}/public" target="_blank" class="btn btn-outline-primary btn-sm mb-2 w-100">
-                            <i class="bi bi-trophy"></i> Ver Ranking {{ t.name }}
-                        </a>
+                            <option value="{{ t.id }}">{{ t.name }}</option>
                         {% endfor %}
+                        </select>
                     </div>
+                    {% else %}
+                    <input type="hidden" id="sessionTeamSelect" value="{{ teams[0].id if teams else '' }}">
+                    <div class="alert alert-info small mb-3">
+                        <i class="bi bi-info-circle"></i> Equipo: <strong>{{ teams[0].name if teams else 'Sin equipos' }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Jugadores Presentes</label>
+                        <p class="small text-muted mb-2">Todos están preseleccionados. Desmarca los que no están.</p>
+                        <div id="sessionPlayersList" class="border rounded p-2 bg-white" style="max-height: 300px; overflow-y: auto;">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-success w-100" onclick="startTrainingSession()" style="background: var(--success); border: none;">
+                        <i class="bi bi-play-fill"></i> Iniciar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Gamificación -->
+    <div class="modal fade" id="gameModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="gameDrillTitle">Gamificar</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {% if active_session %}
+                    <div class="alert alert-success small mb-3">
+                        <i class="bi bi-check-circle"></i> Sesión: <strong>{{ active_session.team.name }}</strong>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-3 rounded shadow-sm">
+                        <span class="small fw-bold text-muted">CRITERIO:</span>
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="criteria" id="crit-high" value="high" checked>
+                            <label class="btn btn-outline-success btn-sm" for="crit-high">
+                                <i class="bi bi-arrow-up"></i> Mayor
+                            </label>
+                            <input type="radio" class="btn-check" name="criteria" id="crit-low" value="low">
+                            <label class="btn btn-outline-danger btn-sm" for="crit-low">
+                                <i class="bi bi-arrow-down"></i> Menor
+                            </label>
+                        </div>
+                    </div>
+
+                    <p class="small text-muted mb-3 text-center">
+                        <i class="bi bi-lightbulb"></i> Introduce el resultado. Los puntos se asignan automáticamente.
+                    </p>
+
+                    <div id="gamificationPlayersList" class="mb-3">
+                        <!-- Se llenará dinámicamente -->
+                    </div>
+                    
+                    <div id="absentPlayersSection" style="display: none;">
+                        <div class="add-absent-btn" onclick="showAbsentPlayers()">
+                            <i class="bi bi-person-plus"></i> Añadir jugador ausente
+                        </div>
+                        <div id="absentPlayersList" style="display: none; margin-top: 8px;">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary w-100 mb-2" onclick="saveGamification()" style="background: var(--accent); border: none;">
+                        <i class="bi bi-save"></i> Guardar Puntuaciones
+                    </button>
+                    {% else %}
+                    <div class="alert alert-info small mb-3">
+                        <i class="bi bi-info-circle"></i> No hay sesión activa.
+                    </div>
+                    <button class="btn btn-success w-100" onclick="openStartSessionModal()" style="background: var(--success); border: none;">
+                        <i class="bi bi-play-fill"></i> Iniciar Sesión
+                    </button>
+                    {% endif %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">Cerrar</button>
@@ -202,7 +645,34 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Modal Añadir Jugador Tardío -->
+    <div class="modal fade" id="addPlayerModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Añadir Jugador Tardío</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {% if active_session %}
+                    <p class="small text-muted mb-3">Selecciona los jugadores que han llegado tarde:</p>
+                    <div id="absentPlayersList" class="mb-3" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Se llenará dinámicamente -->
+                    </div>
+                    <div id="noAbsentPlayers" class="alert alert-info small" style="display: none;">
+                        <i class="bi bi-info-circle"></i> Todos los jugadores del equipo ya están presentes.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning small">
+                        <i class="bi bi-exclamation-triangle"></i> No hay sesión activa.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.js"></script>
     <script>
         let currentIdx = 0;
         const totalDrills = {{ plan.items|length }};
@@ -211,19 +681,34 @@
         let timers = {}; 
         let intervalGlobal = null;
         let sessionLog = []; 
+        let activeSessionId = {{ active_session.id if active_session else 'null' }};
+        let rankingChart = null;
+        let rankingChartVisible = false;
+        let absentPlayers = [];
 
         const drillsData = [
             {% for item in plan.items|sort(attribute='order') %}
-            { duration: {{ item.duration }} },
+            { duration: {{ item.duration }}, drill_id: {{ item.drill.id }} },
             {% endfor %}
         ];
 
+        {% if active_session %}
+        document.getElementById('rankingToggleBtn').classList.add('show');
+        document.getElementById('addPlayerBtn').classList.add('show');
+        {% endif %}
+
         function startSession() {
+            // Si no hay sesión activa, abrir modal de inicio de sesión primero
+            if (!activeSessionId) {
+                openStartSessionModal();
+                return;
+            }
+            
+            // Iniciar sesión directamente
             sessionStartTime = new Date();
             drillStartTime = new Date();
             document.getElementById('start-overlay').style.display = 'none';
             intervalGlobal = setInterval(updateDashboard, 1000);
-            startTimer(0);
             updateDashboard();
         }
 
@@ -247,13 +732,13 @@
             
             if (lagSecs > 60) { 
                 lagEl.innerText = `+${lagM} min`;
-                lagEl.className = "dash-value text-lag-bad";
+                lagEl.className = "stat-value bad";
             } else if (lagSecs < -60) {
                 lagEl.innerText = `-${lagM} min`;
-                lagEl.className = "dash-value text-lag-good";
+                lagEl.className = "stat-value good";
             } else {
                 lagEl.innerText = "En hora";
-                lagEl.className = "dash-value text-white";
+                lagEl.className = "stat-value";
             }
 
             let totalPlanMins = 0;
@@ -263,6 +748,9 @@
             const endH = estimatedEndTime.getHours();
             const endM = estimatedEndTime.getMinutes();
             document.getElementById('nextFinishTime').innerText = `${endH}:${endM.toString().padStart(2,'0')}`;
+            
+            // Actualizar badge
+            document.getElementById('exerciseBadge').innerText = `${currentIdx + 1} / ${totalDrills}`;
         }
 
         function logDrillTime() {
@@ -283,7 +771,10 @@
 
         function showDrill(idx) {
             document.querySelectorAll('.drill-container').forEach(el => el.classList.remove('active'));
-            document.getElementById('drill-' + idx).classList.add('active');
+            const drillEl = document.getElementById('drill-' + idx);
+            drillEl.classList.add('active');
+            
+            drillEl.scrollTo({ top: 0, behavior: 'smooth' });
             
             const nextBtn = document.getElementById('nextBtn');
             if (idx === totalDrills - 1) {
@@ -318,6 +809,7 @@
         }
 
         function showFinishScreen() {
+            if (intervalGlobal) clearInterval(intervalGlobal);
             const overlay = document.getElementById('finish-overlay');
             overlay.style.display = 'flex';
             document.getElementById('finalTotalTime').innerText = document.getElementById('totalSessionTime').innerText;
@@ -326,6 +818,7 @@
             tbody.innerHTML = '';
             
             sessionLog.forEach(log => {
+                if (!log) return;
                 const diff = log.actual - log.planned;
                 let diffClass = '';
                 if (diff > 0) diffClass = 'time-diff-bad';
@@ -346,6 +839,36 @@
             const btn = document.querySelector('#finish-overlay .btn-primary');
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
             
+            // Guardar todas las ejecuciones de ejercicios
+            if (activeSessionId) {
+                for (const [itemId, state] of Object.entries(exerciseStates)) {
+                    const drillIndex = Array.from(document.querySelectorAll('.drill-container')).findIndex(el => 
+                        parseInt(el.getAttribute('data-item-id')) == itemId
+                    );
+                    if (drillIndex >= 0) {
+                        const timerDisplay = document.getElementById(`timer-${drillIndex}`);
+                        const [mins, secs] = timerDisplay.innerText.split(':').map(Number);
+                        const plannedMins = parseInt(document.querySelector(`#drill-${drillIndex}`).getAttribute('data-duration'));
+                        const actualDuration = state.was_completed ? (plannedMins - mins - (secs > 0 ? 1 : 0)) : null;
+                        
+                        await fetch('/api/save_exercise_execution', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                session_id: activeSessionId,
+                                training_item_id: parseInt(itemId),
+                                was_completed: state.was_completed,
+                                actual_duration: actualDuration
+                            })
+                        });
+                    }
+                }
+                
+                // Finalizar sesión
+                await fetch(`/api/finish_session/${activeSessionId}`, { method: 'POST' });
+            }
+            
+            // Guardar tiempos del plan (legacy)
             for (const log of sessionLog) {
                 if (log && log.actual > 0) {
                     await fetch('/update_item_duration', {
@@ -361,6 +884,7 @@
         function startTimer(idx) {
             if (timers[idx]) return;
             const display = document.getElementById('timer-' + idx);
+            display.classList.add('running');
             timers[idx] = setInterval(() => {
                 let [mins, secs] = display.innerText.split(':').map(Number);
                 let totalSeconds = mins * 60 + secs;
@@ -372,25 +896,457 @@
                 } else {
                     clearInterval(timers[idx]);
                     timers[idx] = null;
-                    display.style.color = '#dc3545';
+                    display.classList.remove('running');
+                    display.classList.add('finished');
                 }
             }, 1000);
         }
-        function pauseTimer(idx) { clearInterval(timers[idx]); timers[idx] = null; }
+        
+        function pauseTimer(idx) { 
+            clearInterval(timers[idx]); 
+            timers[idx] = null;
+            const display = document.getElementById('timer-' + idx);
+            display.classList.remove('running');
+        }
+        
         function resetTimer(idx, originalMins) {
             pauseTimer(idx);
-            document.getElementById('timer-' + idx).innerText = `${originalMins.toString().padStart(2, '0')}:00`;
-            document.getElementById('timer-' + idx).style.color = '#0d6efd';
+            const display = document.getElementById('timer-' + idx);
+            display.innerText = `${originalMins.toString().padStart(2, '0')}:00`;
+            display.className = 'timer-display';
         }
+        
         function openMedia(type, file, link) {
             if (type === 'link') window.open(link, '_blank');
             else if (type === 'pdf' || type === 'image') window.open('/static/uploads/' + file, '_blank');
         }
         
-        function openGamificationModal(title) {
-            document.getElementById('gameTitle').innerText = title;
+        async function openGamificationModal(drillId, title, drillIndex) {
+            document.getElementById('gameDrillTitle').innerText = title;
+            
+            if (!activeSessionId) {
+                openStartSessionModal();
+                return;
+            }
+            
+            // Cargar jugadores presentes y ausentes
+            const response = await fetch(`/api/get_session_players?session_id=${activeSessionId}`);
+            const data = await response.json();
+            
+            const listEl = document.getElementById('gamificationPlayersList');
+            const absentSection = document.getElementById('absentPlayersSection');
+            const absentList = document.getElementById('absentPlayersList');
+            listEl.innerHTML = '';
+            absentPlayers = [];
+            
+            // Separar presentes y ausentes
+            data.players.forEach(player => {
+                if (player.is_present) {
+                    const div = document.createElement('div');
+                    div.className = 'player-score-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${player.name}</strong> <span class="text-muted">#${player.dorsal}</span>
+                        </div>
+                        <input type="number" class="form-control form-control-sm" 
+                               id="score_${player.id}" 
+                               placeholder="Resultado" 
+                               style="width: 100px; text-align: center;"
+                               step="0.01">
+                    `;
+                    listEl.appendChild(div);
+                } else {
+                    absentPlayers.push(player);
+                }
+            });
+            
+            // Mostrar sección de ausentes si hay
+            if (absentPlayers.length > 0) {
+                absentSection.style.display = 'block';
+                absentList.innerHTML = '';
+                absentPlayers.forEach(player => {
+                    const div = document.createElement('div');
+                    div.className = 'player-score-item';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${player.name}</strong> <span class="text-muted">#${player.dorsal}</span>
+                        </div>
+                        <button class="btn btn-sm btn-success" onclick="addAbsentPlayer(${player.id})">
+                            <i class="bi bi-person-plus"></i> Añadir
+                        </button>
+                    `;
+                    absentList.appendChild(div);
+                });
+            } else {
+                absentSection.style.display = 'none';
+            }
+            
             new bootstrap.Modal(document.getElementById('gameModal')).show();
         }
+        
+        function showAbsentPlayers() {
+            const list = document.getElementById('absentPlayersList');
+            list.style.display = list.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        async function addAbsentPlayer(playerId) {
+            if (!activeSessionId) return;
+            
+            const response = await fetch('/api/save_attendance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: activeSessionId,
+                    player_id: playerId,
+                    is_present: true
+                })
+            });
+            
+            if (response.ok) {
+                // Recargar modal de gamificación
+                const currentDrill = document.querySelector('.drill-container.active');
+                const drillId = parseInt(currentDrill.getAttribute('data-drill-id'));
+                const drillTitle = currentDrill.getAttribute('data-title');
+                bootstrap.Modal.getInstance(document.getElementById('gameModal')).hide();
+                setTimeout(() => openGamificationModal(drillId, drillTitle, currentIdx), 300);
+            }
+        }
+        
+        async function saveGamification() {
+            if (!activeSessionId) return;
+            
+            const drillId = parseInt(document.querySelector('.drill-container.active').getAttribute('data-drill-id'));
+            const criteria = document.querySelector('input[name="criteria"]:checked').value;
+            
+            const results = [];
+            document.querySelectorAll('#gamificationPlayersList input[type="number"]').forEach(input => {
+                const playerId = parseInt(input.id.split('_')[1]);
+                const rawScore = parseFloat(input.value) || 0;
+                if (rawScore > 0) {
+                    results.push({ player_id: playerId, raw_score: rawScore });
+                }
+            });
+            
+            if (results.length === 0) {
+                alert('Introduce al menos un resultado');
+                return;
+            }
+            
+            const response = await fetch('/api/save_gamification', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: activeSessionId,
+                    drill_id: drillId,
+                    results: results,
+                    criteria: criteria
+                })
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('gameModal')).hide();
+                updateRankingChart();
+                alert('Puntuaciones guardadas correctamente');
+            } else {
+                alert('Error al guardar las puntuaciones');
+            }
+        }
+        
+        function toggleRankingChart() {
+            rankingChartVisible = !rankingChartVisible;
+            const container = document.getElementById('rankingChartContainer');
+            if (rankingChartVisible) {
+                container.classList.add('show');
+                updateRankingChart();
+            } else {
+                container.classList.remove('show');
+            }
+        }
+        
+        async function updateRankingChart() {
+            if (!activeSessionId || !rankingChartVisible) return;
+            
+            const topX = parseInt(document.getElementById('rankingTopX').value) || 6;
+            
+            const response = await fetch(`/api/get_session_ranking?session_id=${activeSessionId}&top_x=${topX}`);
+            const data = await response.json();
+            
+            const ctx = document.getElementById('rankingChart').getContext('2d');
+            
+            if (rankingChart) {
+                rankingChart.destroy();
+            }
+            
+            rankingChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.ranking.map(r => r.name),
+                    datasets: [{
+                        label: 'Puntos',
+                        data: data.ranking.map(r => r.total_points),
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: true }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { color: '#a0a0a0', font: { size: 10 } },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        y: {
+                            ticks: { color: '#a0a0a0', font: { size: 10 } },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        async function openAddPlayerModal() {
+            if (!activeSessionId) return;
+            
+            const response = await fetch(`/api/get_absent_players?session_id=${activeSessionId}`);
+            const data = await response.json();
+            
+            const listEl = document.getElementById('absentPlayersList');
+            const noAbsentEl = document.getElementById('noAbsentPlayers');
+            
+            if (data.players.length === 0) {
+                listEl.innerHTML = '';
+                noAbsentEl.style.display = 'block';
+            } else {
+                noAbsentEl.style.display = 'none';
+                listEl.innerHTML = '';
+                data.players.forEach(player => {
+                    const div = document.createElement('div');
+                    div.className = 'player-score-item mb-2';
+                    div.innerHTML = `
+                        <div>
+                            <strong>#${player.dorsal}</strong> ${player.name}
+                        </div>
+                        <button class="btn btn-sm btn-success" onclick="addAbsentPlayerToSession(${player.id})">
+                            <i class="bi bi-person-plus"></i> Añadir
+                        </button>
+                    `;
+                    listEl.appendChild(div);
+                });
+            }
+            
+            new bootstrap.Modal(document.getElementById('addPlayerModal')).show();
+        }
+        
+        async function addAbsentPlayerToSession(playerId) {
+            if (!activeSessionId) return;
+            
+            const response = await fetch('/api/save_attendance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: activeSessionId,
+                    player_id: playerId,
+                    is_present: true
+                })
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('addPlayerModal')).hide();
+                updateRankingChart();
+                alert('Jugador añadido y marcado como presente');
+            } else {
+                alert('Error al añadir el jugador');
+            }
+        }
+        
+        // Estado de ejercicios realizados/no realizados
+        let exerciseStates = {}; // {item_id: {was_completed: true/false, duration: X}}
+        
+        async function toggleExerciseDone(drillIndex, itemId) {
+            const btn = document.getElementById(`notDoneBtn-${drillIndex}`);
+            const text = document.getElementById(`notDoneText-${drillIndex}`);
+            const timerDisplay = document.getElementById(`timer-${drillIndex}`);
+            
+            if (!exerciseStates[itemId]) {
+                exerciseStates[itemId] = { was_completed: true, duration: null };
+            }
+            
+            exerciseStates[itemId].was_completed = !exerciseStates[itemId].was_completed;
+            
+            if (exerciseStates[itemId].was_completed) {
+                btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> <span>Realizado</span>';
+                btn.style.background = 'var(--bg-elevated)';
+                btn.style.color = 'var(--text-primary)';
+                timerDisplay.style.opacity = '1';
+            } else {
+                btn.innerHTML = '<i class="bi bi-x-circle-fill"></i> <span>No Realizado</span>';
+                btn.style.background = 'var(--danger)';
+                btn.style.color = 'white';
+                timerDisplay.style.opacity = '0.3';
+                pauseTimer(drillIndex);
+            }
+            
+            // Guardar inmediatamente si hay sesión activa
+            if (activeSessionId) {
+                await saveExerciseExecution(itemId, drillIndex);
+            }
+        }
+        
+        async function saveExerciseExecution(itemId, drillIndex) {
+            if (!activeSessionId) return;
+            
+            const state = exerciseStates[itemId] || { was_completed: true, duration: null };
+            const timerDisplay = document.getElementById(`timer-${drillIndex}`);
+            const [mins, secs] = timerDisplay.innerText.split(':').map(Number);
+            const plannedMins = parseInt(document.getElementById(`timer-${drillIndex}`).getAttribute('data-planned') || mins);
+            
+            // Calcular tiempo real (diferencia entre tiempo planificado y tiempo restante)
+            const actualDuration = state.was_completed ? (plannedMins - mins - (secs > 0 ? 1 : 0)) : null;
+            state.duration = actualDuration;
+            
+            const response = await fetch('/api/save_exercise_execution', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: activeSessionId,
+                    training_item_id: itemId,
+                    was_completed: state.was_completed,
+                    actual_duration: actualDuration
+                })
+            });
+        }
+        
+        // Funciones para inicio de sesión
+        function openStartSessionModal() {
+            {% if not teams or teams|length == 0 %}
+            alert('No tienes equipos. Por favor, crea un equipo primero desde "Mis Equipos".');
+            return;
+            {% endif %}
+            
+            const modalEl = document.getElementById('startSessionModal');
+            if (!modalEl) {
+                alert('Error: Modal no encontrado. Recarga la página.');
+                return;
+            }
+            
+            // Bootstrap 5 puro (sin jQuery)
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+        
+        async function loadTeamPlayers() {
+            const teamSelect = document.getElementById('sessionTeamSelect');
+            if (!teamSelect) return;
+            
+            const teamId = teamSelect.value;
+            if (!teamId) return;
+            
+            try {
+                const response = await fetch(`/api/get_team_players?team_id=${teamId}`);
+                const data = await response.json();
+                
+                const listEl = document.getElementById('sessionPlayersList');
+                if (!listEl) return;
+                
+                listEl.innerHTML = '';
+                
+                if (!data.players || data.players.length === 0) {
+                    listEl.innerHTML = '<div class="text-muted small">No hay jugadores en este equipo</div>';
+                    return;
+                }
+                
+                data.players.forEach(player => {
+                    const div = document.createElement('div');
+                    div.className = 'form-check mb-2';
+                    div.innerHTML = `
+                        <input class="form-check-input" type="checkbox" value="${player.id}" id="player_${player.id}" checked>
+                        <label class="form-check-label" for="player_${player.id}">
+                            #${player.dorsal} ${player.name}
+                        </label>
+                    `;
+                    listEl.appendChild(div);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        async function startTrainingSession() {
+            const teamId = document.getElementById('sessionTeamSelect').value;
+            if (!teamId) {
+                alert('Selecciona un equipo');
+                return;
+            }
+            
+            const selectedPlayers = Array.from(document.querySelectorAll('#sessionPlayersList input[type="checkbox"]:checked'))
+                .map(cb => parseInt(cb.value));
+            
+            if (selectedPlayers.length === 0) {
+                alert('Selecciona al menos un jugador');
+                return;
+            }
+            
+            const response = await fetch('/api/start_session_from_court', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    plan_id: {{ plan.id }},
+                    team_id: parseInt(teamId),
+                    player_ids: selectedPlayers
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                activeSessionId = data.session_id;
+                
+                bootstrap.Modal.getInstance(document.getElementById('startSessionModal')).hide();
+                
+                document.getElementById('rankingToggleBtn').classList.add('show');
+                document.getElementById('addPlayerBtn').classList.add('show');
+                
+                // Iniciar la sesión de Modo Pista
+                sessionStartTime = new Date();
+                drillStartTime = new Date();
+                document.getElementById('start-overlay').style.display = 'none';
+                intervalGlobal = setInterval(updateDashboard, 1000);
+                updateDashboard();
+            } else {
+                alert('Error al iniciar la sesión');
+            }
+        }
+        
+        // Cargar jugadores al abrir el modal (Bootstrap 5 puro)
+        document.addEventListener('DOMContentLoaded', function() {
+            const startModal = document.getElementById('startSessionModal');
+            if (startModal) {
+                startModal.addEventListener('shown.bs.modal', function() {
+                    loadTeamPlayers();
+                });
+            }
+            
+            // Cargar cuando cambia el equipo
+            const teamSelect = document.getElementById('sessionTeamSelect');
+            if (teamSelect) {
+                teamSelect.addEventListener('change', function() {
+                    loadTeamPlayers();
+                });
+            }
+        });
+        
+        setInterval(() => {
+            if (rankingChartVisible && activeSessionId) {
+                updateRankingChart();
+            }
+        }, 5000);
     </script>
 </body>
 </html>

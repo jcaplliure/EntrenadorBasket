@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestión de Invitaciones</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bg-dark: #0a1929;
+            --bg-card: #0d1f2d;
+            --accent: #3b82f6;
+            --cream: #f5f5dc;
+        }
+        body {
+            background: var(--bg-dark);
+            color: var(--cream);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .container { max-width: 900px; padding: 2rem 1rem; }
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+        }
+        .form-control, .btn-primary {
+            border-radius: 8px;
+        }
+        .form-control {
+            background: #162838;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: white;
+        }
+        .form-control:focus {
+            background: #1a2f42;
+            border-color: var(--accent);
+            color: white;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .btn-primary {
+            background: var(--accent);
+            border: none;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        .table {
+            color: var(--cream);
+        }
+        .table thead th {
+            border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.6);
+        }
+        .table tbody td {
+            border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+            vertical-align: middle;
+            padding: 0.75rem 0.5rem;
+        }
+        .badge-pending {
+            background: #f59e0b;
+            color: #000;
+        }
+        .badge-registered {
+            background: #10b981;
+        }
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        .back-link {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .back-link:hover {
+            color: #60a5fa;
+        }
+        .stats-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            flex: 1;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/admin/config" class="back-link"><i class="bi bi-arrow-left"></i> Volver a Configuración</a>
+        
+        <h1 class="page-title mt-3"><i class="bi bi-envelope-paper"></i> Gestión de Invitaciones</h1>
+        
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            {% for message in messages %}{{ message }}{% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+        {% endwith %}
+        
+        <!-- Estadísticas -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-number">{{ invitations|length }}</div>
+                <div class="stat-label">Total invitados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ invitations|selectattr('registered_at')|list|length }}</div>
+                <div class="stat-label">Registrados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ invitations|rejectattr('registered_at')|list|length }}</div>
+                <div class="stat-label">Pendientes</div>
+            </div>
+        </div>
+        
+        <!-- Formulario invitar -->
+        <div class="card p-3 mb-4">
+            <form action="/admin/invite" method="POST" class="d-flex gap-2 align-items-end">
+                <div class="flex-grow-1">
+                    <label class="form-label small">Invitar nuevo entrenador</label>
+                    <input type="email" name="email" class="form-control" placeholder="email@ejemplo.com" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-send"></i> Enviar invitación
+                </button>
+            </form>
+        </div>
+        
+        <!-- Tabla de invitaciones -->
+        <div class="card p-3">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Invitado</th>
+                            <th>Alta</th>
+                            <th>Accesos (30d)</th>
+                            <th>Último acceso</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invitations %}
+                        <tr>
+                            <td>
+                                <strong>{{ inv.email }}</strong>
+                            </td>
+                            <td>{{ inv.invited_at.strftime('%d/%m/%y') }}</td>
+                            <td>
+                                {% if inv.registered_at %}
+                                    <span class="badge badge-registered">{{ inv.registered_at.strftime('%d/%m/%y') }}</span>
+                                {% else %}
+                                    <span class="badge badge-pending">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if inv.registered_at %}
+                                    <strong>{{ inv.accesses_30d }}</strong>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if inv.last_access %}
+                                    {{ inv.last_access.strftime('%d/%m/%y %H:%M') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if not inv.registered_at %}
+                                <a href="/admin/resend_invite/{{ inv.email }}" class="btn btn-sm btn-outline-primary" title="Reenviar">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </a>
+                                <a href="/admin/delete_invite/{{ inv.email }}" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="return confirm('¿Eliminar invitación?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 opacity-50">
+                                No hay invitaciones todavía
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Nota sobre configuración SMTP -->
+        <div class="mt-4 p-3 rounded" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+            <h6><i class="bi bi-info-circle"></i> Configuración de Email</h6>
+            <p class="small mb-2">Para enviar emails, configura estas variables de entorno:</p>
+            <code class="small d-block">SMTP_HOST=smtp.gmail.com</code>
+            <code class="small d-block">SMTP_PORT=587</code>
+            <code class="small d-block">SMTP_USER=tu_email@gmail.com</code>
+            <code class="small d-block">SMTP_PASS=tu_contraseña_de_app</code>
+            <p class="small mt-2 mb-0 opacity-75">Si no configuras SMTP, puedes copiar el enlace manualmente: <code>/register/TOKEN</code></p>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -6,25 +6,73 @@
     <title>Editar Plan</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --cream: #e9e4d2;
+            --bg-dark: #0b1424;
+            --bg-panel: #0f1b2e;
+            --bg-panel-2: #111f35;
+            --action-green: #4ade80;
+        }
+        body { background: var(--bg-dark); color: #e9edf2; }
+        .page-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .panel-card {
+            width: 100%;
+            max-width: 820px;
+            background: var(--bg-panel);
+            border: 1px solid var(--cream);
+            border-radius: 18px;
+            box-shadow: 0 0 24px rgba(233, 228, 210, 0.12), 0 16px 32px rgba(0,0,0,0.45);
+            padding: 20px;
+        }
+        .panel-header { border-bottom: 1px solid rgba(233, 228, 210, 0.2); padding-bottom: 10px; margin-bottom: 16px; }
+        .panel-title { color: #ffffff; font-weight: 700; }
+        .btn-cancel {
+            border: 1px solid var(--cream);
+            color: var(--cream);
+            background: transparent;
+        }
+        .panel-section {
+            background: var(--bg-panel-2);
+            border: 1px solid rgba(233, 228, 210, 0.25);
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .form-control, textarea {
+            background: #0e1b2f;
+            border: 1px solid var(--cream);
+            color: #ffffff;
+        }
+        .form-control::placeholder, textarea::placeholder { color: #8c97ad; }
+        .form-label { color: var(--cream); }
+        .btn-submit {
+            background: var(--action-green);
+            color: #0b1a12;
+            font-weight: 700;
+            border: none;
+            padding: 0.8rem;
+            font-size: 1.05rem;
+        }
+        .btn-submit:hover { filter: brightness(1.05); }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="/">Entrenador Basket</a>
-            <a href="/my_plans" class="btn btn-outline-light btn-sm">Cancelar</a>
-        </div>
-    </nav>
-
-    <div class="container" style="max-width: 700px;">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-warning text-dark">
-                <h4 class="mb-0 fw-bold"><i class="bi bi-pencil-square"></i> Editar Plan</h4>
+    <div class="page-wrap">
+        <div class="panel-card">
+            <div class="d-flex justify-content-between align-items-center panel-header">
+                <h4 class="mb-0 panel-title"><i class="bi bi-pencil-square"></i> Editar Plan</h4>
+                <a href="/my_plans" class="btn btn-cancel btn-sm">Cancelar</a>
             </div>
-            <div class="card-body p-4">
-                
-                <form action="/edit_plan/{{ plan.id }}" method="POST">
-                    
+            
+            <form action="/edit_plan/{{ plan.id }}" method="POST">
+                <div class="panel-section">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Nombre del Entrenamiento</label>
@@ -54,13 +102,12 @@
                             <textarea name="notes" class="form-control" rows="3">{{ plan.notes }}</textarea>
                         </div>
                     </div>
+                </div>
 
-                    <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-warning btn-lg fw-bold">Guardar Cambios</button>
-                    </div>
-                </form>
-
-            </div>
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-submit">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
 

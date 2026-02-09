@@ -36,13 +36,16 @@
             
             {% if current_user.is_authenticated %}
             <div class="d-flex gap-2">
-                <a href="/toggle_fav/{{ drill.id }}" class="btn {% if drill in current_user.favoritos %}btn-danger{% else %}btn-outline-danger{% endif %} rounded-circle" title="Favorito">
+                <button onclick="toggleFavoriteModal({{ drill.id }}, this)" class="btn {% if drill in current_user.favoritos %}btn-danger{% else %}btn-outline-danger{% endif %} rounded-circle" title="Favorito" id="modal-fav-btn-{{ drill.id }}">
                     <i class="bi {% if drill in current_user.favoritos %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
-                </a>
+                </button>
                 
                 {% if drill.user_id == current_user.id or current_user.is_admin %}
                     <a href="/edit/{{ drill.id }}" class="btn btn-outline-secondary rounded-circle" title="Editar">
                         <i class="bi bi-pencil-fill"></i>
+                    </a>
+                    <a href="/delete/{{ drill.id }}" class="btn btn-outline-danger rounded-circle" title="Eliminar" onclick="return confirm('¿Seguro que quieres eliminar este ejercicio? Esta acción no se puede deshacer.');">
+                        <i class="bi bi-trash"></i>
                     </a>
                 {% endif %}
             </div>
@@ -50,9 +53,9 @@
         </div>
 
         <div class="mb-4">
-            {% for tag in drill.primary_tags %}
-                <span class="badge bg-primary me-1">{{ tag.name }}</span>
-            {% endfor %}
+            {% if drill.primary_tag %}
+                <span class="badge bg-primary me-1" style="font-size: 0.85rem;">{{ drill.primary_tag.name }}</span>
+            {% endif %}
             {% for tag in drill.secondary_tags %}
                 <span class="badge bg-secondary me-1">{{ tag.name }}</span>
             {% endfor %}
