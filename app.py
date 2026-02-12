@@ -1229,8 +1229,8 @@ def login():
 
 @app.route('/login/google')
 def google_login():
-    # Usar localhost explícitamente para desarrollo local
-    redirect_uri = 'http://localhost:5001/auth/callback'
+    # Usar variable de entorno para producción, localhost para desarrollo
+    redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5001/auth/callback')
     return google.authorize_redirect(redirect_uri)
 
 @app.route('/auth/callback')
@@ -1760,8 +1760,9 @@ def send_invitation_email(email, token):
     if not smtp_user or not smtp_pass:
         raise Exception('SMTP no configurado. Configura SMTP_USER y SMTP_PASS')
     
-    # URL de registro
-    register_url = f"http://localhost:5001/register/{token}"
+    # URL de registro - usar variable de entorno para producción
+    base_url = os.getenv('APP_BASE_URL', 'http://localhost:5001')
+    register_url = f"{base_url}/register/{token}"
     
     msg = MIMEMultipart('alternative')
     msg['Subject'] = '🏀 Invitación a EntrenadorBasket'
