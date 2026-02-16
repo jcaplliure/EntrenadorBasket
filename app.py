@@ -484,11 +484,8 @@ def _run_alter(cmd):
         db.session.execute(text(cmd))
         db.session.commit()
     except Exception as e:
-        s = str(e).lower()
-        if 'duplicate column' in s or 'already exists' in s or 'no such table' in s:
-            db.session.rollback()
-            return
-        raise
+        db.session.rollback()
+        return
 
 def run_migrations():
     _run_alter('ALTER TABLE action_definition ADD COLUMN icon VARCHAR(50)')

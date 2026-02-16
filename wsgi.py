@@ -6,8 +6,8 @@ from app import app, db, run_migrations
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 with app.app_context():
-    run_migrations()
     db.create_all()
+    run_migrations()
 
 if __name__ == "__main__":
     app.run()
