@@ -1229,8 +1229,12 @@ def login():
 
 @app.route('/login/google')
 def google_login():
-    # Usar variable de entorno para producción, localhost para desarrollo
-    redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5001/auth/callback')
+    # Usar el mismo host que la petición (www o no) para que la cookie de sesión coincida al volver de Google
+    if request.host:
+        scheme = request.headers.get('X-Forwarded-Proto', request.scheme) or 'https'
+        redirect_uri = f'{scheme}://{request.host}/auth/callback'
+    else:
+        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5001/auth/callback')
     return google.authorize_redirect(redirect_uri)
 
 @app.route('/auth/callback')
@@ -1675,6 +1679,7 @@ def admin_invitations():
     for inv in invitations:
         data = {
             'email': inv.email,
+            'token': inv.token,
             'invited_at': inv.invited_at,
             'registered_at': inv.registered_at,
             'accesses_30d': 0,
