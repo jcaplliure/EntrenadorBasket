@@ -739,6 +739,11 @@ def get_rankings_for_team(team_id, user_id):
         return team_rankings
     return RankingDefinition.query.filter_by(user_id=user_id).all()
 
+# --- HEALTH CHECK (Railway) ---
+@app.route('/health')
+def health_check():
+    return 'OK', 200
+
 # --- RUTAS ---
 @app.route('/')
 def home():
