@@ -104,7 +104,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=True)
-    password_hash = db.Column(db.String(128), nullable=True)
+    password_hash = db.Column(db.String(256), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     theme_color = db.Column(db.String(7), nullable=True)
     last_blocks_config = db.Column(db.String(500), nullable=True, default="Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma")
@@ -488,6 +488,7 @@ def _run_alter(cmd):
         return
 
 def run_migrations():
+    _run_alter('ALTER TABLE "user" ALTER COLUMN password_hash TYPE VARCHAR(256)')
     _run_alter('ALTER TABLE action_definition ADD COLUMN icon VARCHAR(50)')
     _run_alter('ALTER TABLE action_definition ADD COLUMN team_id INTEGER REFERENCES team(id)')
     _run_alter('ALTER TABLE action_definition ADD COLUMN display_section VARCHAR(20)')
