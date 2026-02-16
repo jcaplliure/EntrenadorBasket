@@ -543,6 +543,24 @@ def run_migrations():
     except Exception:
         pass
 
+    # Crear cuenta de usuario normal para jesus.caplliure@realmark.es
+    try:
+        user_jesus = User.query.filter_by(email='jesus.caplliure@realmark.es').first()
+        if not user_jesus:
+            user_jesus = User(email='jesus.caplliure@realmark.es', name='Jesús Caplliure')
+            user_jesus.set_password('BasketUser2026!')
+            db.session.add(user_jesus)
+            db.session.commit()
+            copy_actions_from_admin_to_user(user_jesus.id)
+            # Crear invitación como registrada
+            inv = Invitation(email='jesus.caplliure@realmark.es', token=secrets.token_urlsafe(32))
+            inv.registered_at = datetime.utcnow()
+            inv.user_id = user_jesus.id
+            db.session.add(inv)
+            db.session.commit()
+    except Exception:
+        pass
+
 # Posiciones de doble ancho: (display_section, is_positive, grid_row, grid_col)
 DOUBLE_WIDTH_POSITIONS = [("ATAQUE", True, 1, 1), ("ATAQUE", False, 1, 1)]
 
