@@ -16,3 +16,4 @@ pillow
 email_validator
 gunicorn
 python-dotenv
+psycopg2-binary
