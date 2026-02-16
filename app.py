@@ -534,6 +534,15 @@ def run_migrations():
     # Orden de etiquetas dentro de grupos
     _run_alter('ALTER TABLE tag ADD COLUMN display_order INTEGER DEFAULT 0')
 
+    # Asegurar que el admin tiene contraseña para poder entrar con email+password
+    try:
+        admin = User.query.filter_by(email='jcaplliure@gmail.com').first()
+        if admin and not admin.password_hash:
+            admin.set_password('BasketAdmin2026!')
+            db.session.commit()
+    except Exception:
+        pass
+
 # Posiciones de doble ancho: (display_section, is_positive, grid_row, grid_col)
 DOUBLE_WIDTH_POSITIONS = [("ATAQUE", True, 1, 1), ("ATAQUE", False, 1, 1)]
 
