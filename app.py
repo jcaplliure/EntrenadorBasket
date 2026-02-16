@@ -532,17 +532,25 @@ def run_migrations():
     _run_alter('ALTER TABLE tag ADD COLUMN display_order INTEGER DEFAULT 0')
 
     # Asegurar que el admin existe y tiene contraseña
+    import logging as _log
+    _logger = _log.getLogger('migrations')
     try:
         admin = User.query.filter_by(email='jcaplliure@gmail.com').first()
+        _logger.info(f"=== MIGRATION: Admin query result: {admin} ===")
         if not admin:
             admin = User(email='jcaplliure@gmail.com', name='Admin', is_admin=True)
             admin.set_password('BasketAdmin2026!')
             db.session.add(admin)
             db.session.commit()
+            _logger.info("=== MIGRATION: Admin CREADO correctamente ===")
         elif not admin.password_hash:
             admin.set_password('BasketAdmin2026!')
             db.session.commit()
-    except Exception:
+            _logger.info("=== MIGRATION: Admin password ACTUALIZADO ===")
+        else:
+            _logger.info("=== MIGRATION: Admin ya existe con password ===")
+    except Exception as e:
+        _logger.error(f"=== MIGRATION: ERROR creando admin: {e} ===")
         db.session.rollback()
 
     # Crear cuenta de usuario normal para jesus.caplliure@realmark.es
