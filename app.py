@@ -531,14 +531,19 @@ def run_migrations():
     # Orden de etiquetas dentro de grupos
     _run_alter('ALTER TABLE tag ADD COLUMN display_order INTEGER DEFAULT 0')
 
-    # Asegurar que el admin tiene contraseña para poder entrar con email+password
+    # Asegurar que el admin existe y tiene contraseña
     try:
         admin = User.query.filter_by(email='jcaplliure@gmail.com').first()
-        if admin and not admin.password_hash:
+        if not admin:
+            admin = User(email='jcaplliure@gmail.com', name='Admin', is_admin=True)
+            admin.set_password('BasketAdmin2026!')
+            db.session.add(admin)
+            db.session.commit()
+        elif not admin.password_hash:
             admin.set_password('BasketAdmin2026!')
             db.session.commit()
     except Exception:
-        pass
+        db.session.rollback()
 
     # Crear cuenta de usuario normal para jesus.caplliure@realmark.es
     try:
