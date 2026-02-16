@@ -1697,7 +1697,8 @@ def admin_invitations():
                 data['last_access'] = last.accessed_at
         invitation_data.append(data)
     
-    return render_template('admin_invitations.html', invitations=invitation_data)
+    base_url = os.getenv('APP_BASE_URL', request.url_root.rstrip('/'))
+    return render_template('admin_invitations.html', invitations=invitation_data, base_url=base_url)
 
 @app.route('/admin/invite', methods=['POST'])
 @login_required
