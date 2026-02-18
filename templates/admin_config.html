@@ -721,7 +721,7 @@
                                     {{ tag.group.name if tag.group else 'Sin grupo' }}
                                 </div>
                             {% endif %}
-                            <div class="tag-item">
+                            <div class="tag-item" data-tag-id="{{ tag.id }}">
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
                                     <div class="d-flex align-items-center gap-2">
                                         <button type="button" class="btn btn-outline-secondary btn-sm px-1" onclick="reorderTag({{ tag.id }}, 'up')" title="Subir">
@@ -816,36 +816,33 @@
         </div>
     </div>
 
-    <!-- Modal para editar etiqueta -->
+    <!-- Modal para editar etiqueta (AJAX) -->
     <div class="modal fade modal-dark" id="editTagModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="/admin/tags" method="POST">
-                    <input type="hidden" name="action" value="edit_tag">
-                    <input type="hidden" name="tag_id" id="editTagId">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Editar etiqueta</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <input type="hidden" id="editTagId">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Editar etiqueta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-secondary">Nombre</label>
+                        <input type="text" id="editTagName" class="form-control form-control-dark" required>
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label text-secondary">Nombre</label>
-                            <input type="text" name="tag_name" id="editTagName" class="form-control form-control-dark" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-secondary">Grupo</label>
-                            <select name="group_id" id="editTagGroup" class="form-select form-select-dark" required>
-                                {% for g in groups %}
-                                <option value="{{ g.id }}">{{ g.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary">Grupo</label>
+                        <select id="editTagGroup" class="form-select form-select-dark" required>
+                            {% for g in groups %}
+                            <option value="{{ g.id }}">{{ g.name }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-accent">Guardar</button>
-                    </div>
-                </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-accent" onclick="saveEditTag()">Guardar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -919,13 +916,40 @@
         }
 
         // Edit tag modal
+        let editModal = null;
         function openEditTagModal(tagId, tagName, groupId) {
             document.getElementById('editTagId').value = tagId;
             document.getElementById('editTagName').value = tagName;
             if (groupId) {
                 document.getElementById('editTagGroup').value = groupId;
             }
-            new bootstrap.Modal(document.getElementById('editTagModal')).show();
+            editModal = new bootstrap.Modal(document.getElementById('editTagModal'));
+            editModal.show();
+        }
+
+        async function saveEditTag() {
+            const tagId = document.getElementById('editTagId').value;
+            const tagName = document.getElementById('editTagName').value.trim();
+            const groupId = document.getElementById('editTagGroup').value;
+            if (!tagName) return alert('El nombre no puede estar vacío');
+            try {
+                const resp = await fetch('/api/edit_tag', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({tag_id: tagId, tag_name: tagName, group_id: groupId})
+                });
+                const data = await resp.json();
+                if (data.status === 'ok') {
+                    if (editModal) editModal.hide();
+                    const nameEl = document.querySelector(`[data-tag-id="${tagId}"] .tag-name`);
+                    if (nameEl) nameEl.textContent = tagName;
+                    else location.reload();
+                } else {
+                    alert(data.error || 'Error al guardar');
+                }
+            } catch(e) {
+                alert('Error de conexión');
+            }
         }
 
         // Reorder tag

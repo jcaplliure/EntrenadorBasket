@@ -1501,6 +1501,29 @@ def api_custom_tag_delete(tag_id):
     db.session.commit()
     return jsonify({'status': 'ok'})
 
+@app.route('/api/edit_tag', methods=['POST'])
+@login_required
+def api_edit_tag():
+    if not current_user.is_admin:
+        return jsonify({'error': 'No autorizado'}), 403
+    data = request.json or {}
+    tag_id = data.get('tag_id')
+    new_name = (data.get('tag_name') or '').strip()
+    new_group_id = data.get('group_id')
+    if not tag_id or not new_name:
+        return jsonify({'error': 'Datos incompletos'}), 400
+    tag = Tag.query.get(tag_id)
+    if not tag:
+        return jsonify({'error': 'Etiqueta no encontrada'}), 404
+    existing = Tag.query.filter(func.lower(Tag.name) == new_name.lower(), Tag.id != int(tag_id)).first()
+    if existing:
+        return jsonify({'error': f'Ya existe una etiqueta con el nombre "{new_name}"'}), 400
+    tag.name = new_name
+    if new_group_id:
+        tag.group_id = int(new_group_id)
+    db.session.commit()
+    return jsonify({'status': 'ok', 'name': tag.name})
+
 @app.route('/api/reorder_tag', methods=['POST'])
 @login_required
 def api_reorder_tag():
