@@ -1426,8 +1426,7 @@ def manage_tags():
                 db.session.delete(img)
                 db.session.commit()
                 flash('Imagen eliminada')
-    # Redirigir a la página de configuración unificada con la pestaña de etiquetas activa
-    return redirect('/admin/config#tags')
+    return redirect('/admin/config?tab=tags')
 
 @app.route('/api/custom_tag', methods=['POST'])
 @login_required
@@ -1591,8 +1590,9 @@ def admin_config():
     # Color del tema
     theme_setting = AppSettings.query.filter_by(key='primary_color').first()
     theme_color = theme_setting.value if theme_setting else '#FFD700'
+    active_tab = request.args.get('tab', 'appearance')
     return render_template('admin_config.html', config_dict=config_dict, keys_needed=keys_needed,
-                           groups=groups, tags=tags, theme_color=theme_color)
+                           groups=groups, tags=tags, theme_color=theme_color, active_tab=active_tab)
 
 @app.route('/admin/update_primary_color', methods=['POST'])
 @login_required
