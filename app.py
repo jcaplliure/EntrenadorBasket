@@ -626,11 +626,11 @@ def run_migrations():
     _run_alter('ALTER TABLE action_definition ADD COLUMN grid_row INTEGER DEFAULT 1')
     _run_alter('ALTER TABLE action_definition ADD COLUMN grid_col INTEGER DEFAULT 1')
     # Gráficos visibles en portal público
-    _run_alter('ALTER TABLE team ADD COLUMN chart_all_visible BOOLEAN DEFAULT 1')
-    _run_alter('ALTER TABLE team ADD COLUMN chart_attack_visible BOOLEAN DEFAULT 0')
-    _run_alter('ALTER TABLE team ADD COLUMN chart_attack_no_shots_visible BOOLEAN DEFAULT 0')
-    _run_alter('ALTER TABLE team ADD COLUMN chart_defense_visible BOOLEAN DEFAULT 0')
-    _run_alter('ALTER TABLE team ADD COLUMN chart_shots_visible BOOLEAN DEFAULT 0')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS chart_all_visible BOOLEAN DEFAULT TRUE')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS chart_attack_visible BOOLEAN DEFAULT FALSE')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS chart_attack_no_shots_visible BOOLEAN DEFAULT FALSE')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS chart_defense_visible BOOLEAN DEFAULT FALSE')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS chart_shots_visible BOOLEAN DEFAULT FALSE')
     # Sistema de invitaciones
     _run_alter('''CREATE TABLE IF NOT EXISTS invitation (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -648,8 +648,8 @@ def run_migrations():
     # Orden de etiquetas dentro de grupos
     _run_alter('ALTER TABLE tag ADD COLUMN display_order INTEGER DEFAULT 0')
     # URL pública con código aleatorio por equipo
-    _run_alter('ALTER TABLE team ADD COLUMN public_slug VARCHAR(80)')
-    _run_alter('ALTER TABLE team ADD COLUMN public_token VARCHAR(8)')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_slug VARCHAR(80)')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_token VARCHAR(8)')
 
     # Asegurar que el admin existe y tiene contraseña
     import logging as _log
