@@ -2903,10 +2903,10 @@ def finish_session(id):
     db.session.commit()
     return redirect('/my_teams')
 
-@app.route('/<slug>/<token>')
-def public_team_by_token(slug, token):
-    """URL pública corta: trainbasket.com/infantil/xK9m2p"""
-    team = Team.query.filter_by(public_slug=slug, public_token=token).first_or_404()
+@app.route('/p/<token>')
+def public_team_by_token(token):
+    """URL pública corta: trainbasket.com/p/xK9m2p"""
+    team = Team.query.filter_by(public_token=token).first_or_404()
     return public_team_ranking_logic(team)
 
 @app.route('/team/<int:id>/public')
@@ -2914,7 +2914,7 @@ def public_team_ranking(id):
     """URL legada — redirige a la URL corta si el equipo ya tiene token."""
     team = Team.query.get_or_404(id)
     _ensure_team_public_token(team)
-    return redirect(url_for('public_team_by_token', slug=team.public_slug, token=team.public_token))
+    return redirect(url_for('public_team_by_token', token=team.public_token))
 
 def public_team_ranking_logic(team):
     _ensure_team_public_token(team)
