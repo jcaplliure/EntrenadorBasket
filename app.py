@@ -162,6 +162,7 @@ class Team(db.Model):
     chart_attack_visible = db.Column(db.Boolean, default=False)  # Ataque
     chart_attack_no_shots_visible = db.Column(db.Boolean, default=False)  # Ataque (sin puntos)
     chart_defense_visible = db.Column(db.Boolean, default=False)  # Defensa
+    chart_shots_visible = db.Column(db.Boolean, default=False)  # % de tiros
     players = db.relationship('Player', backref='team', lazy=True, cascade="all, delete-orphan")
     staff = db.relationship('TeamStaff', backref='team', lazy=True, cascade="all, delete-orphan")
     sessions = db.relationship('TrainingSession', backref='team', lazy=True, cascade="all, delete-orphan")
@@ -507,6 +508,92 @@ def _ensure_team_public_token(team):
     if changed:
         db.session.commit()
 
+def _calc_shot_stats(match_ids, all_actions, team_players):
+    """Calcula % de tiros (1, 2, 3 y campo) por jugador y para el equipo."""
+    shot_types = ['Tiro 1', 'Tiro 2', 'Tiro 3']
+    action_map = {}  # name -> {pos_id, neg_id}
+    for a in all_actions:
+        if a.name in shot_types:
+            key = a.name
+            if key not in action_map:
+                action_map[key] = {'pos': [], 'neg': []}
+            if a.value > 0:
+                action_map[key]['pos'].append(a.id)
+            else:
+                action_map[key]['neg'].append(a.id)
+
+    if not match_ids or not action_map:
+        return {}, {}
+
+    all_shot_action_ids = [aid for k in action_map for sublist in action_map[k].values() for aid in sublist]
+    events = MatchEvent.query.filter(
+        MatchEvent.match_id.in_(match_ids),
+        MatchEvent.action_id.in_(all_shot_action_ids)
+    ).all()
+
+    # Stats por jugador: {player_id: {shot_type: {made, missed}}}
+    player_map = {p.id: p for p in team_players}
+    per_player = {}
+    team_totals = {t: {'made': 0, 'missed': 0} for t in shot_types}
+
+    for e in events:
+        if not e.player_id or not e.action_id:
+            continue
+        for stype, ids in action_map.items():
+            if e.action_id in ids['pos']:
+                team_totals[stype]['made'] += 1
+                if e.player_id not in per_player:
+                    per_player[e.player_id] = {t: {'made': 0, 'missed': 0} for t in shot_types}
+                per_player[e.player_id][stype]['made'] += 1
+            elif e.action_id in ids['neg']:
+                team_totals[stype]['missed'] += 1
+                if e.player_id not in per_player:
+                    per_player[e.player_id] = {t: {'made': 0, 'missed': 0} for t in shot_types}
+                per_player[e.player_id][stype]['missed'] += 1
+
+    def pct(made, missed):
+        total = made + missed
+        return round(made / total * 100, 1) if total > 0 else None
+
+    def fmt_player(stats):
+        t2 = stats.get('Tiro 2', {'made': 0, 'missed': 0})
+        t3 = stats.get('Tiro 3', {'made': 0, 'missed': 0})
+        campo_made = t2['made'] + t3['made']
+        campo_missed = t2['missed'] + t3['missed']
+        return {
+            'tiro1':  pct(stats.get('Tiro 1', {'made': 0, 'missed': 0})['made'], stats.get('Tiro 1', {'made': 0, 'missed': 0})['missed']),
+            'tiro2':  pct(t2['made'], t2['missed']),
+            'tiro3':  pct(t3['made'], t3['missed']),
+            'campo':  pct(campo_made, campo_missed),
+            'intentos_t1': stats.get('Tiro 1', {'made': 0, 'missed': 0})['made'] + stats.get('Tiro 1', {'made': 0, 'missed': 0})['missed'],
+            'intentos_t2': t2['made'] + t2['missed'],
+            'intentos_t3': t3['made'] + t3['missed'],
+        }
+
+    players_shot_stats = []
+    for pid, stats in per_player.items():
+        player = player_map.get(pid)
+        if not player:
+            continue
+        fmt = fmt_player(stats)
+        total_intentos = fmt['intentos_t1'] + fmt['intentos_t2'] + fmt['intentos_t3']
+        if total_intentos > 0:
+            players_shot_stats.append({'name': player.name, 'dorsal': player.dorsal, **fmt})
+    players_shot_stats.sort(key=lambda x: (x['campo'] or -1), reverse=True)
+
+    t2 = team_totals['Tiro 2']
+    t3 = team_totals['Tiro 3']
+    team_shot_stats = {
+        'tiro1': pct(team_totals['Tiro 1']['made'], team_totals['Tiro 1']['missed']),
+        'tiro2': pct(t2['made'], t2['missed']),
+        'tiro3': pct(t3['made'], t3['missed']),
+        'campo': pct(t2['made'] + t3['made'], t2['missed'] + t3['missed']),
+        'intentos_t1': team_totals['Tiro 1']['made'] + team_totals['Tiro 1']['missed'],
+        'intentos_t2': t2['made'] + t2['missed'],
+        'intentos_t3': t3['made'] + t3['missed'],
+    }
+    return team_shot_stats, players_shot_stats
+
 def _run_alter(cmd):
     try:
         db.session.execute(text(cmd))
@@ -543,6 +630,7 @@ def run_migrations():
     _run_alter('ALTER TABLE team ADD COLUMN chart_attack_visible BOOLEAN DEFAULT 0')
     _run_alter('ALTER TABLE team ADD COLUMN chart_attack_no_shots_visible BOOLEAN DEFAULT 0')
     _run_alter('ALTER TABLE team ADD COLUMN chart_defense_visible BOOLEAN DEFAULT 0')
+    _run_alter('ALTER TABLE team ADD COLUMN chart_shots_visible BOOLEAN DEFAULT 0')
     # Sistema de invitaciones
     _run_alter('''CREATE TABLE IF NOT EXISTS invitation (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2342,6 +2430,8 @@ def api_save_analytics_settings():
         team.chart_attack_no_shots_visible = data.get('chart_attack_no_shots_visible', False)
     if 'chart_defense_visible' in data:
         team.chart_defense_visible = data.get('chart_defense_visible', False)
+    if 'chart_shots_visible' in data:
+        team.chart_shots_visible = data.get('chart_shots_visible', False)
     
     db.session.commit()
     return jsonify({'status': 'ok'})
@@ -3028,6 +3118,11 @@ def public_team_ranking_logic(team):
     
     gallery_drills_ordered.sort(key=lambda x: x.gallery_order)
     
+    # Calcular % de tiros si el gráfico está habilitado en el portal
+    team_shot_stats, players_shot_stats = {}, []
+    if team.analytics_visible and team.chart_shots_visible:
+        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players)
+
     return render_template('public_ranking.html', 
                           team=team, 
                           charts=charts,
@@ -3035,7 +3130,9 @@ def public_team_ranking_logic(team):
                           filter_type=filter_type,
                           selected_match_ids=selected_match_ids,
                           num_matches=num_matches,
-                          gallery_drills=gallery_drills_ordered)
+                          gallery_drills=gallery_drills_ordered,
+                          team_shot_stats=team_shot_stats,
+                          players_shot_stats=players_shot_stats)
 
 @app.route('/team/<int:id>/stats')
 @login_required
@@ -3156,6 +3253,9 @@ def team_stats(id):
         'DEFENSA -': [a for a in all_actions if a.display_section == 'DEFENSA' and a.value < 0]
     }
     
+    # Calcular % de tiros (siempre visible en analytics)
+    team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players)
+
     return render_template('team_stats.html', 
                          team=team, 
                          ranking=ranking,
@@ -3165,7 +3265,9 @@ def team_stats(id):
                          all_matches=all_matches,
                          selected_match_ids=selected_match_ids,
                          custom_actions=custom_actions,
-                         actions_by_section=actions_by_section)
+                         actions_by_section=actions_by_section,
+                         team_shot_stats=team_shot_stats,
+                         players_shot_stats=players_shot_stats)
 
 @app.route('/delete_player/<int:id>')
 @login_required

@@ -658,6 +658,14 @@
                                 Defensa
                             </label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chartShots" 
+                                   {% if team.chart_shots_visible %}checked{% endif %}
+                                   onchange="saveAnalyticsSettings()">
+                            <label class="form-check-label" for="chartShots" style="color: var(--cream); font-size: 0.9rem;">
+                                % de Tiros
+                            </label>
+                        </div>
                     </div>
                 </div>
                 
@@ -910,6 +918,7 @@
             const chartAttack = document.getElementById('chartAttack').checked;
             const chartAttackNoShots = document.getElementById('chartAttackNoShots').checked;
             const chartDefense = document.getElementById('chartDefense').checked;
+            const chartShots = document.getElementById('chartShots').checked;
             
             const response = await fetch('/api/save_analytics_settings', {
                 method: 'POST',
@@ -921,7 +930,8 @@
                     chart_all_visible: chartAll,
                     chart_attack_visible: chartAttack,
                     chart_attack_no_shots_visible: chartAttackNoShots,
-                    chart_defense_visible: chartDefense
+                    chart_defense_visible: chartDefense,
+                    chart_shots_visible: chartShots
                 })
             });
             
