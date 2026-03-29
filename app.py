@@ -1270,12 +1270,11 @@ def login():
 
 @app.route('/login/google')
 def google_login():
-    # Usar el mismo host que la petición (www o no) para que la cookie de sesión coincida al volver de Google
-    if request.host:
+    # Si hay variable de entorno explícita (producción), usarla directamente
+    redirect_uri = os.getenv('GOOGLE_REDIRECT_URI')
+    if not redirect_uri:
         scheme = request.headers.get('X-Forwarded-Proto', request.scheme) or 'https'
         redirect_uri = f'{scheme}://{request.host}/auth/callback'
-    else:
-        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5001/auth/callback')
     return google.authorize_redirect(redirect_uri)
 
 @app.route('/auth/callback')
