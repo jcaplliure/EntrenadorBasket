@@ -1,4 +1,6 @@
 import os
+import re
+import unicodedata
 import requests
 import json
 import csv
@@ -145,6 +147,8 @@ class Team(db.Model):
     category = db.Column(db.String(50), nullable=True)
     logo_file = db.Column(db.String(120), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    public_slug = db.Column(db.String(80), nullable=True)
+    public_token = db.Column(db.String(8), nullable=True)
     visibility_top_x = db.Column(db.Integer, default=3)
     visibility_top_pct = db.Column(db.Integer, default=25)
     visibility_mode = db.Column(db.String(20), default='fixed')
@@ -479,6 +483,30 @@ def create_default_game_config(user_id):
     db.session.add(r_mvp)
     db.session.commit()
 
+def _make_team_slug(name):
+    """Convierte el nombre del equipo en un slug URL-seguro (ej: 'Infantil A' → 'infantil-a')."""
+    name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
+    name = name.lower()
+    name = re.sub(r'[^a-z0-9]+', '-', name).strip('-')
+    return name or 'equipo'
+
+def _make_public_token():
+    """Genera un código aleatorio corto de 6 caracteres (ej: 'xK9m2p')."""
+    alphabet = 'abcdefghijkmnpqrstuvwxyz23456789'
+    return ''.join(secrets.choice(alphabet) for _ in range(6))
+
+def _ensure_team_public_token(team):
+    """Genera slug y token si el equipo no los tiene todavía."""
+    changed = False
+    if not team.public_slug:
+        team.public_slug = _make_team_slug(team.name)
+        changed = True
+    if not team.public_token:
+        team.public_token = _make_public_token()
+        changed = True
+    if changed:
+        db.session.commit()
+
 def _run_alter(cmd):
     try:
         db.session.execute(text(cmd))
@@ -531,6 +559,9 @@ def run_migrations():
     )''')
     # Orden de etiquetas dentro de grupos
     _run_alter('ALTER TABLE tag ADD COLUMN display_order INTEGER DEFAULT 0')
+    # URL pública con código aleatorio por equipo
+    _run_alter('ALTER TABLE team ADD COLUMN public_slug VARCHAR(80)')
+    _run_alter('ALTER TABLE team ADD COLUMN public_token VARCHAR(8)')
 
     # Asegurar que el admin existe y tiene contraseña
     import logging as _log
@@ -1923,7 +1954,12 @@ def my_teams():
             logo_filename = f"team_{int(datetime.now().timestamp())}.jpg"
             comp = compress_image(file)
             with open(os.path.join(app.config['UPLOAD_FOLDER'], logo_filename), 'wb') as f: f.write(comp.getbuffer())
-        new_team = Team(name=name, category=category, logo_file=logo_filename, user_id=current_user.id)
+        new_team = Team(
+            name=name, category=category, logo_file=logo_filename,
+            user_id=current_user.id,
+            public_slug=_make_team_slug(name),
+            public_token=_make_public_token()
+        )
         db.session.add(new_team)
         db.session.commit()
         return redirect('/my_teams')
@@ -2867,9 +2903,21 @@ def finish_session(id):
     db.session.commit()
     return redirect('/my_teams')
 
+@app.route('/<slug>/<token>')
+def public_team_by_token(slug, token):
+    """URL pública corta: trainbasket.com/infantil/xK9m2p"""
+    team = Team.query.filter_by(public_slug=slug, public_token=token).first_or_404()
+    return public_team_ranking_logic(team)
+
 @app.route('/team/<int:id>/public')
 def public_team_ranking(id):
+    """URL legada — redirige a la URL corta si el equipo ya tiene token."""
     team = Team.query.get_or_404(id)
+    _ensure_team_public_token(team)
+    return redirect(url_for('public_team_by_token', slug=team.public_slug, token=team.public_token))
+
+def public_team_ranking_logic(team):
+    _ensure_team_public_token(team)
     
     # Obtener parámetros de filtro de partidos
     filter_type = request.args.get('filter', 'all')
