@@ -436,10 +436,13 @@
     async function openChartModal(chartId) {
         // Rellenar grid de acciones
         const grid = document.getElementById('actionsGrid');
-        grid.innerHTML = actionsData.map(a =>
-            `<div class="form-check"><input class="form-check-input action-cb" type="checkbox" id="act_${a.id}" value="${a.id}">
-             <label class="form-check-label" for="act_${a.id}">[${a.section}] ${a.name}</label></div>`
-        ).join('');
+        grid.innerHTML = actionsData.map(a => {
+            const v = a.value;
+            const valColor = v > 0 ? '#4ade80' : v < 0 ? '#f87171' : '#f59e0b';
+            const valLabel = (v > 0 ? '+' : '') + v;
+            return `<div class="form-check"><input class="form-check-input action-cb" type="checkbox" id="act_${a.id}" value="${a.id}">
+             <label class="form-check-label" for="act_${a.id}" style="font-size:0.78rem;">[${a.section}] ${a.name} <span style="font-weight:700;color:${valColor};margin-left:3px;">${valLabel}</span></label></div>`;
+        }).join('');
 
         // Rellenar grid de equipos
         const tGrid = document.getElementById('teamsGrid');

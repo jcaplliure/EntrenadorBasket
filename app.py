@@ -2447,7 +2447,7 @@ def my_teams():
     _ensure_user_charts(current_user.id)
     user_actions_qs = ActionDefinition.query.filter_by(user_id=current_user.id, team_id=None).order_by(
         ActionDefinition.display_section, ActionDefinition.display_order).all()
-    user_actions = [{'id': a.id, 'name': a.name, 'section': a.display_section or ''} for a in user_actions_qs]
+    user_actions = [{'id': a.id, 'name': a.name, 'section': a.display_section or '', 'value': a.value} for a in user_actions_qs]
     return render_template('my_teams.html', teams=owned, all_teams=all_teams, user_actions=user_actions)
 
 @app.route('/team/<int:id>', methods=['GET', 'POST'])
