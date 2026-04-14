@@ -2317,6 +2317,12 @@ def api_get_chart_definitions():
 @login_required
 def api_create_chart_definition():
     data = request.get_json()
+    new_order = int(data.get('display_order', 10) or 10)
+    # Desplazar gráficos con el mismo orden
+    conflicts = ChartDefinition.query.filter_by(user_id=current_user.id)\
+        .filter(ChartDefinition.display_order >= new_order).order_by(ChartDefinition.display_order.desc()).all()
+    for existing in conflicts:
+        existing.display_order += 1
     cd = ChartDefinition(
         user_id=current_user.id,
         name=data.get('name', 'Nuevo gráfico'),
@@ -2328,7 +2334,7 @@ def api_create_chart_definition():
         metric=data.get('metric', 'sum'),
         format=data.get('format', 'avg'),
         description=data.get('description', ''),
-        display_order=data.get('display_order', 10),
+        display_order=new_order,
         top_n=data.get('top_n')
     )
     db.session.add(cd)
@@ -2355,7 +2361,17 @@ def api_update_chart_definition(cid):
     cd.metric = data.get('metric', cd.metric)
     cd.format = data.get('format', cd.format)
     cd.description = data.get('description', cd.description)
-    cd.display_order = data.get('display_order', cd.display_order)
+    new_order = data.get('display_order')
+    if new_order is not None:
+        new_order = int(new_order)
+        if new_order != cd.display_order:
+            # Desplazar otros gráficos que tengan ese orden
+            conflicts = ChartDefinition.query.filter_by(user_id=current_user.id)\
+                .filter(ChartDefinition.display_order == new_order)\
+                .filter(ChartDefinition.id != cd.id).all()
+            for ex in conflicts:
+                ex.display_order = cd.display_order  # intercambiar posición
+        cd.display_order = new_order
     raw_top_n = data.get('top_n')
     cd.top_n = int(raw_top_n) if raw_top_n is not None and raw_top_n != '' else None
     if cd.system_key == 'shots_pct':
@@ -3412,7 +3428,8 @@ def public_team_ranking_logic(team):
     # Cargar gráficos dinámicos del entrenador para este equipo (portal público)
     _ensure_user_charts(team.user_id)
     chart_owner = User.query.get(team.user_id)
-    charts = {}
+    charts_list = []  # lista ordenada de gráficos
+    shots_pct_def = None
     if team.analytics_visible:
         chart_defs = ChartDefinition.query.filter_by(user_id=team.user_id)\
             .filter(ChartDefinition.visible_public == True)\
@@ -3421,6 +3438,12 @@ def public_team_ranking_logic(team):
             if not _chart_applies_to_team(cd, team.id):
                 continue
             if cd.system_key == 'shots_pct':
+                shots_pct_def = cd
+                # Placeholder que se rellena luego
+                charts_list.append({'id': str(cd.id), 'is_shots_pct': True,
+                                    'display_order': cd.display_order,
+                                    'description': cd.description or '',
+                                    'team_shot_stats': {}, 'players_shot_stats': []})
                 continue
             limit = _resolve_chart_limit(cd, chart_owner)
             if cd.system_key == 'plus_minus':
@@ -3431,7 +3454,11 @@ def public_team_ranking_logic(team):
                 data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
             if data:
                 fmt_label = ' (total)' if cd.format == 'total' else ''
-                charts[str(cd.id)] = {'title': cd.name.upper() + fmt_label, 'data': data, 'description': cd.description or '', 'is_pm': cd.system_key == 'plus_minus'}
+                charts_list.append({'id': str(cd.id), 'title': cd.name.upper() + fmt_label,
+                                    'data': data, 'description': cd.description or '',
+                                    'is_pm': cd.system_key == 'plus_minus',
+                                    'is_shots_pct': False,
+                                    'display_order': cd.display_order})
 
     # Obtener ejercicios de la galería ordenados con notas
     gallery_items = TeamGalleryItem.query.filter_by(team_id=team.id).order_by(TeamGalleryItem.display_order).all()
@@ -3451,23 +3478,23 @@ def public_team_ranking_logic(team):
     
     gallery_drills_ordered.sort(key=lambda x: x.gallery_order)
     
-    # Calcular % de tiros si el gráfico shots_pct está habilitado y visible en portal
-    team_shot_stats, players_shot_stats = {}, []
-    shots_pct_def = ChartDefinition.query.filter_by(user_id=team.user_id, system_key='shots_pct').first()
-    if team.analytics_visible and shots_pct_def and shots_pct_def.visible_public and _chart_applies_to_team(shots_pct_def, team.id):
-        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def.shot_min_attempts or 0)
+    # Rellenar datos de shots_pct en su posición dentro de charts_list
+    if shots_pct_def:
+        t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def.shot_min_attempts or 0)
+        for entry in charts_list:
+            if entry.get('is_shots_pct'):
+                entry['team_shot_stats'] = t_shot
+                entry['players_shot_stats'] = p_shot
 
     hl_count, hl_color = _get_highlight_config(chart_owner)
     return render_template('public_ranking.html',
                           team=team,
-                          charts=charts,
+                          charts=charts_list,
                           all_matches=all_matches,
                           filter_type=filter_type,
                           selected_match_ids=selected_match_ids,
                           num_matches=num_matches,
                           gallery_drills=gallery_drills_ordered,
-                          team_shot_stats=team_shot_stats,
-                          players_shot_stats=players_shot_stats,
                           hl_count=hl_count,
                           hl_color=hl_color)
 
@@ -3590,22 +3617,23 @@ def team_stats(id):
         'DEFENSA -': [a for a in all_actions if a.display_section == 'DEFENSA' and a.value < 0]
     }
     
-    # Calcular % de tiros
-    team_shot_stats, players_shot_stats = {}, []
+    # Gráficos dinámicos para el entrenador (lista ordenada, shots_pct incluido en posición)
     _ensure_user_charts(team.user_id)
-    shots_pct_def = ChartDefinition.query.filter_by(user_id=team.user_id, system_key='shots_pct').first()
-    if shots_pct_def and shots_pct_def.visible_coach and _chart_applies_to_team(shots_pct_def, team.id):
-        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def.shot_min_attempts or 0)
-
-    # Gráficos dinámicos para el entrenador
     chart_owner = User.query.get(team.user_id)
     extra_charts = []
+    shots_pct_def_coach = None
     chart_defs = ChartDefinition.query.filter_by(user_id=team.user_id)\
         .filter(ChartDefinition.visible_coach == True)\
-        .filter(ChartDefinition.system_key != 'shots_pct')\
         .order_by(ChartDefinition.display_order).all()
     for cd in chart_defs:
         if not _chart_applies_to_team(cd, team.id):
+            continue
+        if cd.system_key == 'shots_pct':
+            shots_pct_def_coach = cd
+            extra_charts.append({'title': '% DE TIROS', 'is_shots_pct': True,
+                                 'display_order': cd.display_order,
+                                 'description': cd.description or '',
+                                 'team_shot_stats': {}, 'players_shot_stats': []})
             continue
         limit = _resolve_chart_limit(cd, chart_owner)
         if cd.system_key == 'plus_minus':
@@ -3615,7 +3643,19 @@ def team_stats(id):
         else:
             data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
         if data:
-            extra_charts.append({'title': cd.name.upper(), 'data': data, 'description': cd.description or '', 'is_pm': cd.system_key == 'plus_minus'})
+            extra_charts.append({'title': cd.name.upper(), 'data': data,
+                                 'description': cd.description or '',
+                                 'is_pm': cd.system_key == 'plus_minus',
+                                 'is_shots_pct': False,
+                                 'display_order': cd.display_order})
+
+    # Rellenar datos shots_pct en su posición
+    if shots_pct_def_coach:
+        t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def_coach.shot_min_attempts or 0)
+        for entry in extra_charts:
+            if entry.get('is_shots_pct'):
+                entry['team_shot_stats'] = t_shot
+                entry['players_shot_stats'] = p_shot
 
     hl_count, hl_color = _get_highlight_config(chart_owner)
     return render_template('team_stats.html',
@@ -3628,8 +3668,6 @@ def team_stats(id):
                          selected_match_ids=selected_match_ids,
                          custom_actions=custom_actions,
                          actions_by_section=actions_by_section,
-                         team_shot_stats=team_shot_stats,
-                         players_shot_stats=players_shot_stats,
                          extra_charts=extra_charts,
                          hl_count=hl_count,
                          hl_color=hl_color)

@@ -282,9 +282,64 @@
         </div>
         {% endif %}
         
-        <!-- Mostrar todos los gráficos habilitados -->
-        {% for chart_type, chart in charts.items() %}
-        {% if chart.data %}
+        <!-- Mostrar todos los gráficos habilitados (ordenados por display_order) -->
+        {% for chart in charts %}
+        {% if chart.is_shots_pct %}
+            {% set t_shot = chart.team_shot_stats %}
+            {% set p_shot = chart.players_shot_stats %}
+            {% if t_shot or p_shot %}
+            <div class="chart-card">
+                <h2 class="chart-title">% DE TIROS</h2>
+                <div class="chart-subtitle">{{ num_matches }} partido{% if num_matches != 1 %}s{% endif %}</div>
+                {% if chart.description %}
+                <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-bottom:0.75rem;">{{ chart.description }}</div>
+                {% endif %}
+                {% if t_shot %}
+                <div class="mb-3">
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Equipo</div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.4rem;text-align:center;">
+                        {% for label, key, intentos_key in [('T.Libre','tiro1','intentos_t1'),('2 ptos','tiro2','intentos_t2'),('3 ptos','tiro3','intentos_t3'),('Campo','campo','intentos_campo')] %}
+                        {% set val = t_shot.get(key) %}
+                        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:0.5rem 0.3rem;">
+                            <div style="font-size:0.65rem;color:rgba(255,255,255,0.5);margin-bottom:0.2rem;">{{ label }}</div>
+                            <div style="font-size:1.3rem;font-weight:700;color:{% if val is not none and val >= 50 %}#4ade80{% elif val is not none %}#f87171{% else %}rgba(255,255,255,0.3){% endif %};">
+                                {% if val is not none %}{{ val }}%{% else %}—{% endif %}
+                            </div>
+                            {% if intentos_key and t_shot.get(intentos_key) %}
+                            <div style="font-size:0.6rem;color:rgba(255,255,255,0.35);">{{ t_shot[intentos_key] }} int.</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% if p_shot %}
+                <div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.2rem;">Por jugador (% campo)</div>
+                    {% for p in p_shot %}
+                    <div class="player-row">
+                        <span class="player-name">{{ p.name }}</span>
+                        <div class="bar-container">
+                            {% set w = p.campo if p.campo is not none else 0 %}
+                            {% set is_hl = loop.index <= (hl_count or 1) and hl_color %}
+                            {% if is_hl %}
+                            <div class="bar-neon" style="width:{{ w }}%;background:{{ hl_color }};box-shadow:0 0 10px {{ hl_color }}80;"></div>
+                            {% else %}
+                            <div class="bar-neon blue" style="width:{{ w }}%;"></div>
+                            {% endif %}
+                        </div>
+                        <span class="player-value" style="color:{{ hl_color if (loop.index <= (hl_count or 1) and hl_color) else '#4a9eff' }};">
+                            {% if p.intentos_campo %}<span style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-right:0.3rem;">{{ p.intentos_campo }} int.</span>{% endif %}
+                            {% if p.campo is not none %}{{ p.campo }}%{% else %}—{% endif %}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="sparkle">🏀</div>
+            </div>
+            {% endif %}
+        {% elif chart.data %}
         <div class="chart-card">
             <h2 class="chart-title">{{ chart.title }}</h2>
             <div class="chart-subtitle">Top {{ team.analytics_players_count }} jugadores{% if num_matches > 1 %} (promedio){% endif %}</div>
@@ -400,58 +455,6 @@
         </div>
         {% endif %}
         
-        <!-- Gráfico % de tiros -->
-        {% if team.analytics_visible and team.chart_shots_visible and (team_shot_stats or players_shot_stats) %}
-        <div class="chart-card">
-            <h2 class="chart-title">% DE TIROS</h2>
-            <div class="chart-subtitle">{{ num_matches }} partido{% if num_matches != 1 %}s{% endif %}</div>
-
-            <!-- Totales del equipo -->
-            {% if team_shot_stats %}
-            <div class="mb-3">
-                <div style="font-size:0.75rem;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Equipo</div>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.4rem;text-align:center;">
-                    {% for label, key, intentos_key in [('T.Libre','tiro1','intentos_t1'),('2 ptos','tiro2','intentos_t2'),('3 ptos','tiro3','intentos_t3'),('Campo','campo','intentos_campo')] %}
-                    {% set val = team_shot_stats.get(key) %}
-                    <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:0.5rem 0.3rem;">
-                        <div style="font-size:0.65rem;color:rgba(255,255,255,0.5);margin-bottom:0.2rem;">{{ label }}</div>
-                        <div style="font-size:1.3rem;font-weight:700;color:{% if val is not none and val >= 50 %}#4ade80{% elif val is not none %}#f87171{% else %}rgba(255,255,255,0.3){% endif %};">
-                            {% if val is not none %}{{ val }}%{% else %}—{% endif %}
-                        </div>
-                        {% if intentos_key and team_shot_stats.get(intentos_key) %}
-                        <div style="font-size:0.6rem;color:rgba(255,255,255,0.35);">{{ team_shot_stats[intentos_key] }} int.</div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Por jugador -->
-            {% if players_shot_stats %}
-            <div>
-                <div style="font-size:0.75rem;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.2rem;">Por jugador (% campo)</div>
-                <div style="font-size:0.65rem;color:rgba(255,255,255,0.3);margin-bottom:0.5rem;">
-                    mín. {{ team.shot_min_attempts or 0 }} int. de campo
-                </div>
-                {% for p in players_shot_stats[:team.analytics_players_count or 5] %}
-                <div class="player-row">
-                    <span class="player-name">{{ p.name }}</span>
-                    <div class="bar-container">
-                        {% set w = p.campo if p.campo is not none else 0 %}
-                        <div class="bar-neon {% if loop.first %}gold{% else %}blue{% endif %}" style="width:{{ w }}%;"></div>
-                    </div>
-                    <span class="player-value {% if loop.first %}gold{% else %}blue{% endif %}">
-                        {% if p.intentos_campo %}<span style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-right:0.3rem;">{{ p.intentos_campo }} int.</span>{% endif %}
-                        {% if p.campo is not none %}{{ p.campo }}%{% else %}—{% endif %}
-                    </span>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-            <div class="sparkle">🏀</div>
-        </div>
-        {% endif %}
 
         <div class="text-center mt-5 mb-4">
             <a href="https://www.trainbasket.com" target="_blank" rel="noopener"
