@@ -474,6 +474,16 @@
     </style>
 </head>
 <body>
+    <!-- Supertítulo -->
+    <div style="background:#060f1e;border-bottom:1px solid rgba(255,255,255,0.06);padding:6px 0;">
+        <div class="container">
+            <span style="font-size:0.75rem;color:rgba(255,255,255,0.35);letter-spacing:0.05em;">
+                <a href="/my_teams" style="color:rgba(255,255,255,0.35);text-decoration:none;">Mis Equipos</a>
+                <span style="margin:0 6px;">›</span>
+                Configuración de tu equipo
+            </span>
+        </div>
+    </div>
     <!-- Header -->
     <div class="team-header">
         <div class="container">
@@ -487,9 +497,6 @@
                     <span class="team-name">{{ team.name }}</span>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="/team/{{ team.id }}/public" target="_blank" class="btn-portal">
-                        <i class="bi bi-trophy-fill"></i> Portal
-                    </a>
                     <a href="/my_teams" class="btn-back">Volver</a>
                 </div>
             </div>
@@ -596,6 +603,21 @@
         
         <!-- Tab Content: Portal Público -->
         <div class="tab-content-area" id="tab-public">
+            <!-- Link al portal -->
+            <div class="public-section" style="padding:14px 20px;">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div>
+                        <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-bottom:2px;">Link al portal público del equipo</div>
+                        <a href="/team/{{ team.id }}/public" target="_blank"
+                           style="font-size:0.85rem;color:var(--accent-color);word-break:break-all;">
+                            trainbasket.com/p/{{ team.public_token or '' }}
+                        </a>
+                    </div>
+                    <a href="/team/{{ team.id }}/public" target="_blank" class="btn-portal" style="flex-shrink:0;">
+                        <i class="bi bi-box-arrow-up-right"></i> Abrir portal
+                    </a>
+                </div>
+            </div>
             <!-- Notas del Entrenador -->
             <div class="public-section">
                 <h6 class="public-title"><i class="bi bi-pencil-square"></i> Notas del Entrenador</h6>
@@ -823,18 +845,51 @@
     
     <!-- Modal Biblioteca de Ejercicios -->
     <div class="modal fade" id="libraryModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content" style="background: var(--bg-panel); border: 1px solid var(--border-color);">
                 <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
                     <h5 class="modal-title" style="color: var(--cream);"><i class="bi bi-collection-play"></i> Añadir ejercicio de la biblioteca</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <input type="text" id="librarySearchInput" class="form-control" placeholder="Buscar por nombre o etiqueta..." onkeyup="searchLibrary()">
+                    <!-- Filtros (misma lógica que Biblioteca) -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-12 col-md-4">
+                            <input type="text" id="librarySearchInput" class="form-control form-control-sm"
+                                   placeholder="Buscar por nombre..." oninput="searchLibraryDebounced()">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <select id="libraryTagSelect" class="form-select form-select-sm" multiple
+                                    onchange="searchLibrary()" style="min-height:34px;">
+                                {% for group in tag_groups %}
+                                    {% if group.tags %}
+                                    <optgroup label="{{ group.group.name }}">
+                                        {% for tag in group.tags %}
+                                        <option value="{{ tag.id }}">{{ tag.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-8 col-md-3">
+                            <select id="libraryOriginSelect" class="form-select form-select-sm" onchange="searchLibrary()">
+                                <option value="">Todos los orígenes</option>
+                                <option value="link">YouTube / Link</option>
+                                <option value="tiktok">TikTok</option>
+                                <option value="instagram">Instagram</option>
+                                <option value="pdf">PDF</option>
+                                <option value="image">Imagen</option>
+                            </select>
+                        </div>
+                        <div class="col-4 col-md-1">
+                            <button class="btn btn-accent btn-sm w-100" onclick="searchLibrary()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div id="libraryResults" style="max-height: 400px; overflow-y: auto;">
-                        <div class="text-center text-muted py-4">Busca ejercicios por nombre o etiqueta</div>
+                    <div id="libraryResults" style="max-height: 420px; overflow-y: auto;">
+                        <div class="text-center text-muted py-4">Usa los filtros para buscar ejercicios</div>
                     </div>
                 </div>
             </div>
@@ -1024,50 +1079,62 @@
         
         // Library Modal
         let librarySearchTimeout = null;
-        
+
         function openLibraryModal() {
             document.getElementById('librarySearchInput').value = '';
-            document.getElementById('libraryResults').innerHTML = '<div class="text-center text-muted py-4">Busca ejercicios por nombre o etiqueta</div>';
+            // Limpiar selects
+            Array.from(document.getElementById('libraryTagSelect').options).forEach(o => o.selected = false);
+            document.getElementById('libraryOriginSelect').value = '';
+            searchLibrary();
             new bootstrap.Modal(document.getElementById('libraryModal')).show();
         }
-        
-        function searchLibrary() {
+
+        function searchLibraryDebounced() {
             clearTimeout(librarySearchTimeout);
+            librarySearchTimeout = setTimeout(searchLibrary, 300);
+        }
+
+        async function searchLibrary() {
             const query = document.getElementById('librarySearchInput').value.trim();
+            const origin = document.getElementById('libraryOriginSelect').value;
+            const tagSelect = document.getElementById('libraryTagSelect');
+            const selectedTags = Array.from(tagSelect.selectedOptions).map(o => o.value);
             const resultsDiv = document.getElementById('libraryResults');
-            
-            if (query.length < 2) {
-                resultsDiv.innerHTML = '<div class="text-center text-muted py-4">Escribe al menos 2 caracteres</div>';
-                return;
-            }
-            
+
             resultsDiv.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm" style="color: var(--accent-color);"></div></div>';
-            
-            librarySearchTimeout = setTimeout(async () => {
-                const response = await fetch(`/api/get_drills?q=${encodeURIComponent(query)}&limit=20`);
-                const data = await response.json();
-                
-                if (data.drills.length === 0) {
-                    resultsDiv.innerHTML = '<div class="text-center text-muted py-4">No se encontraron ejercicios</div>';
-                } else {
-                    resultsDiv.innerHTML = data.drills.map(drill => {
-                        const coverUrl = drill.cover_image ? `/static/uploads/${drill.cover_image}` : '';
-                        return `
-                        <div class="library-item d-flex align-items-center gap-3 p-2 rounded mb-2" style="background: var(--bg-input); cursor: pointer;" onclick="addDrillToGallery(${drill.id})">
-                            <div style="width: 60px; height: 45px; background: #333; border-radius: 6px; overflow: hidden; flex-shrink: 0;">
-                                ${coverUrl ? `<img src="${coverUrl}" style="width: 100%; height: 100%; object-fit: cover;">` : '<div class="h-100 d-flex align-items-center justify-content-center"><i class="bi bi-play-circle text-muted"></i></div>'}
-                            </div>
-                            <div class="flex-grow-1 overflow-hidden">
-                                <div class="fw-bold text-truncate" style="color: var(--cream); font-size: 0.9rem;">${drill.title}</div>
-                                <div class="small text-muted">${drill.tags.slice(0, 2).join(', ')}</div>
-                            </div>
-                            <button class="btn btn-sm" style="background: var(--accent-color); color: #0a1929;">
-                                <i class="bi bi-plus"></i>
-                            </button>
+
+            let url = `/api/get_drills?limit=50`;
+            if (query) url += `&q=${encodeURIComponent(query)}`;
+            if (origin) url += `&origin=${encodeURIComponent(origin)}`;
+            selectedTags.forEach(tid => { url += `&tags=${tid}`; });
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.drills.length === 0) {
+                resultsDiv.innerHTML = '<div class="text-center text-muted py-4">No se encontraron ejercicios</div>';
+            } else {
+                resultsDiv.innerHTML = data.drills.map(drill => {
+                    const coverUrl = drill.cover_image ? `/static/uploads/${drill.cover_image}` : '';
+                    return `
+                    <div class="library-item d-flex align-items-center gap-3 p-2 rounded mb-2"
+                         style="background: var(--bg-input); cursor: pointer;"
+                         onclick="addDrillToGallery(${drill.id})">
+                        <div style="width:64px;height:48px;background:#333;border-radius:6px;overflow:hidden;flex-shrink:0;">
+                            ${coverUrl
+                                ? `<img src="${coverUrl}" style="width:100%;height:100%;object-fit:cover;">`
+                                : '<div class="h-100 d-flex align-items-center justify-content-center"><i class="bi bi-play-circle text-muted"></i></div>'}
                         </div>
-                    `}).join('');
-                }
-            }, 300);
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-bold text-truncate" style="color:var(--cream);font-size:0.9rem;">${drill.title}</div>
+                            <div class="small text-muted">${drill.tags.slice(0,3).join(' · ')}</div>
+                        </div>
+                        <button class="btn btn-sm flex-shrink-0" style="background:var(--accent-color);color:#0a1929;">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>`;
+                }).join('');
+            }
         }
         
         async function addDrillToGallery(drillId) {

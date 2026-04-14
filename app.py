@@ -1434,14 +1434,15 @@ def api_get_drill_title(drill_id):
 def api_get_drills():
     query = request.args.get('q', '').strip()
     tag_ids = request.args.getlist('tags')
-    
+    origin = request.args.get('origin', '').strip()
+
     base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id)
     drills_query = Drill.query.filter(base_condition)
-    
+
     if query:
         search_term = f"%{query}%"
         drills_query = drills_query.filter(or_(Drill.title.ilike(search_term), Drill.description.ilike(search_term)))
-    
+
     if tag_ids:
         try:
             tag_ids_int = [int(tid) for tid in tag_ids]
@@ -1453,7 +1454,10 @@ def api_get_drills():
             )
         except ValueError:
             pass
-    
+
+    if origin:
+        drills_query = drills_query.filter(Drill.media_type == origin)
+
     drills = drills_query.limit(50).all()
     result = []
     for drill in drills:
@@ -2524,10 +2528,12 @@ def view_team(id):
     global_top_n = current_user.chart_default_top_n or 0
     shots_pct_chart = ChartDefinition.query.filter_by(user_id=current_user.id, system_key='shots_pct').first()
     global_shot_min = shots_pct_chart.shot_min_attempts if shots_pct_chart else 0
+    tag_groups = get_tag_groups_for_user(current_user)
     return render_template('view_team.html', team=team, is_owner=is_owner, sessions=sessions,
                            actions=team_actions, rankings=team_rankings, categories=categories,
                            gallery_items_ordered=gallery_items_ordered,
-                           global_top_n=global_top_n, global_shot_min=global_shot_min)
+                           global_top_n=global_top_n, global_shot_min=global_shot_min,
+                           tag_groups=tag_groups)
 
 def _user_teams():
     owned = Team.query.filter_by(user_id=current_user.id).all()
