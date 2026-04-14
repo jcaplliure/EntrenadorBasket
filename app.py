@@ -568,6 +568,7 @@ def _calc_shot_stats(match_ids, all_actions, team_players):
             'intentos_t1': stats.get('Tiro 1', {'made': 0, 'missed': 0})['made'] + stats.get('Tiro 1', {'made': 0, 'missed': 0})['missed'],
             'intentos_t2': t2['made'] + t2['missed'],
             'intentos_t3': t3['made'] + t3['missed'],
+            'intentos_campo': (t2['made'] + t2['missed']) + (t3['made'] + t3['missed']),
         }
 
     players_shot_stats = []
@@ -591,6 +592,7 @@ def _calc_shot_stats(match_ids, all_actions, team_players):
         'intentos_t1': team_totals['Tiro 1']['made'] + team_totals['Tiro 1']['missed'],
         'intentos_t2': t2['made'] + t2['missed'],
         'intentos_t3': t3['made'] + t3['missed'],
+        'intentos_campo': (t2['made'] + t2['missed']) + (t3['made'] + t3['missed']),
     }
     return team_shot_stats, players_shot_stats
 

@@ -448,7 +448,7 @@
             <div class="mb-3">
                 <div style="font-size:0.75rem;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Equipo</div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.4rem;text-align:center;">
-                    {% for label, key, intentos_key in [('T.Libre','tiro1','intentos_t1'),('2 ptos','tiro2','intentos_t2'),('3 ptos','tiro3','intentos_t3'),('Campo','campo','')] %}
+                    {% for label, key, intentos_key in [('T.Libre','tiro1','intentos_t1'),('2 ptos','tiro2','intentos_t2'),('3 ptos','tiro3','intentos_t3'),('Campo','campo','intentos_campo')] %}
                     {% set val = team_shot_stats.get(key) %}
                     <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:0.5rem 0.3rem;">
                         <div style="font-size:0.65rem;color:rgba(255,255,255,0.5);margin-bottom:0.2rem;">{{ label }}</div>
@@ -476,6 +476,7 @@
                         <div class="bar-neon {% if loop.first %}gold{% else %}blue{% endif %}" style="width:{{ w }}%;"></div>
                     </div>
                     <span class="player-value {% if loop.first %}gold{% else %}blue{% endif %}">
+                        {% if p.intentos_campo %}<span style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-right:0.3rem;">{{ p.intentos_campo }} int.</span>{% endif %}
                         {% if p.campo is not none %}{{ p.campo }}%{% else %}—{% endif %}
                     </span>
                 </div>
