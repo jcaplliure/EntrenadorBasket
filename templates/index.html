@@ -141,9 +141,13 @@
             font-weight: 700;
             color: var(--cream);
             margin: 0;
-            font-size: 1rem;
+            font-size: 0.8rem;
             text-shadow: 0 1px 6px rgba(0,0,0,0.4);
-            line-height: 1.2;
+            line-height: 1.25;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
         .drill-tags {
             display: flex;
@@ -362,7 +366,7 @@
                     <div class="drill-info">
                         <div class="drill-header">
                             <div class="drill-title">
-                                {{ drill.title[:20] }}{% if drill.title|length > 20 %}…{% endif %}
+                                {{ drill.title }}
                             </div>
                         </div>
                         <div class="drill-tags">
