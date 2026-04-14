@@ -761,6 +761,7 @@
                                                       data-drill-id="{{ drill.id }}"
                                                       placeholder="Añade una nota para los jugadores..."
                                                       style="font-size: 0.85rem; resize: none; height: 60px;"
+                                                      oninput="scheduleSaveNote({{ drill.id }}, this.value)"
                                                       onblur="saveDrillNote({{ drill.id }}, this.value)">{{ drill.gallery_note or '' }}</textarea>
                                         </div>
                                     </div>
@@ -998,6 +999,12 @@
         })();
         
         // Drill Notes
+        const _noteTimers = {};
+        function scheduleSaveNote(drillId, note) {
+            clearTimeout(_noteTimers[drillId]);
+            _noteTimers[drillId] = setTimeout(() => saveDrillNote(drillId, note), 1000);
+        }
+
         async function saveDrillNote(drillId, note) {
             const response = await fetch('/api/save_gallery_item_note', {
                 method: 'POST',
