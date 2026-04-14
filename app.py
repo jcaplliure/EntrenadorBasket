@@ -163,6 +163,7 @@ class Team(db.Model):
     chart_attack_no_shots_visible = db.Column(db.Boolean, default=False)  # Ataque (sin puntos)
     chart_defense_visible = db.Column(db.Boolean, default=False)  # Defensa
     chart_shots_visible = db.Column(db.Boolean, default=False)  # % de tiros
+    shot_min_attempts = db.Column(db.Integer, default=0)  # Mínimo intentos campo para aparecer en ranking
     players = db.relationship('Player', backref='team', lazy=True, cascade="all, delete-orphan")
     staff = db.relationship('TeamStaff', backref='team', lazy=True, cascade="all, delete-orphan")
     sessions = db.relationship('TrainingSession', backref='team', lazy=True, cascade="all, delete-orphan")
@@ -508,7 +509,7 @@ def _ensure_team_public_token(team):
     if changed:
         db.session.commit()
 
-def _calc_shot_stats(match_ids, all_actions, team_players):
+def _calc_shot_stats(match_ids, all_actions, team_players, min_attempts=0):
     """Calcula % de tiros (1, 2, 3 y campo) por jugador y para el equipo."""
     shot_types = ['Tiro 1', 'Tiro 2', 'Tiro 3']
     action_map = {}  # name -> {pos_id, neg_id}
@@ -578,7 +579,7 @@ def _calc_shot_stats(match_ids, all_actions, team_players):
             continue
         fmt = fmt_player(stats)
         total_intentos = fmt['intentos_t1'] + fmt['intentos_t2'] + fmt['intentos_t3']
-        if total_intentos > 0:
+        if total_intentos > 0 and fmt['intentos_campo'] >= min_attempts:
             players_shot_stats.append({'name': player.name, 'dorsal': player.dorsal, **fmt})
     players_shot_stats.sort(key=lambda x: (x['campo'] or -1), reverse=True)
 
@@ -633,6 +634,7 @@ def run_migrations():
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS chart_attack_no_shots_visible BOOLEAN DEFAULT FALSE')
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS chart_defense_visible BOOLEAN DEFAULT FALSE')
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS chart_shots_visible BOOLEAN DEFAULT FALSE')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS shot_min_attempts INTEGER DEFAULT 0')
     # Sistema de invitaciones
     _run_alter('''CREATE TABLE IF NOT EXISTS invitation (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2434,6 +2436,8 @@ def api_save_analytics_settings():
         team.chart_defense_visible = data.get('chart_defense_visible', False)
     if 'chart_shots_visible' in data:
         team.chart_shots_visible = data.get('chart_shots_visible', False)
+    if 'shot_min_attempts' in data:
+        team.shot_min_attempts = max(0, int(data.get('shot_min_attempts', 0)))
     
     db.session.commit()
     return jsonify({'status': 'ok'})
@@ -3123,7 +3127,7 @@ def public_team_ranking_logic(team):
     # Calcular % de tiros si el gráfico está habilitado en el portal
     team_shot_stats, players_shot_stats = {}, []
     if team.analytics_visible and team.chart_shots_visible:
-        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players)
+        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=team.shot_min_attempts or 0)
 
     return render_template('public_ranking.html', 
                           team=team, 
@@ -3256,7 +3260,7 @@ def team_stats(id):
     }
     
     # Calcular % de tiros (siempre visible en analytics)
-    team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players)
+    team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=team.shot_min_attempts or 0)
 
     return render_template('team_stats.html', 
                          team=team, 

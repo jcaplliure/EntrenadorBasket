@@ -408,7 +408,10 @@
             <!-- Por jugador -->
             {% if players_shot_stats %}
             <div>
-                <div style="font-size:0.75rem;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Por jugador (% campo)</div>
+                <div style="font-size:0.75rem;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:1px;margin-bottom:0.2rem;">Por jugador (% campo)</div>
+                <div style="font-size:0.65rem;color:rgba(255,255,255,0.3);margin-bottom:0.5rem;">
+                    mín. {{ team.shot_min_attempts or 0 }} int. de campo
+                </div>
                 {% for p in players_shot_stats[:team.analytics_players_count or 5] %}
                 <div class="player-row">
                     <span class="player-name">{{ p.name }}</span>
