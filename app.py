@@ -2523,7 +2523,7 @@ def view_team(id):
     
     # Obtener ejercicios de la galería ordenados con sus notas
     gallery_items = TeamGalleryItem.query.filter_by(team_id=team.id).order_by(TeamGalleryItem.display_order).all()
-    drill_notes = {item.drill_id: item.note for item in gallery_items}
+    drill_notes = {item.drill_id: (item.note or '') for item in gallery_items}
     drill_order = {item.drill_id: item.display_order for item in gallery_items}
     
     # Ordenar gallery_drills según TeamGalleryItem.display_order
@@ -3615,7 +3615,7 @@ def public_team_ranking_logic(team):
 
     # Obtener ejercicios de la galería ordenados con notas
     gallery_items = TeamGalleryItem.query.filter_by(team_id=team.id).order_by(TeamGalleryItem.display_order).all()
-    drill_notes = {item.drill_id: item.note for item in gallery_items}
+    drill_notes = {item.drill_id: (item.note or '') for item in gallery_items}
     drill_order = {item.drill_id: item.display_order for item in gallery_items}
     
     gallery_drills_ordered = []
