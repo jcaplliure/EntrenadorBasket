@@ -724,13 +724,13 @@
                                     <div class="card-img-zone h-100" style="min-height: 120px; border-radius: 12px 0 0 12px;" 
                                          onclick="openDrillContent({{ drill.id }}, '{{ drill.media_type }}', '{{ drill.external_link or '' }}', '{{ drill.media_file or '' }}')">
                                         {% if drill.cover_image %}
-                                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}" style="border-radius: 12px 0 0 12px;">
+                                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
                                         {% elif drill.cover_fallback %}
-                                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_fallback) }}" style="border-radius: 12px 0 0 12px;">
+                                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_fallback) }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
                                         {% elif drill.media_type == 'image' and drill.media_file %}
-                                            <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" style="border-radius: 12px 0 0 12px;">
+                                            <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
                                         {% else %}
-                                            <img src="{{ get_config_url('generic_bg') }}" style="border-radius: 12px 0 0 12px;">
+                                            <img src="{{ get_config_url('generic_bg') }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
                                         {% endif %}
 
                                         {% if drill.origin == 'youtube' %}
