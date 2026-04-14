@@ -453,8 +453,10 @@
                 <span class="player-name">{{ p.name }}</span>
                 <div class="bar-container">
                     {% if chart.is_pm %}
-                        {% set max_abs = (chart.data | map(attribute='points') | map('abs') | max) or 1 %}
-                        {% set w = (p.points | abs / max_abs * 100) | round | int %}
+                        {% set all_abs = [] %}{% for item in chart.data %}{% if all_abs.append(item.points if item.points >= 0 else -item.points) %}{% endif %}{% endfor %}
+                        {% set max_abs = (all_abs | max) if all_abs else 1 %}
+                        {% set abs_val = p.points if p.points >= 0 else -p.points %}
+                        {% set w = ((abs_val / max_abs) * 100) | round | int %}
                         {% set bar_color = '#4ade80' if p.points >= 0 else '#f87171' %}
                         <div class="bar-neon" style="width:{{ w }}%;background:{{ bar_color }};box-shadow:0 0 8px {{ bar_color }};"></div>
                     {% else %}

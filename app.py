@@ -279,7 +279,8 @@ class Match(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False) 
     roster = db.relationship('Player', secondary=match_roster, backref='matches_played')
-    events = db.relationship('MatchEvent', backref='match', lazy=True, cascade="all, delete-orphan")
+    events = db.relationship('MatchEvent', backref='match', lazy=True, cascade="all, delete-orphan", overlaps="lineup_events")
+    lineup_events = db.relationship('MatchLineupEvent', lazy=True, cascade="all, delete-orphan", overlaps="events")
 
 class MatchEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
