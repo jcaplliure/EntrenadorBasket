@@ -340,11 +340,23 @@
             </div>
             {% endif %}
         {% elif chart.data %}
+        {% set player_ids_str = chart.data | map(attribute='id') | list | join(',') %}
         <div class="chart-card">
-            <h2 class="chart-title">{{ chart.title }}</h2>
-            <div class="chart-subtitle">{% if chart.limit %}Top {{ chart.limit }} jugadores{% else %}Todos los jugadores{% endif %}{% if chart.format != 'total' and num_matches > 1 %} (promedio){% elif chart.format == 'total' %} (total){% endif %}</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                    <h2 class="chart-title" style="margin-bottom:0.1rem;">{{ chart.title }}</h2>
+                    <div class="chart-subtitle">{% if chart.limit %}Top {{ chart.limit }} jugadores{% else %}Todos los jugadores{% endif %}{% if chart.format != 'total' and num_matches > 1 %} (promedio){% elif chart.format == 'total' %} (total){% endif %}</div>
+                </div>
+                {% if chart.chart_id %}
+                <button onclick="openActionLog({{ chart.chart_id }}, {{ team.id }}, '{{ filter_type }}', '{{ player_ids_str }}')"
+                        style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:rgba(255,255,255,0.5);padding:4px 8px;cursor:pointer;font-size:0.75rem;flex-shrink:0;margin-top:2px;"
+                        title="Ver log de acciones">
+                    <i class="bi bi-list-ul"></i>
+                </button>
+                {% endif %}
+            </div>
             {% if chart.description %}
-            <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-bottom:0.75rem;">{{ chart.description }}</div>
+            <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin:0.4rem 0 0.75rem;">{{ chart.description }}</div>
             {% endif %}
             <div class="ranking-list">
                 {% for p in chart.data %}
@@ -604,5 +616,66 @@
             <div class="modal-content"></div>
         </div>
     </div>
+
+    <!-- Modal Log de Acciones -->
+    <div class="modal fade" id="actionLogModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content" style="background:#0a1220;border:1px solid rgba(255,255,255,0.1);color:#e7edf7;">
+                <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.1);">
+                    <h5 class="modal-title"><i class="bi bi-list-ul me-2"></i>Log de acciones</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="actionLogBody" style="max-height:70vh;overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function openActionLog(chartId, teamId, filterType, playerIdsStr) {
+            const modal = document.getElementById('actionLogModal');
+            const body  = document.getElementById('actionLogBody');
+            body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-light" role="status"></div></div>';
+            new bootstrap.Modal(modal).show();
+
+            const params = new URLSearchParams({ chart_id: chartId, team_id: teamId, filter: filterType, token: publicToken });
+            playerIdsStr.split(',').filter(Boolean).forEach(id => params.append('player_ids', id));
+
+            try {
+                const res  = await fetch('/api/chart_action_log?' + params.toString());
+                const data = await res.json();
+                if (!data.length) { body.innerHTML = '<p class="text-center text-secondary py-3">Sin datos de acciones.</p>'; return; }
+                let html = '';
+                const periodLabel = p => p <= 4 ? `Q${p}` : `P${p}`;
+                data.forEach(player => {
+                    html += `<div style="margin-bottom:1.2rem;">
+                        <div style="font-weight:700;font-size:0.95rem;color:#e7edf7;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:0.3rem;margin-bottom:0.5rem;">
+                            #${player.player_dorsal} ${player.player_name}
+                            <span style="font-weight:400;font-size:0.8rem;color:rgba(255,255,255,0.45);margin-left:0.5rem;">${player.events.length} acciones</span>
+                        </div>
+                        <table style="width:100%;font-size:0.8rem;border-collapse:collapse;">
+                            <thead><tr style="color:rgba(255,255,255,0.4);text-align:left;">
+                                <th style="padding:2px 6px;">Per.</th>
+                                <th style="padding:2px 6px;">Partido</th>
+                                <th style="padding:2px 6px;">Acción</th>
+                                <th style="padding:2px 6px;text-align:right;">Val</th>
+                            </tr></thead>
+                            <tbody>`;
+                    player.events.forEach(e => {
+                        const color = e.value > 0 ? '#4ade80' : e.value < 0 ? '#f87171' : '#fbbf24';
+                        html += `<tr style="border-top:1px solid rgba(255,255,255,0.05);">
+                            <td style="padding:3px 6px;"><span style="background:rgba(59,130,246,0.25);border-radius:4px;padding:1px 5px;font-size:0.7rem;">${periodLabel(e.period)}</span></td>
+                            <td style="padding:3px 6px;color:rgba(255,255,255,0.6);">${e.match_date} vs ${e.match}</td>
+                            <td style="padding:3px 6px;">${e.action}</td>
+                            <td style="padding:3px 6px;text-align:right;font-weight:700;color:${color};">${e.value > 0 ? '+' : ''}${e.value}</td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                });
+                body.innerHTML = html;
+            } catch(err) {
+                body.innerHTML = '<p class="text-center text-danger py-3">Error al cargar el log.</p>';
+            }
+        }
+    </script>
 </body>
 </html>

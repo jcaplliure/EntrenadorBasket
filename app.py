@@ -758,7 +758,7 @@ def _calc_chart_data(chart_def, match_ids, all_actions, num_matches, players, li
             # Dividir entre los partidos que el jugador ha jugado, no el total del equipo
             player_matches = len(player_match_counts.get(pid, set())) or 1
             val = round(total / player_matches, 2)
-        ranking.append({'name': player.name, 'points': val, 'photo': player.photo_file, 'dorsal': player.dorsal})
+        ranking.append({'id': pid, 'name': player.name, 'points': val, 'photo': player.photo_file, 'dorsal': player.dorsal})
 
     ranking.sort(key=lambda x: x['points'], reverse=True)
     return ranking[:limit] if limit else ranking
@@ -2898,6 +2898,101 @@ def api_save_gallery_item_note():
     db.session.commit()
     return jsonify({'status': 'ok'})
 
+@app.route('/api/chart_action_log')
+def api_chart_action_log():
+    """Log de acciones de los jugadores top de un gráfico."""
+    chart_id   = request.args.get('chart_id', type=int)
+    team_id    = request.args.get('team_id', type=int)
+    filter_type = request.args.get('filter', 'all')
+    player_ids = request.args.getlist('player_ids', type=int)
+    token      = request.args.get('token', '')
+
+    chart_def = ChartDefinition.query.get(chart_id)
+    team      = Team.query.get(team_id)
+    if not chart_def or not team:
+        return jsonify({'error': 'Not found'}), 404
+
+    # Auth: propietario/staff autenticado, o token público con gráfico visible
+    is_auth = False
+    if current_user.is_authenticated:
+        is_owner = (team.user_id == current_user.id)
+        is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+        is_auth  = bool(is_owner or is_staff)
+    elif token and team.public_token == token and chart_def.visible_public:
+        is_auth = True
+    if not is_auth:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    # Partidos según filtro
+    all_matches = Match.query.filter_by(team_id=team.id).order_by(Match.date.desc()).all()
+    if filter_type == 'last1':   filtered = all_matches[:1]
+    elif filter_type == 'last5':  filtered = all_matches[:5]
+    elif filter_type == 'last10': filtered = all_matches[:10]
+    else:                         filtered = all_matches
+    match_ids = [m.id for m in filtered]
+    match_map = {m.id: m for m in filtered}
+
+    if not match_ids:
+        return jsonify([])
+
+    # Acciones del gráfico
+    chart_actions = ActionDefinition.query.filter_by(user_id=team.user_id, team_id=None).all()
+    action_map = {a.id: a for a in chart_actions}
+    if chart_def.action_ids:
+        try:
+            selected_ids = set(json.loads(chart_def.action_ids))
+            action_ids = [aid for aid in selected_ids if aid in action_map]
+        except Exception:
+            action_ids = list(action_map.keys())
+    else:
+        action_ids = list(action_map.keys())
+
+    if not action_ids:
+        return jsonify([])
+
+    # Eventos filtrados por jugadores del gráfico
+    q = MatchEvent.query.filter(
+        MatchEvent.match_id.in_(match_ids),
+        MatchEvent.action_id.in_(action_ids)
+    )
+    if player_ids:
+        q = q.filter(MatchEvent.player_id.in_(player_ids))
+    events = q.order_by(MatchEvent.match_id, MatchEvent.period, MatchEvent.timestamp).all()
+
+    player_map = {p.id: p for p in team.players}
+
+    # Agrupar por jugador
+    from collections import defaultdict
+    player_logs = defaultdict(list)
+    for e in events:
+        if not e.player_id or not e.action_id:
+            continue
+        action = action_map.get(e.action_id)
+        if not action:
+            continue
+        match = match_map.get(e.match_id)
+        player_logs[e.player_id].append({
+            'match':      match.opponent if match else '?',
+            'match_date': match.date.strftime('%d/%m') if match else '',
+            'period':     e.period or 1,
+            'action':     action.name,
+            'value':      action.value
+        })
+
+    # Respuesta en el orden del gráfico
+    result = []
+    ordered_ids = player_ids if player_ids else list(player_logs.keys())
+    for pid in ordered_ids:
+        if pid in player_logs:
+            player = player_map.get(pid)
+            result.append({
+                'player_name':   player.name   if player else '?',
+                'player_dorsal': player.dorsal if player else '',
+                'events':        player_logs[pid]
+            })
+    return jsonify(result)
+
+
 @app.route('/api/reorder_gallery', methods=['POST'])
 @login_required
 def api_reorder_gallery():
@@ -3515,6 +3610,7 @@ def public_team_ranking_logic(team):
                                     'is_shots_pct': False,
                                     'format': cd.format or 'avg',
                                     'limit': limit,
+                                    'chart_id': cd.id,
                                     'display_order': cd.display_order})
 
     # Obtener ejercicios de la galería ordenados con notas
@@ -3717,6 +3813,7 @@ def team_stats(id):
                                  'is_shots_pct': False,
                                  'format': cd.format or 'avg',
                                  'limit': limit,
+                                 'chart_id': cd.id,
                                  'display_order': cd.display_order})
 
     # Rellenar datos shots_pct en su posición
