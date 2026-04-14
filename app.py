@@ -478,9 +478,9 @@ def get_drill_origin(drill):
 def compress_image(file):
     img = Image.open(file)
     if img.mode in ("RGBA", "P"): img = img.convert("RGB")
-    img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+    img.thumbnail((400, 400), Image.Resampling.LANCZOS)
     output = BytesIO()
-    img.save(output, format='JPEG', quality=75, optimize=True)
+    img.save(output, format='JPEG', quality=55, optimize=True)
     output.seek(0)
     return output
 
