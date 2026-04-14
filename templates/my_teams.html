@@ -53,6 +53,9 @@
         .chart-item { background: var(--bg-panel-2); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
         .chart-item-name { font-weight: 600; color: var(--cream); font-size: 0.9rem; flex: 1; min-width: 0; }
         .chart-item-meta { font-size: 0.72rem; color: rgba(255,255,255,0.4); white-space: nowrap; }
+        .order-input { width: 40px; text-align: center; font-size: 0.8rem; font-weight: 700; padding: 3px 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.65); flex-shrink: 0; appearance: textfield; -moz-appearance: textfield; }
+        .order-input::-webkit-outer-spin-button, .order-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .order-input:focus { outline: none; border-color: var(--accent); color: white; background: rgba(255,255,255,0.1); }
         .badge-system { background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(99,102,241,0.3); }
         .badge-vis { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; }
         .badge-coach { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
@@ -298,10 +301,6 @@
                             <input type="number" id="editChartTopN" min="0" max="100" placeholder="Usar global"
                                 class="form-control">
                         </div>
-                        <div class="col-6">
-                            <label class="form-label">Orden de visualización</label>
-                            <input type="number" id="editChartOrder" class="form-control" min="1" max="99">
-                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -401,17 +400,36 @@
                     ? `<span style="font-size:0.7rem;color:rgba(255,200,0,0.7);">${c.action_ids.length} acc.</span>`
                     : `<span style="font-size:0.7rem;color:rgba(255,100,100,0.8);" title="Sin acciones seleccionadas → usa todas">⚠ todas las acc.</span>`);
             return `<div class="chart-item">
+                <input type="number" class="order-input" value="${c.display_order}" min="1" max="99"
+                    title="Orden de visualización (clic para editar)"
+                    data-chart-id="${c.id}" data-prev-order="${c.display_order}"
+                    onchange="saveChartOrder(${c.id}, this)"
+                    onblur="saveChartOrder(${c.id}, this)"
+                    onclick="event.stopPropagation()">
                 <div class="flex-fill min-w-0">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="chart-item-name">${sysLabel}${c.name}</span>
                         ${badges}
                         ${actionCount}
                     </div>
-                    <div class="chart-item-meta mt-1">#${c.display_order} · ${teamLabel} · ${c.metric === 'count' ? 'Nº acciones' : 'Valoración'} · ${c.format === 'total' ? 'Total' : 'Promedio'}</div>
+                    <div class="chart-item-meta mt-1">${teamLabel} · ${c.metric === 'count' ? 'Nº acciones' : 'Valoración'} · ${c.format === 'total' ? 'Total' : 'Promedio'}</div>
                 </div>
                 <button class="chart-btn" onclick="openChartModal(${c.id})" title="Editar"><i class="bi bi-pencil"></i></button>
             </div>`;
         }).join('');
+    }
+
+    async function saveChartOrder(chartId, input) {
+        const newOrder = parseInt(input.value);
+        const prevOrder = parseInt(input.dataset.prevOrder || input.value);
+        if (!newOrder || newOrder < 1) { input.value = prevOrder; return; }
+        if (newOrder === prevOrder) return;
+        await fetch(`/api/chart_definitions/${chartId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ display_order: newOrder })
+        });
+        loadCharts(); // recarga para reflejar el intercambio
     }
 
     async function openChartModal(chartId) {
@@ -446,7 +464,6 @@
             document.getElementById('editVisCoach').checked = c.visible_coach;
             document.getElementById('editVisPublic').checked = c.visible_public;
             document.getElementById('editChartDesc').value = c.description;
-            document.getElementById('editChartOrder').value = c.display_order;
             document.getElementById('editChartTopN').value = c.top_n !== null && c.top_n !== undefined ? String(c.top_n) : '';
 
             // Marcar acciones seleccionadas
@@ -482,7 +499,6 @@
             document.getElementById('editVisCoach').checked = true;
             document.getElementById('editVisPublic').checked = false;
             document.getElementById('editChartDesc').value = '';
-            document.getElementById('editChartOrder').value = '10';
             document.getElementById('editChartTopN').value = '';
             document.getElementById('actionsRow').style.display = '';
             document.getElementById('deleteChartBtn').style.display = 'none';
@@ -508,7 +524,6 @@
             metric: document.getElementById('editChartMetric').value,
             format: document.getElementById('editChartFormat').value,
             description: document.getElementById('editChartDesc').value,
-            display_order: parseInt(document.getElementById('editChartOrder').value) || 10,
             top_n: document.getElementById('editChartTopN').value === '' ? null : parseInt(document.getElementById('editChartTopN').value),
             shot_min_attempts: parseInt(document.getElementById('editShotMin').value) || 0
         };

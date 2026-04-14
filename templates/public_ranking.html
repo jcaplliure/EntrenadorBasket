@@ -321,14 +321,14 @@
                         <span class="player-name">{{ p.name }}</span>
                         <div class="bar-container">
                             {% set w = p.campo if p.campo is not none else 0 %}
-                            {% set is_hl = loop.index <= (hl_count or 1) and hl_color %}
+                            {% set is_hl = hl_count and loop.index <= hl_count and hl_color %}
                             {% if is_hl %}
                             <div class="bar-neon" style="width:{{ w }}%;background:{{ hl_color }};box-shadow:0 0 10px {{ hl_color }}80;"></div>
                             {% else %}
                             <div class="bar-neon blue" style="width:{{ w }}%;"></div>
                             {% endif %}
                         </div>
-                        <span class="player-value" style="color:{{ hl_color if (loop.index <= (hl_count or 1) and hl_color) else '#4a9eff' }};">
+                        <span class="player-value" style="color:{{ hl_color if (hl_count and loop.index <= hl_count and hl_color) else '#4a9eff' }};">
                             {% if p.intentos_campo %}<span style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-right:0.3rem;">{{ p.intentos_campo }} int.</span>{% endif %}
                             {% if p.campo is not none %}{{ p.campo }}%{% else %}—{% endif %}
                         </span>
@@ -361,7 +361,7 @@
                         {% else %}
                             {% set max_val = chart.data[0].points if chart.data else 1 %}
                             {% set width = (p.points / max_val * 100) if max_val > 0 else 0 %}
-                            {% set is_hl = loop.index <= (hl_count or 1) and hl_color %}
+                            {% set is_hl = hl_count and loop.index <= hl_count and hl_color %}
                             {% if is_hl %}
                             <div class="bar-neon" style="width:{{ width }}%;background:{{ hl_color }};box-shadow:0 0 10px {{ hl_color }}80;"></div>
                             {% else %}
@@ -374,7 +374,7 @@
                         {{ '+' if p.points > 0 else '' }}{{ p.points }}
                     </span>
                     {% else %}
-                    {% set is_hl = loop.index <= (hl_count or 1) and hl_color %}
+                    {% set is_hl = hl_count and loop.index <= hl_count and hl_color %}
                     <span class="player-value" style="color:{{ hl_color if is_hl else '#4a9eff' }};">Val: {{ p.points|round(1) }}</span>
                     {% endif %}
                 </div>

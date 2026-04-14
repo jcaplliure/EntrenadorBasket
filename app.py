@@ -656,13 +656,15 @@ def _ensure_user_charts(user_id):
 
 
 def _get_highlight_config(user):
-    """Devuelve (highlight_count, highlight_css_color) para usar en templates."""
-    count = user.chart_highlight_count if user.chart_highlight_count is not None else 1
+    """Devuelve (highlight_count, highlight_css_color) para usar en templates.
+    Si el modo es 'none', devuelve count=0 y color=None para que ningún jugador se destaque.
+    """
     mode = user.chart_highlight_color or 'yellow'
+    if mode == 'none':
+        return 0, None  # sin destacar: count=0 inhabilita cualquier highlight
+    count = user.chart_highlight_count if user.chart_highlight_count is not None else 1
     if mode == 'yellow':
         color = '#FFD700'
-    elif mode == 'none':
-        color = None   # sin destacar
     else:  # custom
         color = user.theme_color or '#FFD700'
     return count, color
@@ -2317,12 +2319,10 @@ def api_get_chart_definitions():
 @login_required
 def api_create_chart_definition():
     data = request.get_json()
-    new_order = int(data.get('display_order', 10) or 10)
-    # Desplazar gráficos con el mismo orden
-    conflicts = ChartDefinition.query.filter_by(user_id=current_user.id)\
-        .filter(ChartDefinition.display_order >= new_order).order_by(ChartDefinition.display_order.desc()).all()
-    for existing in conflicts:
-        existing.display_order += 1
+    # Auto-asignar orden: max existente + 1
+    max_order = db.session.query(db.func.max(ChartDefinition.display_order))\
+        .filter_by(user_id=current_user.id).scalar() or 0
+    new_order = max_order + 1
     cd = ChartDefinition(
         user_id=current_user.id,
         name=data.get('name', 'Nuevo gráfico'),
@@ -2349,32 +2349,38 @@ def api_update_chart_definition(cid):
     if cd.user_id != current_user.id:
         return jsonify({'error': 'forbidden'}), 403
     data = request.get_json()
-    if not cd.is_system:
-        cd.name = data.get('name', cd.name)
-    if cd.system_key not in ('shots_pct',):
-        raw_ids = data.get('action_ids', [])
+    # Actualizaciones parciales: solo se modifica lo que viene en el payload
+    if 'name' in data and not cd.is_system:
+        cd.name = data['name']
+    if 'action_ids' in data and cd.system_key not in ('shots_pct',):
+        raw_ids = data['action_ids']
         cd.action_ids = json.dumps(raw_ids) if raw_ids else None
-    t_ids = data.get('team_ids', [])
-    cd.team_ids = json.dumps(t_ids) if t_ids else None
-    cd.visible_coach = data.get('visible_coach', cd.visible_coach)
-    cd.visible_public = data.get('visible_public', cd.visible_public)
-    cd.metric = data.get('metric', cd.metric)
-    cd.format = data.get('format', cd.format)
-    cd.description = data.get('description', cd.description)
-    new_order = data.get('display_order')
-    if new_order is not None:
-        new_order = int(new_order)
+    if 'team_ids' in data:
+        t_ids = data['team_ids']
+        cd.team_ids = json.dumps(t_ids) if t_ids else None
+    if 'visible_coach' in data:
+        cd.visible_coach = data['visible_coach']
+    if 'visible_public' in data:
+        cd.visible_public = data['visible_public']
+    if 'metric' in data:
+        cd.metric = data['metric']
+    if 'format' in data:
+        cd.format = data['format']
+    if 'description' in data:
+        cd.description = data['description']
+    if 'display_order' in data:
+        new_order = int(data['display_order'])
         if new_order != cd.display_order:
-            # Desplazar otros gráficos que tengan ese orden
             conflicts = ChartDefinition.query.filter_by(user_id=current_user.id)\
                 .filter(ChartDefinition.display_order == new_order)\
                 .filter(ChartDefinition.id != cd.id).all()
             for ex in conflicts:
                 ex.display_order = cd.display_order  # intercambiar posición
         cd.display_order = new_order
-    raw_top_n = data.get('top_n')
-    cd.top_n = int(raw_top_n) if raw_top_n is not None and raw_top_n != '' else None
-    if cd.system_key == 'shots_pct':
+    if 'top_n' in data:
+        raw_top_n = data['top_n']
+        cd.top_n = int(raw_top_n) if raw_top_n is not None and raw_top_n != '' else None
+    if cd.system_key == 'shots_pct' and 'shot_min_attempts' in data:
         cd.shot_min_attempts = int(data.get('shot_min_attempts', 0) or 0)
     db.session.commit()
     return jsonify({'status': 'ok'})
