@@ -677,7 +677,7 @@
                                 <form action="/admin/tags" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
                                     <input type="hidden" name="action" value="add_group_image">
                                     <input type="hidden" name="group_id" value="{{ g.id }}">
-                                    <input type="file" name="image" class="form-control form-control-sm form-control-dark" accept="image/*" required style="max-width: 200px;">
+                                    <input type="file" name="images" class="form-control form-control-sm form-control-dark" accept="image/*" multiple required style="max-width: 240px;">
                                     <button type="submit" class="btn btn-outline-accent btn-sm">
                                         <i class="bi bi-upload"></i> Subir
                                     </button>
@@ -745,7 +745,7 @@
                                     <form action="/admin/tags" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
                                         <input type="hidden" name="action" value="add_tag_image">
                                         <input type="hidden" name="tag_id" value="{{ tag.id }}">
-                                        <input type="file" name="image" class="form-control form-control-sm form-control-dark" accept="image/*" required style="max-width: 180px;">
+                                        <input type="file" name="images" class="form-control form-control-sm form-control-dark" accept="image/*" multiple required style="max-width: 200px;">
                                         <button type="submit" class="btn btn-outline-accent btn-sm">
                                             <i class="bi bi-upload"></i>
                                         </button>

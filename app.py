@@ -1745,32 +1745,46 @@ def manage_tags():
             db.session.commit()
         elif action == 'add_group_image':
             group_id = request.form.get('group_id', type=int)
-            file = request.files.get('image')
-            if group_id and file and file.filename != '':
+            files = request.files.getlist('images')
+            files = [f for f in files if f and f.filename != '']
+            if group_id and files:
                 count = TagGroupImage.query.filter_by(group_id=group_id).count()
-                if count >= 10:
+                slots = 10 - count
+                if slots <= 0:
                     flash('Máximo 10 imágenes por grupo')
                 else:
-                    filename = f"group_{group_id}_{int(datetime.now().timestamp())}.jpg"
-                    comp = compress_image(file)
-                    with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'wb') as f:
-                        f.write(comp.getbuffer())
-                    db.session.add(TagGroupImage(group_id=group_id, filename=filename))
+                    uploaded = 0
+                    for file in files[:slots]:
+                        filename = f"group_{group_id}_{int(datetime.now().timestamp())}_{uploaded}.jpg"
+                        comp = compress_image(file)
+                        with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'wb') as f:
+                            f.write(comp.getbuffer())
+                        db.session.add(TagGroupImage(group_id=group_id, filename=filename))
+                        uploaded += 1
                     db.session.commit()
+                    if len(files) > slots:
+                        flash(f'Solo se subieron {slots} imágenes (límite máximo de 10 por grupo)')
         elif action == 'add_tag_image':
             tag_id = request.form.get('tag_id', type=int)
-            file = request.files.get('image')
-            if tag_id and file and file.filename != '':
+            files = request.files.getlist('images')
+            files = [f for f in files if f and f.filename != '']
+            if tag_id and files:
                 count = TagImage.query.filter_by(tag_id=tag_id).count()
-                if count >= 10:
+                slots = 10 - count
+                if slots <= 0:
                     flash('Máximo 10 imágenes por etiqueta')
                 else:
-                    filename = f"tag_{tag_id}_{int(datetime.now().timestamp())}.jpg"
-                    comp = compress_image(file)
-                    with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'wb') as f:
-                        f.write(comp.getbuffer())
-                    db.session.add(TagImage(tag_id=tag_id, filename=filename))
+                    uploaded = 0
+                    for file in files[:slots]:
+                        filename = f"tag_{tag_id}_{int(datetime.now().timestamp())}_{uploaded}.jpg"
+                        comp = compress_image(file)
+                        with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'wb') as f:
+                            f.write(comp.getbuffer())
+                        db.session.add(TagImage(tag_id=tag_id, filename=filename))
+                        uploaded += 1
                     db.session.commit()
+                    if len(files) > slots:
+                        flash(f'Solo se subieron {slots} imágenes (límite máximo de 10 por etiqueta)')
         elif action == 'edit_tag':
             tag_id = request.form.get('tag_id', type=int)
             new_name = (request.form.get('tag_name') or '').strip()
