@@ -454,7 +454,7 @@
             {% if t_shot or p_shot %}
             <div class="chart-card mt-3">
                 <h2 class="chart-title">% DE TIROS</h2>
-                <div class="chart-subtitle">{{ num_matches }} partido{% if num_matches != 1 %}s{% endif %}</div>
+                <div class="chart-subtitle">{% if chart.limit %}Top {{ chart.limit }} jugadores{% else %}Todos los jugadores{% endif %} · {{ num_matches }} partido{% if num_matches != 1 %}s{% endif %}</div>
                 {% if chart.description %}
                 <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-bottom:0.75rem;">{{ chart.description }}</div>
                 {% endif %}
@@ -513,7 +513,7 @@
         {% elif chart.data %}
         <div class="chart-card mt-3">
             <h2 class="chart-title">{{ chart.title }}</h2>
-            <div class="chart-subtitle">{{ num_matches }} partido{% if num_matches != 1 %}s{% endif %}</div>
+            <div class="chart-subtitle">{% if chart.limit %}Top {{ chart.limit }} jugadores{% else %}Todos los jugadores{% endif %}{% if chart.format != 'total' and num_matches > 1 %} (promedio){% elif chart.format == 'total' %} (total){% endif %}</div>
             {% if chart.description %}
             <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-bottom:0.75rem;">{{ chart.description }}</div>
             {% endif %}

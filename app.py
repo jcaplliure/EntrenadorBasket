@@ -3445,10 +3445,11 @@ def public_team_ranking_logic(team):
                 continue
             if cd.system_key == 'shots_pct':
                 shots_pct_def = cd
-                # Placeholder que se rellena luego
+                limit_shot = _resolve_chart_limit(cd, chart_owner)
                 charts_list.append({'id': str(cd.id), 'is_shots_pct': True,
                                     'display_order': cd.display_order,
                                     'description': cd.description or '',
+                                    'limit': limit_shot,
                                     'team_shot_stats': {}, 'players_shot_stats': []})
                 continue
             limit = _resolve_chart_limit(cd, chart_owner)
@@ -3464,6 +3465,8 @@ def public_team_ranking_logic(team):
                                     'data': data, 'description': cd.description or '',
                                     'is_pm': cd.system_key == 'plus_minus',
                                     'is_shots_pct': False,
+                                    'format': cd.format or 'avg',
+                                    'limit': limit,
                                     'display_order': cd.display_order})
 
     # Obtener ejercicios de la galería ordenados con notas
@@ -3639,9 +3642,11 @@ def team_stats(id):
             continue
         if cd.system_key == 'shots_pct':
             shots_pct_def_coach = cd
+            limit_shot_coach = _resolve_chart_limit(cd, chart_owner)
             extra_charts.append({'title': '% DE TIROS', 'is_shots_pct': True,
                                  'display_order': cd.display_order,
                                  'description': cd.description or '',
+                                 'limit': limit_shot_coach,
                                  'team_shot_stats': {}, 'players_shot_stats': []})
             continue
         limit = _resolve_chart_limit(cd, chart_owner)
@@ -3656,6 +3661,8 @@ def team_stats(id):
                                  'description': cd.description or '',
                                  'is_pm': cd.system_key == 'plus_minus',
                                  'is_shots_pct': False,
+                                 'format': cd.format or 'avg',
+                                 'limit': limit,
                                  'display_order': cd.display_order})
 
     # Rellenar datos shots_pct en su posición
