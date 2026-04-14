@@ -267,6 +267,11 @@
                         <textarea id="editChartDesc" class="form-control" rows="2" maxlength="300"></textarea>
                     </div>
 
+                    <div class="mb-3" id="shotMinRow" style="display:none;">
+                        <label class="form-label">Mínimo intentos de campo para ranking <span style="font-size:0.72rem;opacity:0.5;">(0 = todos)</span></label>
+                        <input type="number" id="editShotMin" min="0" max="999" class="form-control" style="width:120px;" value="0">
+                    </div>
+
                     <div class="row mb-3">
                         <div class="col-6">
                             <label class="form-label">Top jugadores <span style="font-size:0.72rem;opacity:0.5;">(vacío = global, 0 = todos)</span></label>
@@ -407,6 +412,9 @@
             const hideActions = c.system_key === 'shots_pct' || c.system_key === 'plus_minus';
             document.getElementById('actionsRow').style.display = hideActions ? 'none' : '';
             document.getElementById('deleteChartBtn').style.display = c.is_system ? 'none' : 'block';
+            // Mostrar mínimo intentos solo para % de Tiros
+            document.getElementById('shotMinRow').style.display = c.system_key === 'shots_pct' ? '' : 'none';
+            document.getElementById('editShotMin').value = c.shot_min_attempts ?? 0;
         } else {
             document.getElementById('chartModalTitle').textContent = 'Nuevo gráfico';
             document.getElementById('editChartId').value = '';
@@ -423,6 +431,8 @@
             document.getElementById('editChartTopN').value = '';
             document.getElementById('actionsRow').style.display = '';
             document.getElementById('deleteChartBtn').style.display = 'none';
+            document.getElementById('shotMinRow').style.display = 'none';
+            document.getElementById('editShotMin').value = 0;
         }
 
         chartModal.show();
@@ -444,7 +454,8 @@
             format: document.getElementById('editChartFormat').value,
             description: document.getElementById('editChartDesc').value,
             display_order: parseInt(document.getElementById('editChartOrder').value) || 10,
-            top_n: document.getElementById('editChartTopN').value === '' ? null : parseInt(document.getElementById('editChartTopN').value)
+            top_n: document.getElementById('editChartTopN').value === '' ? null : parseInt(document.getElementById('editChartTopN').value),
+            shot_min_attempts: parseInt(document.getElementById('editShotMin').value) || 0
         };
         const url = id ? `/api/chart_definitions/${id}` : '/api/chart_definitions';
         const method = id ? 'PUT' : 'POST';

@@ -320,6 +320,7 @@ class ChartDefinition(db.Model):
     description = db.Column(db.Text, nullable=True)
     display_order = db.Column(db.Integer, default=10)
     top_n = db.Column(db.Integer, nullable=True)  # null = usar config global del usuario
+    shot_min_attempts = db.Column(db.Integer, default=0)  # solo para system_key='shots_pct'
 
 class SiteConfig(db.Model):
     key = db.Column(db.String(50), primary_key=True) 
@@ -854,6 +855,8 @@ def run_migrations():
     # URL pública con código aleatorio por equipo
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_slug VARCHAR(80)')
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_token VARCHAR(8)')
+    # Mínimo intentos de tiro en ChartDefinition (para % de Tiros)
+    _run_alter('ALTER TABLE chart_definition ADD COLUMN IF NOT EXISTS shot_min_attempts INTEGER DEFAULT 0')
     # Renombrar "Gráfico Principal" → "Valoración total"
     _run_alter("UPDATE chart_definition SET name = 'Valoración total' WHERE system_key = 'main' AND name = 'Gráfico Principal'")
     # Top N jugadores: config global del usuario y por gráfico
@@ -2286,7 +2289,8 @@ def api_get_chart_definitions():
             'visible_coach': c.visible_coach, 'visible_public': c.visible_public,
             'metric': c.metric or 'sum', 'format': c.format or 'avg',
             'description': c.description or '', 'display_order': c.display_order,
-            'top_n': c.top_n  # null = usar global
+            'top_n': c.top_n,
+            'shot_min_attempts': c.shot_min_attempts or 0
         })
     return jsonify(result)
 
@@ -2336,6 +2340,8 @@ def api_update_chart_definition(cid):
     cd.display_order = data.get('display_order', cd.display_order)
     raw_top_n = data.get('top_n')
     cd.top_n = int(raw_top_n) if raw_top_n is not None and raw_top_n != '' else None
+    if cd.system_key == 'shots_pct':
+        cd.shot_min_attempts = int(data.get('shot_min_attempts', 0) or 0)
     db.session.commit()
     return jsonify({'status': 'ok'})
 
@@ -3424,7 +3430,7 @@ def public_team_ranking_logic(team):
     team_shot_stats, players_shot_stats = {}, []
     shots_pct_def = ChartDefinition.query.filter_by(user_id=team.user_id, system_key='shots_pct').first()
     if team.analytics_visible and shots_pct_def and shots_pct_def.visible_public and _chart_applies_to_team(shots_pct_def, team.id):
-        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=team.shot_min_attempts or 0)
+        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def.shot_min_attempts or 0)
 
     return render_template('public_ranking.html', 
                           team=team, 
@@ -3561,7 +3567,7 @@ def team_stats(id):
     _ensure_user_charts(team.user_id)
     shots_pct_def = ChartDefinition.query.filter_by(user_id=team.user_id, system_key='shots_pct').first()
     if shots_pct_def and shots_pct_def.visible_coach and _chart_applies_to_team(shots_pct_def, team.id):
-        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=team.shot_min_attempts or 0)
+        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def.shot_min_attempts or 0)
 
     # Gráficos dinámicos para el entrenador
     chart_owner = User.query.get(team.user_id)
