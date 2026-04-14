@@ -3469,11 +3469,16 @@ def public_team_ranking_logic(team):
     match_ids = [m.id for m in filtered_matches]
     num_matches = len(match_ids)
     
-    # Obtener acciones del equipo
+    # Obtener acciones del equipo (para ranking principal)
     all_actions = ActionDefinition.query.filter_by(team_id=team.id).all()
     if not all_actions:
         all_actions = ActionDefinition.query.filter_by(user_id=team.user_id, team_id=None).all()
-    
+
+    # Acciones a nivel usuario para cálculo de gráficos (chart_def.action_ids siempre referencia estos IDs)
+    chart_actions = ActionDefinition.query.filter_by(user_id=team.user_id, team_id=None).all()
+    if not chart_actions:
+        chart_actions = all_actions
+
     # Cargar gráficos dinámicos del entrenador para este equipo (portal público)
     _ensure_user_charts(team.user_id)
     chart_owner = User.query.get(team.user_id)
@@ -3501,7 +3506,7 @@ def public_team_ranking_logic(team):
                 if limit:
                     data = data[:limit]
             else:
-                data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
+                data = _calc_chart_data(cd, match_ids, chart_actions, num_matches, team.players, limit)
             if data:
                 fmt_label = ' (total)' if cd.format == 'total' else ''
                 charts_list.append({'id': str(cd.id), 'title': cd.name.upper() + fmt_label,
@@ -3532,7 +3537,7 @@ def public_team_ranking_logic(team):
     
     # Rellenar datos de shots_pct en su posición dentro de charts_list
     if shots_pct_def:
-        t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=_resolve_shot_min(shots_pct_def, team))
+        t_shot, p_shot = _calc_shot_stats(match_ids, chart_actions, team.players, min_attempts=_resolve_shot_min(shots_pct_def, team))
         limit_shot = _resolve_chart_limit(shots_pct_def, chart_owner, team)
         if limit_shot:
             p_shot = p_shot[:limit_shot]
@@ -3672,6 +3677,12 @@ def team_stats(id):
         'DEFENSA -': [a for a in all_actions if a.display_section == 'DEFENSA' and a.value < 0]
     }
     
+    # Acciones a nivel usuario para cálculo de gráficos (chart_def.action_ids siempre referencia estos IDs)
+    chart_actions = ActionDefinition.query.filter_by(user_id=team.user_id, team_id=None)\
+        .order_by(ActionDefinition.display_section, ActionDefinition.display_order).all()
+    if not chart_actions:
+        chart_actions = all_actions
+
     # Gráficos dinámicos para el entrenador (lista ordenada, shots_pct incluido en posición)
     _ensure_user_charts(team.user_id)
     chart_owner = User.query.get(team.user_id)
@@ -3698,7 +3709,7 @@ def team_stats(id):
             if limit:
                 data = data[:limit]
         else:
-            data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
+            data = _calc_chart_data(cd, match_ids, chart_actions, num_matches, team.players, limit)
         if data:
             extra_charts.append({'title': cd.name.upper(), 'data': data,
                                  'description': cd.description or '',
@@ -3710,7 +3721,7 @@ def team_stats(id):
 
     # Rellenar datos shots_pct en su posición
     if shots_pct_def_coach:
-        t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=_resolve_shot_min(shots_pct_def_coach, team))
+        t_shot, p_shot = _calc_shot_stats(match_ids, chart_actions, team.players, min_attempts=_resolve_shot_min(shots_pct_def_coach, team))
         limit_shot = _resolve_chart_limit(shots_pct_def_coach, chart_owner, team)
         if limit_shot:
             p_shot = p_shot[:limit_shot]
