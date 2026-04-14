@@ -3487,6 +3487,9 @@ def public_team_ranking_logic(team):
     # Rellenar datos de shots_pct en su posición dentro de charts_list
     if shots_pct_def:
         t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def.shot_min_attempts or 0)
+        limit_shot = _resolve_chart_limit(shots_pct_def, chart_owner)
+        if limit_shot:
+            p_shot = p_shot[:limit_shot]
         for entry in charts_list:
             if entry.get('is_shots_pct'):
                 entry['team_shot_stats'] = t_shot
@@ -3658,6 +3661,9 @@ def team_stats(id):
     # Rellenar datos shots_pct en su posición
     if shots_pct_def_coach:
         t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def_coach.shot_min_attempts or 0)
+        limit_shot = _resolve_chart_limit(shots_pct_def_coach, chart_owner)
+        if limit_shot:
+            p_shot = p_shot[:limit_shot]
         for entry in extra_charts:
             if entry.get('is_shots_pct'):
                 entry['team_shot_stats'] = t_shot
