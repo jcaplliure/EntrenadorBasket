@@ -272,7 +272,7 @@
 
     <script>
     const allTeams = {{ teams | tojson }};
-    const userActions = {{ user_actions | tojson(default=lambda x: {'id': x.id, 'name': x.name, 'display_section': x.display_section or ''}) }};
+    const userActions = {{ user_actions | tojson }};
 
     // Serializar acciones para JS
     const actionsData = [
