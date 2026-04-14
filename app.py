@@ -2357,15 +2357,24 @@ def my_teams():
         db.session.add(new_team)
         db.session.commit()
         return redirect('/my_teams')
-    owned = Team.query.filter_by(user_id=current_user.id).all()
-    staff_memberships = TeamStaff.query.filter_by(email=current_user.email, status='accepted').all()
-    staff_teams = [s.team for s in staff_memberships]
-    all_teams = list(set(owned + staff_teams))
-    _ensure_user_charts(current_user.id)
-    # Acciones del usuario para el modal de edición de gráficos
-    user_actions = ActionDefinition.query.filter_by(user_id=current_user.id, team_id=None).order_by(
-        ActionDefinition.display_section, ActionDefinition.display_order).all()
-    return render_template('my_teams.html', teams=owned, all_teams=all_teams, user_actions=user_actions)
+    import traceback
+    try:
+        owned = Team.query.filter_by(user_id=current_user.id).all()
+        app.logger.info("=== my_teams: owned ok ===")
+        staff_memberships = TeamStaff.query.filter_by(email=current_user.email, status='accepted').all()
+        staff_teams = [s.team for s in staff_memberships]
+        all_teams = list(set(owned + staff_teams))
+        app.logger.info("=== my_teams: all_teams ok ===")
+        _ensure_user_charts(current_user.id)
+        app.logger.info("=== my_teams: _ensure_user_charts ok ===")
+        user_actions = ActionDefinition.query.filter_by(user_id=current_user.id, team_id=None).order_by(
+            ActionDefinition.display_section, ActionDefinition.display_order).all()
+        app.logger.info("=== my_teams: user_actions ok, rendering ===")
+        return render_template('my_teams.html', teams=owned, all_teams=all_teams, user_actions=user_actions)
+    except Exception as e:
+        app.logger.error(f"=== my_teams ERROR: {e} ===")
+        app.logger.error(traceback.format_exc())
+        raise
 
 @app.route('/team/<int:id>', methods=['GET', 'POST'])
 @login_required
