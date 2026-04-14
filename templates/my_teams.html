@@ -271,17 +271,9 @@
     </div>
 
     <script>
-    const allTeams = {{ teams | tojson }};
-    const userActions = {{ user_actions | tojson }};
-
-    // Serializar acciones para JS
-    const actionsData = [
-        {% for a in user_actions %}
-        { id: {{ a.id }}, name: {{ a.name | tojson }}, section: {{ (a.display_section or '') | tojson }} },
-        {% endfor %}
-    ];
+    const actionsData = {{ user_actions | tojson }};
     const teamsData = [
-        {% for t in teams %}
+        {% for t in all_teams %}
         { id: {{ t.id }}, name: {{ t.name | tojson }} },
         {% endfor %}
     ];
