@@ -2898,6 +2898,45 @@ def api_save_gallery_item_note():
     db.session.commit()
     return jsonify({'status': 'ok'})
 
+@app.route('/api/debug_charts')
+@login_required
+def api_debug_charts():
+    """Debug temporal: muestra datos de gráficos para un equipo."""
+    team_id = request.args.get('team_id', type=int)
+    team = Team.query.get_or_404(team_id)
+    if team.user_id != current_user.id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    all_matches = Match.query.filter_by(team_id=team.id).all()
+    match_ids = [m.id for m in all_matches]
+    chart_actions = ActionDefinition.query.filter_by(user_id=team.user_id, team_id=None).all()
+    action_map = {a.id: a for a in chart_actions}
+    chart_defs = ChartDefinition.query.filter_by(user_id=team.user_id, visible_coach=True).order_by(ChartDefinition.display_order).all()
+    result = []
+    for cd in chart_defs:
+        if cd.system_key in ('shots_pct', 'plus_minus', 'main'):
+            continue
+        try:
+            selected_ids = set(json.loads(cd.action_ids)) if cd.action_ids else set()
+        except Exception:
+            selected_ids = set()
+        action_ids_found = [aid for aid in selected_ids if aid in action_map]
+        events_count = MatchEvent.query.filter(
+            MatchEvent.match_id.in_(match_ids),
+            MatchEvent.action_id.in_(action_ids_found)
+        ).count() if action_ids_found else 0
+        data = _calc_chart_data(cd, match_ids, chart_actions, len(match_ids), team.players, None)
+        result.append({
+            'chart': cd.name,
+            'action_ids_in_chart': list(selected_ids),
+            'action_ids_found_in_map': action_ids_found,
+            'action_map_ids': list(action_map.keys())[:10],
+            'events_count': events_count,
+            'data_count': len(data),
+            'data': [{'name': p['name'], 'points': p['points']} for p in data[:3]]
+        })
+    return jsonify(result)
+
+
 @app.route('/api/chart_action_log')
 def api_chart_action_log():
     """Log de acciones de los jugadores top de un gráfico."""
