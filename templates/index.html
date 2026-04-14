@@ -334,6 +334,16 @@
                         <option value="date_desc" {% if request.args.get('sort_by') == 'date_desc' %}selected{% endif %}>📅 Recientes</option>
                     </select>
                 </div>
+                {% if current_user.is_authenticated %}
+                <div class="col-4 col-md-1">
+                    <input type="hidden" name="favs" id="favsInput" value="{{ '1' if request.args.get('favs') == '1' else '0' }}">
+                    <button type="button" id="favsBtn" onclick="toggleFavsFilter()"
+                        class="btn btn-sm w-100 fw-bold {{ 'btn-accent' if request.args.get('favs') == '1' else 'btn-outline-secondary' }}"
+                        title="Solo mis favoritos">
+                        <i class="bi bi-heart{{ '-fill' if request.args.get('favs') == '1' else '' }}"></i>
+                    </button>
+                </div>
+                {% endif %}
                 <div class="col-4 col-md-1">
                     <button type="submit" class="btn btn-accent btn-sm w-100 fw-bold search-btn"><i class="bi bi-search"></i></button>
                 </div>
@@ -450,6 +460,18 @@
                 return url.split('v=')[1].split('&')[0];
             }
             return null;
+        }
+
+        function toggleFavsFilter() {
+            const input = document.getElementById('favsInput');
+            const btn = document.getElementById('favsBtn');
+            const icon = btn.querySelector('i');
+            const active = input.value === '1';
+            input.value = active ? '0' : '1';
+            btn.classList.toggle('btn-accent', !active);
+            btn.classList.toggle('btn-outline-secondary', active);
+            icon.className = active ? 'bi bi-heart' : 'bi bi-heart-fill';
+            btn.closest('form').submit();
         }
 
         // Función para toggle de favorito con AJAX (desde tarjeta)

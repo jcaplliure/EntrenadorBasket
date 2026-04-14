@@ -1158,10 +1158,14 @@ def health_check():
 def home():
     query = request.args.get('q', '').strip()
     primary_ids_raw = request.args.getlist('primary')
-    sort_by = request.args.get('sort_by', 'smart_order') 
+    sort_by = request.args.get('sort_by', 'smart_order')
     origin_filter = request.args.get('origin', '').strip()
+    only_favs = request.args.get('favs') == '1' and current_user.is_authenticated
     base_condition = or_(Drill.is_public == True, Drill.user_id == current_user.id) if current_user.is_authenticated else (Drill.is_public == True)
     drills_query = Drill.query.filter(base_condition)
+    if only_favs:
+        fav_ids = [d.id for d in current_user.favoritos]
+        drills_query = drills_query.filter(Drill.id.in_(fav_ids))
     if query:
         search_term = f"%{query}%"
         drills_query = drills_query.filter(or_(Drill.title.ilike(search_term), Drill.description.ilike(search_term)))
