@@ -684,17 +684,21 @@ def _calc_chart_data(chart_def, match_ids, all_actions, num_matches, players, li
     ).all()
 
     player_totals = {}
+    player_match_counts = {}  # nº de partidos distintos en que cada jugador tuvo eventos
     for e in events:
         if not e.player_id or not e.action_id:
             continue
-        if e.player_id not in player_totals:
-            player_totals[e.player_id] = 0.0
+        pid = e.player_id
+        if pid not in player_totals:
+            player_totals[pid] = 0.0
+            player_match_counts[pid] = set()
         if chart_def.metric == 'count':
-            player_totals[e.player_id] += 1.0
+            player_totals[pid] += 1.0
         else:
             a = action_map.get(e.action_id)
             if a:
-                player_totals[e.player_id] += a.value
+                player_totals[pid] += a.value
+        player_match_counts[pid].add(e.match_id)
 
     player_map = {p.id: p for p in players}
     ranking = []
@@ -705,7 +709,9 @@ def _calc_chart_data(chart_def, match_ids, all_actions, num_matches, players, li
         if chart_def.format == 'total':
             val = round(total, 2)
         else:
-            val = round(total / num_matches, 2) if num_matches > 1 else round(total, 2)
+            # Dividir entre los partidos que el jugador ha jugado, no el total del equipo
+            player_matches = len(player_match_counts.get(pid, set())) or 1
+            val = round(total / player_matches, 2)
         ranking.append({'name': player.name, 'points': val, 'photo': player.photo_file, 'dorsal': player.dorsal})
 
     ranking.sort(key=lambda x: x['points'], reverse=True)
