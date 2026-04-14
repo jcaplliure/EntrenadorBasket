@@ -162,41 +162,42 @@
         .card-img-zone { position: relative; height: 120px; cursor: pointer; background: #000; overflow: hidden; }
         .card-img-zone img { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
         .overlay-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; z-index: 3; }
-        /* Tarjetas galería estilo biblioteca */
+        /* Tarjetas galería — diseño vertical */
         .gallery-drill-card {
-            display: flex; height: 160px; border-radius: 16px; overflow: hidden;
-            border: 1px solid var(--cream, #e7edf7); background: rgba(10,18,32,0.85);
-            cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+            border-radius: 14px; overflow: hidden; cursor: pointer;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            transition: transform 0.15s, box-shadow 0.15s;
+            display: flex; flex-direction: column;
         }
-        .gallery-drill-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+        .gallery-drill-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
         .gallery-drill-media {
-            position: relative; width: 40%; min-width: 130px; max-width: 160px;
+            position: relative; width: 100%; padding-top: 52%;
             background-size: cover; background-position: center; flex-shrink: 0;
         }
         .gallery-drill-overlay {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.35);
-            backdrop-filter: blur(0.5px); z-index: 1;
+            position: absolute; inset: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.6) 100%);
+            z-index: 1;
         }
         .gallery-drill-play {
             position: absolute; inset: 0; display: flex; align-items: center;
             justify-content: center; z-index: 2;
         }
         .gallery-drill-info {
-            flex: 1; padding: 12px 14px; display: flex; flex-direction: column;
-            gap: 4px; overflow: hidden;
-            background: linear-gradient(180deg, rgba(10,18,32,0.85), rgba(10,18,32,0.65));
+            padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1;
         }
         .gallery-drill-title {
-            font-weight: 700; color: var(--cream, #e7edf7); font-size: 0.85rem;
-            line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2;
+            font-weight: 700; color: #e7edf7; font-size: 0.9rem;
+            line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2;
             -webkit-box-orient: vertical; overflow: hidden;
         }
         .gallery-drill-note {
-            font-size: 0.75rem; color: rgba(231,237,247,0.7); line-height: 1.3;
-            display: -webkit-box; -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical; overflow: hidden; flex-shrink: 0;
+            font-size: 0.78rem; color: rgba(231,237,247,0.65); line-height: 1.4;
+            display: -webkit-box; -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical; overflow: hidden;
         }
-        .gallery-drill-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: auto; }
+        .gallery-drill-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: auto; padding-top: 4px; }
         /* Filtros */
         .filters-container {
             background: rgba(13, 31, 45, 0.95);
@@ -446,7 +447,7 @@
         <div class="section-card">
             <h4 class="mb-3 fw-bold"><i class="bi bi-collection-play-fill"></i> Ejercicios Recomendados</h4>
             <p class="opacity-75 small mb-3">Material para entrenar en casa</p>
-            <div class="row row-cols-1 row-cols-md-2 g-3">
+            <div class="row row-cols-2 row-cols-md-3 g-3">
                 {% for drill in gallery_drills %}
                 {% set img_url = url_for('static', filename='uploads/' + drill.cover_image) if drill.cover_image else (url_for('static', filename='uploads/' + drill.cover_fallback) if drill.cover_fallback else (url_for('static', filename='uploads/' + drill.media_file) if drill.media_type == 'image' and drill.media_file else get_config_url('generic_bg'))) %}
                 <div class="col">
