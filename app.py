@@ -293,6 +293,21 @@ class MatchEvent(db.Model):
     player = db.relationship('Player', backref='events')
     action = db.relationship('ActionDefinition', backref='events')
 
+class ChartDefinition(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    is_system = db.Column(db.Boolean, default=False)
+    system_key = db.Column(db.String(20), nullable=True)  # 'main', 'shots_pct'
+    action_ids = db.Column(db.Text, nullable=True)   # JSON list of ActionDefinition IDs; null = all
+    team_ids = db.Column(db.Text, nullable=True)     # JSON list of Team IDs; null/empty = all teams
+    visible_coach = db.Column(db.Boolean, default=True)
+    visible_public = db.Column(db.Boolean, default=False)
+    metric = db.Column(db.String(10), default='sum') # 'sum' | 'count'
+    format = db.Column(db.String(10), default='avg') # 'avg' | 'total'
+    description = db.Column(db.Text, nullable=True)
+    display_order = db.Column(db.Integer, default=10)
+
 class SiteConfig(db.Model):
     key = db.Column(db.String(50), primary_key=True) 
     value = db.Column(db.String(255), nullable=False) 
@@ -597,6 +612,91 @@ def _calc_shot_stats(match_ids, all_actions, team_players, min_attempts=0):
     }
     return team_shot_stats, players_shot_stats
 
+
+def _ensure_user_charts(user_id):
+    """Crea los gráficos de sistema para un usuario si no existen todavía."""
+    existing_keys = {c.system_key for c in ChartDefinition.query.filter_by(user_id=user_id, is_system=True).all()}
+    changed = False
+    if 'main' not in existing_keys:
+        db.session.add(ChartDefinition(
+            user_id=user_id, name='Gráfico Principal', is_system=True, system_key='main',
+            visible_coach=True, visible_public=True, metric='sum', format='avg', display_order=1
+        ))
+        changed = True
+    if 'shots_pct' not in existing_keys:
+        db.session.add(ChartDefinition(
+            user_id=user_id, name='% de Tiros', is_system=True, system_key='shots_pct',
+            visible_coach=True, visible_public=False, metric='sum', format='avg', display_order=2
+        ))
+        changed = True
+    if changed:
+        db.session.commit()
+
+
+def _chart_applies_to_team(chart_def, team_id):
+    """Comprueba si un ChartDefinition aplica a un equipo concreto."""
+    if not chart_def.team_ids:
+        return True
+    try:
+        ids = json.loads(chart_def.team_ids)
+        return not ids or team_id in ids
+    except Exception:
+        return True
+
+
+def _calc_chart_data(chart_def, match_ids, all_actions, num_matches, players, limit=5):
+    """Calcula el ranking de jugadores para un ChartDefinition genérico."""
+    if not match_ids:
+        return []
+
+    action_map = {a.id: a for a in all_actions}
+
+    if chart_def.action_ids:
+        try:
+            selected_ids = set(json.loads(chart_def.action_ids))
+            action_ids = [aid for aid in selected_ids if aid in action_map]
+        except Exception:
+            action_ids = list(action_map.keys())
+    else:
+        action_ids = list(action_map.keys())
+
+    if not action_ids:
+        return []
+
+    events = MatchEvent.query.filter(
+        MatchEvent.match_id.in_(match_ids),
+        MatchEvent.action_id.in_(action_ids)
+    ).all()
+
+    player_totals = {}
+    for e in events:
+        if not e.player_id or not e.action_id:
+            continue
+        if e.player_id not in player_totals:
+            player_totals[e.player_id] = 0.0
+        if chart_def.metric == 'count':
+            player_totals[e.player_id] += 1.0
+        else:
+            a = action_map.get(e.action_id)
+            if a:
+                player_totals[e.player_id] += a.value
+
+    player_map = {p.id: p for p in players}
+    ranking = []
+    for pid, total in player_totals.items():
+        player = player_map.get(pid)
+        if not player:
+            continue
+        if chart_def.format == 'total':
+            val = round(total, 2)
+        else:
+            val = round(total / num_matches, 2) if num_matches > 1 else round(total, 2)
+        ranking.append({'name': player.name, 'points': val, 'photo': player.photo_file, 'dorsal': player.dorsal})
+
+    ranking.sort(key=lambda x: x['points'], reverse=True)
+    return ranking[:limit]
+
+
 def _run_alter(cmd):
     try:
         db.session.execute(text(cmd))
@@ -654,6 +754,22 @@ def run_migrations():
     # URL pública con código aleatorio por equipo
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_slug VARCHAR(80)')
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_token VARCHAR(8)')
+    # Sistema de gráficos dinámicos
+    _run_alter('''CREATE TABLE IF NOT EXISTS chart_definition (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES "user"(id),
+        name VARCHAR(100) NOT NULL,
+        is_system BOOLEAN DEFAULT FALSE,
+        system_key VARCHAR(20),
+        action_ids TEXT,
+        team_ids TEXT,
+        visible_coach BOOLEAN DEFAULT TRUE,
+        visible_public BOOLEAN DEFAULT FALSE,
+        metric VARCHAR(10) DEFAULT 'sum',
+        format VARCHAR(10) DEFAULT 'avg',
+        description TEXT,
+        display_order INTEGER DEFAULT 10
+    )''')
 
     # Asegurar que el admin existe y tiene contraseña
     import logging as _log
@@ -2032,6 +2148,93 @@ def register_with_invitation(token):
     
     return render_template('register_invite.html', email=invitation.email, token=token)
 
+# --- CHART DEFINITIONS API ---
+
+@app.route('/api/chart_definitions', methods=['GET'])
+@login_required
+def api_get_chart_definitions():
+    _ensure_user_charts(current_user.id)
+    charts = ChartDefinition.query.filter_by(user_id=current_user.id).order_by(ChartDefinition.display_order).all()
+    teams = Team.query.filter_by(user_id=current_user.id).all()
+    team_map = {t.id: t.name for t in teams}
+    result = []
+    for c in charts:
+        try:
+            t_ids = json.loads(c.team_ids) if c.team_ids else []
+        except Exception:
+            t_ids = []
+        result.append({
+            'id': c.id, 'name': c.name, 'is_system': c.is_system, 'system_key': c.system_key,
+            'action_ids': json.loads(c.action_ids) if c.action_ids else [],
+            'team_ids': t_ids,
+            'team_names': [team_map[tid] for tid in t_ids if tid in team_map],
+            'all_teams': not t_ids,
+            'visible_coach': c.visible_coach, 'visible_public': c.visible_public,
+            'metric': c.metric or 'sum', 'format': c.format or 'avg',
+            'description': c.description or '', 'display_order': c.display_order
+        })
+    return jsonify(result)
+
+
+@app.route('/api/chart_definitions', methods=['POST'])
+@login_required
+def api_create_chart_definition():
+    data = request.get_json()
+    cd = ChartDefinition(
+        user_id=current_user.id,
+        name=data.get('name', 'Nuevo gráfico'),
+        is_system=False,
+        action_ids=json.dumps(data.get('action_ids', [])) if data.get('action_ids') else None,
+        team_ids=json.dumps(data.get('team_ids', [])) if data.get('team_ids') else None,
+        visible_coach=data.get('visible_coach', True),
+        visible_public=data.get('visible_public', False),
+        metric=data.get('metric', 'sum'),
+        format=data.get('format', 'avg'),
+        description=data.get('description', ''),
+        display_order=data.get('display_order', 10)
+    )
+    db.session.add(cd)
+    db.session.commit()
+    return jsonify({'id': cd.id, 'status': 'ok'})
+
+
+@app.route('/api/chart_definitions/<int:cid>', methods=['PUT'])
+@login_required
+def api_update_chart_definition(cid):
+    cd = ChartDefinition.query.get_or_404(cid)
+    if cd.user_id != current_user.id:
+        return jsonify({'error': 'forbidden'}), 403
+    data = request.get_json()
+    if not cd.is_system:
+        cd.name = data.get('name', cd.name)
+    if cd.system_key not in ('shots_pct',):
+        raw_ids = data.get('action_ids', [])
+        cd.action_ids = json.dumps(raw_ids) if raw_ids else None
+    t_ids = data.get('team_ids', [])
+    cd.team_ids = json.dumps(t_ids) if t_ids else None
+    cd.visible_coach = data.get('visible_coach', cd.visible_coach)
+    cd.visible_public = data.get('visible_public', cd.visible_public)
+    cd.metric = data.get('metric', cd.metric)
+    cd.format = data.get('format', cd.format)
+    cd.description = data.get('description', cd.description)
+    cd.display_order = data.get('display_order', cd.display_order)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/chart_definitions/<int:cid>', methods=['DELETE'])
+@login_required
+def api_delete_chart_definition(cid):
+    cd = ChartDefinition.query.get_or_404(cid)
+    if cd.user_id != current_user.id:
+        return jsonify({'error': 'forbidden'}), 403
+    if cd.is_system:
+        return jsonify({'error': 'cannot delete system chart'}), 400
+    db.session.delete(cd)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
 # --- TEAMS & PLAYERS ---
 
 @app.route('/my_teams', methods=['GET', 'POST'])
@@ -2059,7 +2262,11 @@ def my_teams():
     staff_memberships = TeamStaff.query.filter_by(email=current_user.email, status='accepted').all()
     staff_teams = [s.team for s in staff_memberships]
     all_teams = list(set(owned + staff_teams))
-    return render_template('my_teams.html', teams=all_teams)
+    _ensure_user_charts(current_user.id)
+    # Acciones del usuario para el modal de edición de gráficos
+    user_actions = ActionDefinition.query.filter_by(user_id=current_user.id, team_id=None).order_by(
+        ActionDefinition.display_section, ActionDefinition.display_order).all()
+    return render_template('my_teams.html', teams=owned, all_teams=all_teams, user_actions=user_actions)
 
 @app.route('/team/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -3042,70 +3249,24 @@ def public_team_ranking_logic(team):
     if not all_actions:
         all_actions = ActionDefinition.query.filter_by(user_id=team.user_id, team_id=None).all()
     
-    shot_names = ['Tiro 1', 'Tiro 2', 'Tiro 3']
-    
-    # Función auxiliar para calcular ranking por tipo
-    def calculate_ranking(action_filter_type):
-        if action_filter_type == 'all':
-            action_ids = [a.id for a in all_actions]
-        elif action_filter_type == 'attack':
-            action_ids = [a.id for a in all_actions if a.display_section == 'ATAQUE']
-        elif action_filter_type == 'attack_no_shots':
-            action_ids = [a.id for a in all_actions if a.display_section == 'ATAQUE' and a.name not in shot_names]
-        elif action_filter_type == 'defense':
-            action_ids = [a.id for a in all_actions if a.display_section == 'DEFENSA']
-        else:
-            action_ids = [a.id for a in all_actions]
-        
-        if not match_ids or not action_ids:
-            return []
-        
-        # Calcular puntos
-        events = MatchEvent.query.filter(
-            MatchEvent.match_id.in_(match_ids),
-            MatchEvent.action_id.in_(action_ids)
-        ).all()
-        
-        player_stats = {}
-        for e in events:
-            if not e.player_id or not e.action_id:
-                continue
-            a = ActionDefinition.query.get(e.action_id)
-            if not a:
-                continue
-            if e.player_id not in player_stats:
-                player_stats[e.player_id] = 0.0
-            player_stats[e.player_id] += a.value
-        
-        # Convertir a lista y ordenar
-        ranking_data = []
-        for pid, total in player_stats.items():
-            player = Player.query.get(pid)
-            if player:
-                avg = round(total / num_matches, 2) if num_matches > 1 else total
-                ranking_data.append({
-                    'name': player.name,
-                    'points': avg,
-                    'photo': player.photo_file,
-                    'dorsal': player.dorsal
-                })
-        
-        ranking_data.sort(key=lambda x: x['points'], reverse=True)
-        limit = team.analytics_players_count or 5
-        return ranking_data[:limit]
-    
-    # Calcular rankings solo para gráficos habilitados
+    # Cargar gráficos dinámicos del entrenador para este equipo (portal público)
+    _ensure_user_charts(team.user_id)
+    limit = team.analytics_players_count or 5
     charts = {}
     if team.analytics_visible:
-        if team.chart_all_visible:
-            charts['all'] = {'title': 'LÍDERES EN ATAQUE Y DEFENSA', 'data': calculate_ranking('all')}
-        if team.chart_attack_visible:
-            charts['attack'] = {'title': 'LÍDERES EN ATAQUE', 'data': calculate_ranking('attack')}
-        if team.chart_attack_no_shots_visible:
-            charts['attack_no_shots'] = {'title': 'LÍDERES EN ATAQUE (SIN PUNTOS)', 'data': calculate_ranking('attack_no_shots')}
-        if team.chart_defense_visible:
-            charts['defense'] = {'title': 'LÍDERES EN DEFENSA', 'data': calculate_ranking('defense')}
-    
+        chart_defs = ChartDefinition.query.filter_by(user_id=team.user_id)\
+            .filter(ChartDefinition.visible_public == True)\
+            .order_by(ChartDefinition.display_order).all()
+        for cd in chart_defs:
+            if not _chart_applies_to_team(cd, team.id):
+                continue
+            if cd.system_key == 'shots_pct':
+                continue  # Se calcula aparte más abajo
+            data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
+            if data:
+                fmt_label = ' (total)' if cd.format == 'total' else ''
+                charts[str(cd.id)] = {'title': cd.name.upper() + fmt_label, 'data': data, 'description': cd.description or ''}
+
     # Obtener ejercicios de la galería ordenados con notas
     gallery_items = TeamGalleryItem.query.filter_by(team_id=team.id).order_by(TeamGalleryItem.display_order).all()
     drill_notes = {item.drill_id: item.note for item in gallery_items}
@@ -3124,9 +3285,10 @@ def public_team_ranking_logic(team):
     
     gallery_drills_ordered.sort(key=lambda x: x.gallery_order)
     
-    # Calcular % de tiros si el gráfico está habilitado en el portal
+    # Calcular % de tiros si el gráfico shots_pct está habilitado y visible en portal
     team_shot_stats, players_shot_stats = {}, []
-    if team.analytics_visible and team.chart_shots_visible:
+    shots_pct_def = ChartDefinition.query.filter_by(user_id=team.user_id, system_key='shots_pct').first()
+    if team.analytics_visible and shots_pct_def and shots_pct_def.visible_public and _chart_applies_to_team(shots_pct_def, team.id):
         team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=team.shot_min_attempts or 0)
 
     return render_template('public_ranking.html', 
@@ -3259,8 +3421,26 @@ def team_stats(id):
         'DEFENSA -': [a for a in all_actions if a.display_section == 'DEFENSA' and a.value < 0]
     }
     
-    # Calcular % de tiros (siempre visible en analytics)
-    team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=team.shot_min_attempts or 0)
+    # Calcular % de tiros
+    team_shot_stats, players_shot_stats = {}, []
+    _ensure_user_charts(team.user_id)
+    shots_pct_def = ChartDefinition.query.filter_by(user_id=team.user_id, system_key='shots_pct').first()
+    if shots_pct_def and shots_pct_def.visible_coach and _chart_applies_to_team(shots_pct_def, team.id):
+        team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=team.shot_min_attempts or 0)
+
+    # Gráficos dinámicos para el entrenador
+    limit = team.analytics_players_count or 5
+    extra_charts = []
+    chart_defs = ChartDefinition.query.filter_by(user_id=team.user_id)\
+        .filter(ChartDefinition.visible_coach == True)\
+        .filter(ChartDefinition.system_key != 'shots_pct')\
+        .order_by(ChartDefinition.display_order).all()
+    for cd in chart_defs:
+        if not _chart_applies_to_team(cd, team.id):
+            continue
+        data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
+        if data:
+            extra_charts.append({'title': cd.name.upper(), 'data': data, 'description': cd.description or ''})
 
     return render_template('team_stats.html', 
                          team=team, 
@@ -3273,7 +3453,8 @@ def team_stats(id):
                          custom_actions=custom_actions,
                          actions_by_section=actions_by_section,
                          team_shot_stats=team_shot_stats,
-                         players_shot_stats=players_shot_stats)
+                         players_shot_stats=players_shot_stats,
+                         extra_charts=extra_charts)
 
 @app.route('/delete_player/<int:id>')
 @login_required

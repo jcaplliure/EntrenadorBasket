@@ -622,51 +622,11 @@
                     </div>
                 </div>
                 
-                <!-- Gráficos individuales -->
-                <div id="chartsConfig" class="mb-3" style="{% if not team.analytics_visible %}display: none;{% endif %}">
-                    <label class="form-label mb-2">Gráficos a mostrar:</label>
-                    <div class="d-flex flex-wrap gap-2">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chartAll" 
-                                   {% if team.chart_all_visible %}checked{% endif %}
-                                   onchange="saveAnalyticsSettings()">
-                            <label class="form-check-label" for="chartAll" style="color: var(--cream); font-size: 0.9rem;">
-                                Ataque y Defensa
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chartAttack" 
-                                   {% if team.chart_attack_visible %}checked{% endif %}
-                                   onchange="saveAnalyticsSettings()">
-                            <label class="form-check-label" for="chartAttack" style="color: var(--cream); font-size: 0.9rem;">
-                                Ataque
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chartAttackNoShots" 
-                                   {% if team.chart_attack_no_shots_visible %}checked{% endif %}
-                                   onchange="saveAnalyticsSettings()">
-                            <label class="form-check-label" for="chartAttackNoShots" style="color: var(--cream); font-size: 0.9rem;">
-                                Ataque (sin puntos)
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chartDefense" 
-                                   {% if team.chart_defense_visible %}checked{% endif %}
-                                   onchange="saveAnalyticsSettings()">
-                            <label class="form-check-label" for="chartDefense" style="color: var(--cream); font-size: 0.9rem;">
-                                Defensa
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chartShots" 
-                                   {% if team.chart_shots_visible %}checked{% endif %}
-                                   onchange="saveAnalyticsSettings()">
-                            <label class="form-check-label" for="chartShots" style="color: var(--cream); font-size: 0.9rem;">
-                                % de Tiros
-                            </label>
-                        </div>
-                    </div>
+                <!-- Gráficos: gestión centralizada en Mis Equipos -->
+                <div class="mb-3" style="{% if not team.analytics_visible %}display: none;{% endif %}">
+                    <a href="/my_teams#chart-config" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-bar-chart-line"></i> Configurar gráficos en Mis Equipos
+                    </a>
                 </div>
 
                 <div class="row g-3 align-items-end mt-1" id="shotMinAttemptsConfig" style="{% if not team.analytics_visible %}display: none;{% endif %}">
@@ -921,17 +881,10 @@
             const visible = document.getElementById('analyticsVisible').checked;
             const count = document.getElementById('analyticsPlayersCount').value;
             
-            // Mostrar/ocultar opciones de gráficos
-            document.getElementById('chartsConfig').style.display = visible ? 'block' : 'none';
+            // Mostrar/ocultar opciones
             document.getElementById('playersCountConfig').style.display = visible ? 'flex' : 'none';
             document.getElementById('shotMinAttemptsConfig').style.display = visible ? 'flex' : 'none';
             
-            // Obtener estado de los gráficos individuales
-            const chartAll = document.getElementById('chartAll').checked;
-            const chartAttack = document.getElementById('chartAttack').checked;
-            const chartAttackNoShots = document.getElementById('chartAttackNoShots').checked;
-            const chartDefense = document.getElementById('chartDefense').checked;
-            const chartShots = document.getElementById('chartShots').checked;
             const shotMinAttempts = parseInt(document.getElementById('shotMinAttempts').value) || 0;
             
             const response = await fetch('/api/save_analytics_settings', {
@@ -941,11 +894,6 @@
                     team_id: {{ team.id }},
                     analytics_visible: visible,
                     analytics_players_count: parseInt(count),
-                    chart_all_visible: chartAll,
-                    chart_attack_visible: chartAttack,
-                    chart_attack_no_shots_visible: chartAttackNoShots,
-                    chart_defense_visible: chartDefense,
-                    chart_shots_visible: chartShots,
                     shot_min_attempts: shotMinAttempts
                 })
             });

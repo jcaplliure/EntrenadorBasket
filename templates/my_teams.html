@@ -48,6 +48,26 @@
         }
         .new-team-card .form-control { background: #0e1b2f; border: 1px solid rgba(255,255,255,0.08); color: #dfe6f2; }
         .new-team-card .form-control::placeholder { color: #8c97ad; }
+        /* Chart config section */
+        .chart-config-section { background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 18px; margin-bottom: 24px; }
+        .chart-item { background: var(--bg-panel-2); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .chart-item-name { font-weight: 600; color: var(--cream); font-size: 0.9rem; flex: 1; min-width: 0; }
+        .chart-item-meta { font-size: 0.72rem; color: rgba(255,255,255,0.4); white-space: nowrap; }
+        .badge-system { background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(99,102,241,0.3); }
+        .badge-vis { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; }
+        .badge-coach { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+        .badge-public { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+        .chart-btn { background: none; border: none; color: rgba(255,255,255,0.4); padding: 4px 6px; border-radius: 6px; cursor: pointer; transition: color 0.15s; }
+        .chart-btn:hover { color: var(--accent-color); }
+        .modal-dark .modal-content { background: #0f1b2e; color: #e9edf2; border: 1px solid rgba(255,255,255,0.1); }
+        .modal-dark .modal-header { border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .modal-dark .modal-footer { border-top: 1px solid rgba(255,255,255,0.08); }
+        .modal-dark .form-control, .modal-dark .form-select { background: #0b1424; border: 1px solid rgba(255,255,255,0.12); color: #e9edf2; }
+        .modal-dark .form-control:focus, .modal-dark .form-select:focus { background: #0b1424; color: #e9edf2; border-color: var(--accent-color); box-shadow: none; }
+        .modal-dark .form-check-input { background-color: #0b1424; border-color: rgba(255,255,255,0.2); }
+        .modal-dark .form-check-input:checked { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .action-checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 4px; max-height: 220px; overflow-y: auto; }
+        .action-checkbox-grid label { font-size: 0.78rem; color: rgba(255,255,255,0.75); }
     </style>
 </head>
 <body>
@@ -119,6 +139,22 @@
             </div>
         </div>
 
+        <!-- Configuración de gráficos -->
+        <div class="chart-config-section" id="chart-config">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="fw-bold mb-0" style="color:var(--cream)"><i class="bi bi-bar-chart-line me-2"></i>Configuración de Gráficos</h5>
+                    <div class="text-muted" style="font-size:0.78rem;">Define qué gráficos mostrar en el portal público y en analytics</div>
+                </div>
+                <button class="btn btn-accent btn-sm fw-bold rounded-pill px-3" onclick="openChartModal(null)">
+                    <i class="bi bi-plus-circle"></i> Nuevo gráfico
+                </button>
+            </div>
+            <div id="chartList">
+                <div class="text-muted text-center py-3" style="font-size:0.8rem;">Cargando...</div>
+            </div>
+        </div>
+
         <div class="row row-cols-1 row-cols-md-3 g-4">
             {% for team in teams %}
             <div class="col">
@@ -150,5 +186,246 @@
 
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Modal edición de gráfico -->
+    <div class="modal fade modal-dark" id="chartModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="chartModalTitle">Gráfico</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editChartId">
+                    <input type="hidden" id="editChartIsSystem">
+                    <input type="hidden" id="editChartSystemKey">
+
+                    <div class="mb-3" id="nameRow">
+                        <label class="form-label">Nombre del gráfico</label>
+                        <input type="text" id="editChartName" class="form-control" maxlength="100">
+                    </div>
+
+                    <div class="mb-3" id="actionsRow">
+                        <label class="form-label">Acciones a incluir <span style="font-size:0.75rem;opacity:0.5;">(vacío = todas)</span></label>
+                        <div class="action-checkbox-grid" id="actionsGrid"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Equipos</label>
+                        <div class="d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllTeams()">Todos</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllTeams()">Ninguno</button>
+                        </div>
+                        <div id="teamsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px;"></div>
+                        <div style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin-top:4px;">Si no seleccionas ninguno, aplica a todos los equipos.</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Métrica</label>
+                            <select id="editChartMetric" class="form-select">
+                                <option value="sum">Suma de valoración</option>
+                                <option value="count">Nº de acciones</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Formato</label>
+                            <select id="editChartFormat" class="form-select">
+                                <option value="avg">Promedio por partido</option>
+                                <option value="total">Total acumulado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Visibilidad</label>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editVisCoach">
+                                <label class="form-check-label" for="editVisCoach">Entrenador</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editVisPublic">
+                                <label class="form-check-label" for="editVisPublic">Portal público</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Texto explicativo <span style="font-size:0.75rem;opacity:0.5;">(opcional, visible en el gráfico)</span></label>
+                        <textarea id="editChartDesc" class="form-control" rows="2" maxlength="300"></textarea>
+                    </div>
+
+                    <div class="mb-1">
+                        <label class="form-label">Orden de visualización</label>
+                        <input type="number" id="editChartOrder" class="form-control" style="width:100px;" min="1" max="99">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="deleteChartBtn" class="btn btn-outline-danger btn-sm me-auto" onclick="deleteChart()" style="display:none;">Eliminar gráfico</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-accent fw-bold" onclick="saveChart()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const allTeams = {{ teams | tojson }};
+    const userActions = {{ user_actions | tojson(default=lambda x: {'id': x.id, 'name': x.name, 'display_section': x.display_section or ''}) }};
+
+    // Serializar acciones para JS
+    const actionsData = [
+        {% for a in user_actions %}
+        { id: {{ a.id }}, name: {{ a.name | tojson }}, section: {{ (a.display_section or '') | tojson }} },
+        {% endfor %}
+    ];
+    const teamsData = [
+        {% for t in teams %}
+        { id: {{ t.id }}, name: {{ t.name | tojson }} },
+        {% endfor %}
+    ];
+
+    let chartModal;
+    document.addEventListener('DOMContentLoaded', () => {
+        chartModal = new bootstrap.Modal(document.getElementById('chartModal'));
+        loadCharts();
+    });
+
+    async function loadCharts() {
+        const res = await fetch('/api/chart_definitions');
+        const charts = await res.json();
+        renderChartList(charts);
+    }
+
+    function renderChartList(charts) {
+        const el = document.getElementById('chartList');
+        if (!charts.length) {
+            el.innerHTML = '<div class="text-muted text-center py-3" style="font-size:0.8rem;">No hay gráficos configurados</div>';
+            return;
+        }
+        el.innerHTML = charts.map(c => {
+            const teamLabel = c.all_teams ? 'Todos los equipos' : (c.team_names.join(', ') || '—');
+            const badges = [
+                c.visible_coach ? '<span class="badge-vis badge-coach">Coach</span>' : '',
+                c.visible_public ? '<span class="badge-vis badge-public">🌐 Público</span>' : ''
+            ].filter(Boolean).join(' ');
+            const sysLabel = c.is_system ? '<span class="badge-system">SISTEMA</span> ' : '';
+            return `<div class="chart-item">
+                <div class="flex-fill min-w-0">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="chart-item-name">${sysLabel}${c.name}</span>
+                        ${badges}
+                    </div>
+                    <div class="chart-item-meta mt-1">${teamLabel} · ${c.metric === 'count' ? 'Nº acciones' : 'Valoración'} · ${c.format === 'total' ? 'Total' : 'Promedio'}</div>
+                </div>
+                <button class="chart-btn" onclick="openChartModal(${c.id})" title="Editar"><i class="bi bi-pencil"></i></button>
+            </div>`;
+        }).join('');
+    }
+
+    async function openChartModal(chartId) {
+        // Rellenar grid de acciones
+        const grid = document.getElementById('actionsGrid');
+        grid.innerHTML = actionsData.map(a =>
+            `<div class="form-check"><input class="form-check-input action-cb" type="checkbox" id="act_${a.id}" value="${a.id}">
+             <label class="form-check-label" for="act_${a.id}">[${a.section}] ${a.name}</label></div>`
+        ).join('');
+
+        // Rellenar grid de equipos
+        const tGrid = document.getElementById('teamsGrid');
+        tGrid.innerHTML = teamsData.map(t =>
+            `<div class="form-check"><input class="form-check-input team-cb" type="checkbox" id="team_${t.id}" value="${t.id}">
+             <label class="form-check-label" style="font-size:0.78rem;color:rgba(255,255,255,0.75);" for="team_${t.id}">${t.name}</label></div>`
+        ).join('');
+
+        if (chartId) {
+            const res = await fetch('/api/chart_definitions');
+            const charts = await res.json();
+            const c = charts.find(x => x.id === chartId);
+            if (!c) return;
+
+            document.getElementById('chartModalTitle').textContent = c.is_system ? c.name + ' (sistema)' : 'Editar gráfico';
+            document.getElementById('editChartId').value = c.id;
+            document.getElementById('editChartIsSystem').value = c.is_system ? '1' : '0';
+            document.getElementById('editChartSystemKey').value = c.system_key || '';
+            document.getElementById('editChartName').value = c.name;
+            document.getElementById('editChartName').disabled = c.is_system;
+            document.getElementById('editChartMetric').value = c.metric;
+            document.getElementById('editChartFormat').value = c.format;
+            document.getElementById('editVisCoach').checked = c.visible_coach;
+            document.getElementById('editVisPublic').checked = c.visible_public;
+            document.getElementById('editChartDesc').value = c.description;
+            document.getElementById('editChartOrder').value = c.display_order;
+
+            // Marcar acciones seleccionadas
+            c.action_ids.forEach(id => {
+                const cb = document.getElementById('act_' + id);
+                if (cb) cb.checked = true;
+            });
+
+            // Marcar equipos seleccionados
+            if (!c.all_teams) {
+                c.team_ids.forEach(id => {
+                    const cb = document.getElementById('team_' + id);
+                    if (cb) cb.checked = true;
+                });
+            }
+
+            // Ocultar acciones para shots_pct
+            document.getElementById('actionsRow').style.display = c.system_key === 'shots_pct' ? 'none' : '';
+            document.getElementById('deleteChartBtn').style.display = c.is_system ? 'none' : 'block';
+        } else {
+            document.getElementById('chartModalTitle').textContent = 'Nuevo gráfico';
+            document.getElementById('editChartId').value = '';
+            document.getElementById('editChartIsSystem').value = '0';
+            document.getElementById('editChartSystemKey').value = '';
+            document.getElementById('editChartName').value = '';
+            document.getElementById('editChartName').disabled = false;
+            document.getElementById('editChartMetric').value = 'sum';
+            document.getElementById('editChartFormat').value = 'avg';
+            document.getElementById('editVisCoach').checked = true;
+            document.getElementById('editVisPublic').checked = false;
+            document.getElementById('editChartDesc').value = '';
+            document.getElementById('editChartOrder').value = '10';
+            document.getElementById('actionsRow').style.display = '';
+            document.getElementById('deleteChartBtn').style.display = 'none';
+        }
+
+        chartModal.show();
+    }
+
+    function selectAllTeams() { document.querySelectorAll('.team-cb').forEach(cb => cb.checked = true); }
+    function deselectAllTeams() { document.querySelectorAll('.team-cb').forEach(cb => cb.checked = false); }
+
+    async function saveChart() {
+        const id = document.getElementById('editChartId').value;
+        const action_ids = Array.from(document.querySelectorAll('.action-cb:checked')).map(cb => parseInt(cb.value));
+        const team_ids = Array.from(document.querySelectorAll('.team-cb:checked')).map(cb => parseInt(cb.value));
+        const payload = {
+            name: document.getElementById('editChartName').value,
+            action_ids, team_ids,
+            visible_coach: document.getElementById('editVisCoach').checked,
+            visible_public: document.getElementById('editVisPublic').checked,
+            metric: document.getElementById('editChartMetric').value,
+            format: document.getElementById('editChartFormat').value,
+            description: document.getElementById('editChartDesc').value,
+            display_order: parseInt(document.getElementById('editChartOrder').value) || 10
+        };
+        const url = id ? `/api/chart_definitions/${id}` : '/api/chart_definitions';
+        const method = id ? 'PUT' : 'POST';
+        await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+        chartModal.hide();
+        loadCharts();
+    }
+
+    async function deleteChart() {
+        const id = document.getElementById('editChartId').value;
+        if (!id || !confirm('¿Eliminar este gráfico?')) return;
+        await fetch(`/api/chart_definitions/${id}`, { method: 'DELETE' });
+        chartModal.hide();
+        loadCharts();
+    }
+    </script>
 </body>
 </html>

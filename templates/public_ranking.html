@@ -288,7 +288,9 @@
         <div class="chart-card">
             <h2 class="chart-title">{{ chart.title }}</h2>
             <div class="chart-subtitle">Top {{ team.analytics_players_count }} jugadores{% if num_matches > 1 %} (promedio){% endif %}</div>
-            
+            {% if chart.description %}
+            <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-bottom:0.75rem;">{{ chart.description }}</div>
+            {% endif %}
             <div class="ranking-list">
                 {% set max_val = chart.data[0].points if chart.data else 1 %}
                 {% for p in chart.data %}
@@ -302,7 +304,6 @@
                 </div>
                 {% endfor %}
             </div>
-            
             <div class="sparkle">✨</div>
         </div>
         {% endif %}

@@ -339,7 +339,10 @@
     <div class="main-container">
         <div class="navbar">
             <span class="navbar-title">📊 {{ team.name }}</span>
-            <a href="/matches" class="btn-back">← Volver</a>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <a href="/my_teams#chart-config" class="btn-back" title="Configurar gráficos" style="font-size:0.8rem;opacity:0.75;">⚙️ Gráficos</a>
+                <a href="/matches" class="btn-back">← Volver</a>
+            </div>
         </div>
 
         <div class="filters-container">
@@ -437,7 +440,29 @@
         </div>
         {% endif %}
 
-        <!-- Gráfico % de tiros (siempre visible en analytics) -->
+        <!-- Gráficos dinámicos (ChartDefinition) -->
+        {% for chart in extra_charts %}
+        <div class="chart-card mt-3">
+            <h2 class="chart-title">{{ chart.title }}</h2>
+            <div class="chart-subtitle">{{ num_matches }} partido{% if num_matches != 1 %}s{% endif %}</div>
+            {% if chart.description %}
+            <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-bottom:0.75rem;">{{ chart.description }}</div>
+            {% endif %}
+            {% for p in chart.data %}
+            <div class="player-row">
+                <span class="player-name">{{ p.name }}</span>
+                <div class="bar-container">
+                    {% set max_val = chart.data[0].points if chart.data else 1 %}
+                    {% set w = (p.points / max_val * 100) | round | int if max_val > 0 else 0 %}
+                    <div class="bar-neon {% if loop.first %}gold{% else %}blue{% endif %}" style="width:{{ w }}%;"></div>
+                </div>
+                <span class="player-value {% if loop.first %}gold{% else %}blue{% endif %}">Val: {{ p.points }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <!-- Gráfico % de tiros -->
         {% if team_shot_stats or players_shot_stats %}
         <div class="chart-card mt-3">
             <h2 class="chart-title">% DE TIROS</h2>
