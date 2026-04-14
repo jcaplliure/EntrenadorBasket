@@ -632,7 +632,7 @@ def _ensure_user_charts(user_id):
     changed = False
     if 'main' not in existing_keys:
         db.session.add(ChartDefinition(
-            user_id=user_id, name='Gráfico Principal', is_system=True, system_key='main',
+            user_id=user_id, name='Valoración total', is_system=True, system_key='main',
             visible_coach=True, visible_public=True, metric='sum', format='avg', display_order=1
         ))
         changed = True
@@ -854,6 +854,8 @@ def run_migrations():
     # URL pública con código aleatorio por equipo
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_slug VARCHAR(80)')
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_token VARCHAR(8)')
+    # Renombrar "Gráfico Principal" → "Valoración total"
+    _run_alter("UPDATE chart_definition SET name = 'Valoración total' WHERE system_key = 'main' AND name = 'Gráfico Principal'")
     # Top N jugadores: config global del usuario y por gráfico
     _run_alter('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS chart_default_top_n INTEGER DEFAULT 0')
     _run_alter('ALTER TABLE chart_definition ADD COLUMN IF NOT EXISTS top_n INTEGER')

@@ -354,7 +354,7 @@
                         <span class="chart-item-name">${sysLabel}${c.name}</span>
                         ${badges}
                     </div>
-                    <div class="chart-item-meta mt-1">${teamLabel} · ${c.metric === 'count' ? 'Nº acciones' : 'Valoración'} · ${c.format === 'total' ? 'Total' : 'Promedio'}</div>
+                    <div class="chart-item-meta mt-1">#${c.display_order} · ${teamLabel} · ${c.metric === 'count' ? 'Nº acciones' : 'Valoración'} · ${c.format === 'total' ? 'Total' : 'Promedio'}</div>
                 </div>
                 <button class="chart-btn" onclick="openChartModal(${c.id})" title="Editar"><i class="bi bi-pencil"></i></button>
             </div>`;
