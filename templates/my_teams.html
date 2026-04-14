@@ -397,8 +397,8 @@
             const sysLabel = c.is_system ? '<span class="badge-system">SISTEMA</span> ' : '';
             const actionCount = c.system_key === 'shots_pct' || c.system_key === 'plus_minus'
                 ? '' : (c.action_ids && c.action_ids.length > 0
-                    ? `<span style="font-size:0.7rem;color:rgba(255,200,0,0.7);">${c.action_ids.length} acc.</span>`
-                    : `<span style="font-size:0.7rem;color:rgba(255,100,100,0.8);" title="Sin acciones seleccionadas → usa todas">⚠ todas las acc.</span>`);
+                    ? `<span style="font-size:0.7rem;color:rgba(255,200,0,0.7);" title="${c.action_ids.length} acciones seleccionadas">${c.action_ids.length} acciones</span>`
+                    : `<span style="font-size:0.7rem;color:rgba(255,100,100,0.8);" title="Sin acciones seleccionadas → usa todas las del equipo">⚠ usa todas las acciones</span>`);
             return `<div class="chart-item">
                 <input type="number" class="order-input" value="${c.display_order}" min="1" max="99"
                     title="Orden de visualización (clic para editar)"
