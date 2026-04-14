@@ -109,6 +109,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     theme_color = db.Column(db.String(7), nullable=True)
+    chart_default_top_n = db.Column(db.Integer, default=0)  # 0 = todos
     last_blocks_config = db.Column(db.String(500), nullable=True, default="Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma")
     favoritos = db.relationship('Drill', secondary=favorites, backref=db.backref('favorited_by', lazy='dynamic'))
     owned_teams = db.relationship('Team', backref='owner', lazy=True)
@@ -318,6 +319,7 @@ class ChartDefinition(db.Model):
     format = db.Column(db.String(10), default='avg') # 'avg' | 'total'
     description = db.Column(db.Text, nullable=True)
     display_order = db.Column(db.Integer, default=10)
+    top_n = db.Column(db.Integer, nullable=True)  # null = usar config global del usuario
 
 class SiteConfig(db.Model):
     key = db.Column(db.String(50), primary_key=True) 
@@ -650,6 +652,14 @@ def _ensure_user_charts(user_id):
         db.session.commit()
 
 
+def _resolve_chart_limit(chart_def, user):
+    """Devuelve el nº de jugadores a mostrar: top_n individual > global > None (= todos)."""
+    if chart_def.top_n is not None:
+        return chart_def.top_n if chart_def.top_n > 0 else None
+    global_n = getattr(user, 'chart_default_top_n', 0) or 0
+    return global_n if global_n > 0 else None
+
+
 def _chart_applies_to_team(chart_def, team_id):
     """Comprueba si un ChartDefinition aplica a un equipo concreto."""
     if not chart_def.team_ids:
@@ -661,7 +671,7 @@ def _chart_applies_to_team(chart_def, team_id):
         return True
 
 
-def _calc_chart_data(chart_def, match_ids, all_actions, num_matches, players, limit=5):
+def _calc_chart_data(chart_def, match_ids, all_actions, num_matches, players, limit=None):
     """Calcula el ranking de jugadores para un ChartDefinition genérico."""
     if not match_ids:
         return []
@@ -717,7 +727,7 @@ def _calc_chart_data(chart_def, match_ids, all_actions, num_matches, players, li
         ranking.append({'name': player.name, 'points': val, 'photo': player.photo_file, 'dorsal': player.dorsal})
 
     ranking.sort(key=lambda x: x['points'], reverse=True)
-    return ranking[:limit]
+    return ranking[:limit] if limit else ranking
 
 
 def _calc_plus_minus(match_ids, players):
@@ -844,6 +854,9 @@ def run_migrations():
     # URL pública con código aleatorio por equipo
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_slug VARCHAR(80)')
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_token VARCHAR(8)')
+    # Top N jugadores: config global del usuario y por gráfico
+    _run_alter('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS chart_default_top_n INTEGER DEFAULT 0')
+    _run_alter('ALTER TABLE chart_definition ADD COLUMN IF NOT EXISTS top_n INTEGER')
     # Eventos de quinteto para cálculo de +/-
     _run_alter('''CREATE TABLE IF NOT EXISTS match_lineup_event (
         id SERIAL PRIMARY KEY,
@@ -2270,7 +2283,8 @@ def api_get_chart_definitions():
             'all_teams': not t_ids,
             'visible_coach': c.visible_coach, 'visible_public': c.visible_public,
             'metric': c.metric or 'sum', 'format': c.format or 'avg',
-            'description': c.description or '', 'display_order': c.display_order
+            'description': c.description or '', 'display_order': c.display_order,
+            'top_n': c.top_n  # null = usar global
         })
     return jsonify(result)
 
@@ -2290,7 +2304,8 @@ def api_create_chart_definition():
         metric=data.get('metric', 'sum'),
         format=data.get('format', 'avg'),
         description=data.get('description', ''),
-        display_order=data.get('display_order', 10)
+        display_order=data.get('display_order', 10),
+        top_n=data.get('top_n')
     )
     db.session.add(cd)
     db.session.commit()
@@ -2317,6 +2332,8 @@ def api_update_chart_definition(cid):
     cd.format = data.get('format', cd.format)
     cd.description = data.get('description', cd.description)
     cd.display_order = data.get('display_order', cd.display_order)
+    raw_top_n = data.get('top_n')
+    cd.top_n = int(raw_top_n) if raw_top_n is not None and raw_top_n != '' else None
     db.session.commit()
     return jsonify({'status': 'ok'})
 
@@ -2330,6 +2347,17 @@ def api_delete_chart_definition(cid):
     if cd.is_system:
         return jsonify({'error': 'cannot delete system chart'}), 400
     db.session.delete(cd)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/chart_global_config', methods=['GET', 'PUT'])
+@login_required
+def api_chart_global_config():
+    if request.method == 'GET':
+        return jsonify({'chart_default_top_n': current_user.chart_default_top_n or 0})
+    data = request.get_json()
+    current_user.chart_default_top_n = int(data.get('chart_default_top_n', 0))
     db.session.commit()
     return jsonify({'status': 'ok'})
 
@@ -2357,25 +2385,15 @@ def my_teams():
         db.session.add(new_team)
         db.session.commit()
         return redirect('/my_teams')
-    import traceback
-    try:
-        owned = Team.query.filter_by(user_id=current_user.id).all()
-        app.logger.info("=== my_teams: owned ok ===")
-        staff_memberships = TeamStaff.query.filter_by(email=current_user.email, status='accepted').all()
-        staff_teams = [s.team for s in staff_memberships]
-        all_teams = list(set(owned + staff_teams))
-        app.logger.info("=== my_teams: all_teams ok ===")
-        _ensure_user_charts(current_user.id)
-        app.logger.info("=== my_teams: _ensure_user_charts ok ===")
-        user_actions_qs = ActionDefinition.query.filter_by(user_id=current_user.id, team_id=None).order_by(
-            ActionDefinition.display_section, ActionDefinition.display_order).all()
-        user_actions = [{'id': a.id, 'name': a.name, 'section': a.display_section or ''} for a in user_actions_qs]
-        app.logger.info("=== my_teams: user_actions ok, rendering ===")
-        return render_template('my_teams.html', teams=owned, all_teams=all_teams, user_actions=user_actions)
-    except Exception as e:
-        app.logger.error(f"=== my_teams ERROR: {e} ===")
-        app.logger.error(traceback.format_exc())
-        raise
+    owned = Team.query.filter_by(user_id=current_user.id).all()
+    staff_memberships = TeamStaff.query.filter_by(email=current_user.email, status='accepted').all()
+    staff_teams = [s.team for s in staff_memberships]
+    all_teams = list(set(owned + staff_teams))
+    _ensure_user_charts(current_user.id)
+    user_actions_qs = ActionDefinition.query.filter_by(user_id=current_user.id, team_id=None).order_by(
+        ActionDefinition.display_section, ActionDefinition.display_order).all()
+    user_actions = [{'id': a.id, 'name': a.name, 'section': a.display_section or ''} for a in user_actions_qs]
+    return render_template('my_teams.html', teams=owned, all_teams=all_teams, user_actions=user_actions)
 
 @app.route('/team/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -3360,7 +3378,7 @@ def public_team_ranking_logic(team):
     
     # Cargar gráficos dinámicos del entrenador para este equipo (portal público)
     _ensure_user_charts(team.user_id)
-    limit = team.analytics_players_count or 5
+    chart_owner = User.query.get(team.user_id)
     charts = {}
     if team.analytics_visible:
         chart_defs = ChartDefinition.query.filter_by(user_id=team.user_id)\
@@ -3370,9 +3388,12 @@ def public_team_ranking_logic(team):
             if not _chart_applies_to_team(cd, team.id):
                 continue
             if cd.system_key == 'shots_pct':
-                continue  # Se calcula aparte más abajo
+                continue
+            limit = _resolve_chart_limit(cd, chart_owner)
             if cd.system_key == 'plus_minus':
                 data = _calc_plus_minus(match_ids, team.players)
+                if limit:
+                    data = data[:limit]
             else:
                 data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
             if data:
@@ -3541,7 +3562,7 @@ def team_stats(id):
         team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=team.shot_min_attempts or 0)
 
     # Gráficos dinámicos para el entrenador
-    limit = team.analytics_players_count or 5
+    chart_owner = User.query.get(team.user_id)
     extra_charts = []
     chart_defs = ChartDefinition.query.filter_by(user_id=team.user_id)\
         .filter(ChartDefinition.visible_coach == True)\
@@ -3550,8 +3571,11 @@ def team_stats(id):
     for cd in chart_defs:
         if not _chart_applies_to_team(cd, team.id):
             continue
+        limit = _resolve_chart_limit(cd, chart_owner)
         if cd.system_key == 'plus_minus':
             data = _calc_plus_minus(match_ids, team.players)
+            if limit:
+                data = data[:limit]
         else:
             data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
         if data:

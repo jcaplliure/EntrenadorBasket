@@ -150,6 +150,20 @@
                     <i class="bi bi-plus-circle"></i> Nuevo gráfico
                 </button>
             </div>
+            <!-- Configuración global -->
+            <div class="d-flex align-items-center gap-3 mb-3 p-2 rounded" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+                <span style="font-size:0.82rem;color:var(--cream);white-space:nowrap;"><i class="bi bi-gear me-1"></i>Config. global:</span>
+                <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalTopN">Top jugadores</label>
+                <select id="globalTopN" class="form-select form-select-sm" style="width:auto;min-width:130px;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);" onchange="saveGlobalConfig()">
+                    <option value="0">Todos</option>
+                    <option value="10">Top 10</option>
+                    <option value="5">Top 5</option>
+                    <option value="3">Top 3</option>
+                    <option value="1">Top 1</option>
+                </select>
+                <span id="globalSaved" style="font-size:0.72rem;color:#4ade80;display:none;">✓ Guardado</span>
+            </div>
+
             <div id="chartList">
                 <div class="text-muted text-center py-3" style="font-size:0.8rem;">Cargando...</div>
             </div>
@@ -256,9 +270,22 @@
                         <textarea id="editChartDesc" class="form-control" rows="2" maxlength="300"></textarea>
                     </div>
 
-                    <div class="mb-1">
-                        <label class="form-label">Orden de visualización</label>
-                        <input type="number" id="editChartOrder" class="form-control" style="width:100px;" min="1" max="99">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Top jugadores</label>
+                            <select id="editChartTopN" class="form-select">
+                                <option value="">Usar config. global</option>
+                                <option value="0">Todos</option>
+                                <option value="10">Top 10</option>
+                                <option value="5">Top 5</option>
+                                <option value="3">Top 3</option>
+                                <option value="1">Top 1</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Orden de visualización</label>
+                            <input type="number" id="editChartOrder" class="form-control" min="1" max="99">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -281,8 +308,26 @@
     let chartModal;
     document.addEventListener('DOMContentLoaded', () => {
         chartModal = new bootstrap.Modal(document.getElementById('chartModal'));
+        loadGlobalConfig();
         loadCharts();
     });
+
+    async function loadGlobalConfig() {
+        const res = await fetch('/api/chart_global_config');
+        const data = await res.json();
+        document.getElementById('globalTopN').value = data.chart_default_top_n || 0;
+    }
+
+    async function saveGlobalConfig() {
+        const val = parseInt(document.getElementById('globalTopN').value);
+        await fetch('/api/chart_global_config', {
+            method: 'PUT', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ chart_default_top_n: val })
+        });
+        const badge = document.getElementById('globalSaved');
+        badge.style.display = 'inline';
+        setTimeout(() => badge.style.display = 'none', 1500);
+    }
 
     async function loadCharts() {
         const res = await fetch('/api/chart_definitions');
@@ -349,6 +394,7 @@
             document.getElementById('editVisPublic').checked = c.visible_public;
             document.getElementById('editChartDesc').value = c.description;
             document.getElementById('editChartOrder').value = c.display_order;
+            document.getElementById('editChartTopN').value = c.top_n !== null && c.top_n !== undefined ? String(c.top_n) : '';
 
             // Marcar acciones seleccionadas
             c.action_ids.forEach(id => {
@@ -381,6 +427,7 @@
             document.getElementById('editVisPublic').checked = false;
             document.getElementById('editChartDesc').value = '';
             document.getElementById('editChartOrder').value = '10';
+            document.getElementById('editChartTopN').value = '';
             document.getElementById('actionsRow').style.display = '';
             document.getElementById('deleteChartBtn').style.display = 'none';
         }
@@ -403,7 +450,8 @@
             metric: document.getElementById('editChartMetric').value,
             format: document.getElementById('editChartFormat').value,
             description: document.getElementById('editChartDesc').value,
-            display_order: parseInt(document.getElementById('editChartOrder').value) || 10
+            display_order: parseInt(document.getElementById('editChartOrder').value) || 10,
+            top_n: document.getElementById('editChartTopN').value === '' ? null : parseInt(document.getElementById('editChartTopN').value)
         };
         const url = id ? `/api/chart_definitions/${id}` : '/api/chart_definitions';
         const method = id ? 'PUT' : 'POST';
