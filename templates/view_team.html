@@ -609,49 +609,74 @@
             <!-- Configuración de Analytics -->
             <div class="public-section">
                 <h6 class="public-title"><i class="bi bi-bar-chart-fill"></i> Gráficos de Estadísticas</h6>
-                <p class="public-subtitle">Configura qué gráficos de estadísticas son visibles en el portal público</p>
-                
+
+                <!-- Interruptor principal -->
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="analyticsVisible" 
+                        <input class="form-check-input" type="checkbox" id="analyticsVisible"
                                {% if team.analytics_visible %}checked{% endif %}
-                               onchange="saveAnalyticsSettings()">
+                               onchange="saveAnalyticsToggle()">
                         <label class="form-check-label" for="analyticsVisible" style="color: var(--cream);">
                             Mostrar estadísticas en portal público
                         </label>
                     </div>
                 </div>
-                
-                <!-- Gráficos: gestión centralizada en Mis Equipos -->
-                <div class="mb-3" style="{% if not team.analytics_visible %}display: none;{% endif %}">
+
+                <!-- Acceso al configurador -->
+                <div class="mb-3">
                     <a href="/my_teams#chart-config" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-bar-chart-line"></i> Configurar gráficos en Mis Equipos
+                        <i class="bi bi-sliders"></i> Configurar gráficos
                     </a>
                 </div>
 
-                <div class="row g-3 align-items-end mt-1" id="shotMinAttemptsConfig" style="{% if not team.analytics_visible %}display: none;{% endif %}">
-                    <div class="col-auto">
-                        <label class="form-label" style="font-size:0.85rem;">Mínimo intentos de campo para ranking % tiros</label>
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="number" id="shotMinAttempts" class="form-control" min="0" max="999"
-                                   style="width:90px;" value="{{ team.shot_min_attempts or 0 }}"
-                                   onchange="saveAnalyticsSettings()">
-                            <span style="font-size:0.8rem;color:rgba(255,255,255,0.45);">intentos (0 = sin filtro)</span>
+                <!-- Personalización por equipo (plegable) -->
+                <div>
+                    <button class="btn btn-sm btn-link p-0 text-muted" type="button"
+                            onclick="toggleTeamOverrides()" id="overridesToggleBtn"
+                            style="font-size:0.8rem;text-decoration:none;">
+                        <i class="bi bi-chevron-right" id="overridesChevron"></i>
+                        Personalizar solo para este equipo
+                    </button>
+                    <div id="teamOverridesPanel" style="display:none;margin-top:0.75rem;padding:0.75rem 1rem;background:rgba(255,255,255,0.04);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">
+                        <p style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:0.75rem;">
+                            Deja en blanco para usar la configuración general de todos los equipos.
+                        </p>
+
+                        <!-- Top jugadores override -->
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:0.82rem;margin-bottom:0.3rem;">
+                                Nº de jugadores a mostrar
+                                <span style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin-left:6px;">
+                                    (configuración general: {% if global_top_n and global_top_n > 0 %}Top {{ global_top_n }}{% else %}todos{% endif %})
+                                </span>
+                            </label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="number" id="teamTopNOverride" class="form-control form-control-sm" min="1" max="50"
+                                       placeholder="Usar general"
+                                       style="width:110px;"
+                                       value="{{ team.team_top_n_override if team.team_top_n_override is not none else '' }}"
+                                       onchange="saveTeamOverrides()">
+                                <span style="font-size:0.75rem;color:rgba(255,255,255,0.35);">jugadores (vacío = general)</span>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                
-                <div class="row g-3 align-items-end" id="playersCountConfig" style="{% if not team.analytics_visible %}display: none;{% endif %}">
-                    <div class="col-auto">
-                        <label class="form-label">Número de jugadores a mostrar</label>
-                        <select id="analyticsPlayersCount" class="form-select" style="width: 120px;" onchange="saveAnalyticsSettings()">
-                            {% for i in range(3, 16) %}
-                            <option value="{{ i }}" {% if team.analytics_players_count == i %}selected{% endif %}>Top {{ i }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col">
-                        <span class="text-muted small">Los usuarios del portal podrán elegir qué partidos filtrar</span>
+
+                        <!-- Mínimo intentos % tiros override -->
+                        <div>
+                            <label class="form-label" style="font-size:0.82rem;margin-bottom:0.3rem;">
+                                Mínimo intentos de campo para ranking % tiros
+                                <span style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin-left:6px;">
+                                    (configuración general: {{ global_shot_min }} int.)
+                                </span>
+                            </label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="number" id="teamShotMinOverride" class="form-control form-control-sm" min="0" max="999"
+                                       placeholder="Usar general"
+                                       style="width:110px;"
+                                       value="{{ team.team_shot_min_override if team.team_shot_min_override is not none else '' }}"
+                                       onchange="saveTeamOverrides()">
+                                <span style="font-size:0.75rem;color:rgba(255,255,255,0.35);">intentos (vacío = general, 0 = sin filtro)</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -877,31 +902,45 @@
         }
         
         // Analytics Settings
-        async function saveAnalyticsSettings() {
+        async function saveAnalyticsToggle() {
             const visible = document.getElementById('analyticsVisible').checked;
-            const count = document.getElementById('analyticsPlayersCount').value;
-            
-            // Mostrar/ocultar opciones
-            document.getElementById('playersCountConfig').style.display = visible ? 'flex' : 'none';
-            document.getElementById('shotMinAttemptsConfig').style.display = visible ? 'flex' : 'none';
-            
-            const shotMinAttempts = parseInt(document.getElementById('shotMinAttempts').value) || 0;
-            
+            const response = await fetch('/api/save_analytics_settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ team_id: {{ team.id }}, analytics_visible: visible })
+            });
+            if (!response.ok) alert('Error al guardar la configuración');
+        }
+
+        async function saveTeamOverrides() {
+            const topNVal = document.getElementById('teamTopNOverride').value;
+            const shotMinVal = document.getElementById('teamShotMinOverride').value;
             const response = await fetch('/api/save_analytics_settings', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     team_id: {{ team.id }},
-                    analytics_visible: visible,
-                    analytics_players_count: parseInt(count),
-                    shot_min_attempts: shotMinAttempts
+                    team_top_n_override: topNVal === '' ? null : parseInt(topNVal),
+                    team_shot_min_override: shotMinVal === '' ? null : parseInt(shotMinVal)
                 })
             });
-            
-            if (!response.ok) {
-                alert('Error al guardar la configuración');
-            }
+            if (!response.ok) alert('Error al guardar la configuración');
         }
+
+        function toggleTeamOverrides() {
+            const panel = document.getElementById('teamOverridesPanel');
+            const chevron = document.getElementById('overridesChevron');
+            const open = panel.style.display === 'none';
+            panel.style.display = open ? 'block' : 'none';
+            chevron.className = open ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
+        }
+
+        // Abrir panel si ya hay overrides configurados
+        (function() {
+            const topN = document.getElementById('teamTopNOverride').value;
+            const shotMin = document.getElementById('teamShotMinOverride').value;
+            if (topN !== '' || shotMin !== '') toggleTeamOverrides();
+        })();
         
         // Drill Notes
         async function saveDrillNote(drillId, note) {

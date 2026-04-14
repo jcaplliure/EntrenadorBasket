@@ -160,13 +160,16 @@ class Team(db.Model):
     # Configuración de Analytics en portal público
     analytics_visible = db.Column(db.Boolean, default=False)
     analytics_players_count = db.Column(db.Integer, default=5)
-    # Gráficos individuales visibles en portal
-    chart_all_visible = db.Column(db.Boolean, default=True)  # Ataque y defensa
-    chart_attack_visible = db.Column(db.Boolean, default=False)  # Ataque
-    chart_attack_no_shots_visible = db.Column(db.Boolean, default=False)  # Ataque (sin puntos)
-    chart_defense_visible = db.Column(db.Boolean, default=False)  # Defensa
-    chart_shots_visible = db.Column(db.Boolean, default=False)  # % de tiros
-    shot_min_attempts = db.Column(db.Integer, default=0)  # Mínimo intentos campo para aparecer en ranking
+    # Overrides por equipo (None = usar config global del usuario)
+    team_top_n_override = db.Column(db.Integer, nullable=True)      # override top jugadores
+    team_shot_min_override = db.Column(db.Integer, nullable=True)   # override mínimo intentos % tiros
+    # Gráficos individuales visibles en portal (legacy)
+    chart_all_visible = db.Column(db.Boolean, default=True)
+    chart_attack_visible = db.Column(db.Boolean, default=False)
+    chart_attack_no_shots_visible = db.Column(db.Boolean, default=False)
+    chart_defense_visible = db.Column(db.Boolean, default=False)
+    chart_shots_visible = db.Column(db.Boolean, default=False)
+    shot_min_attempts = db.Column(db.Integer, default=0)
     players = db.relationship('Player', backref='team', lazy=True, cascade="all, delete-orphan")
     staff = db.relationship('TeamStaff', backref='team', lazy=True, cascade="all, delete-orphan")
     sessions = db.relationship('TrainingSession', backref='team', lazy=True, cascade="all, delete-orphan")
@@ -670,12 +673,25 @@ def _get_highlight_config(user):
     return count, color
 
 
-def _resolve_chart_limit(chart_def, user):
-    """Devuelve el nº de jugadores a mostrar: top_n individual > global > None (= todos)."""
+def _resolve_chart_limit(chart_def, user, team=None):
+    """Devuelve el nº de jugadores a mostrar.
+    Prioridad: top_n por gráfico > override por equipo > global del usuario > None (todos).
+    """
     if chart_def.top_n is not None:
         return chart_def.top_n if chart_def.top_n > 0 else None
+    if team is not None and team.team_top_n_override is not None:
+        return team.team_top_n_override if team.team_top_n_override > 0 else None
     global_n = getattr(user, 'chart_default_top_n', 0) or 0
     return global_n if global_n > 0 else None
+
+
+def _resolve_shot_min(shots_pct_chart_def, team=None):
+    """Devuelve el mínimo de intentos de campo para el ranking % tiros.
+    Prioridad: override por equipo > configuración del gráfico.
+    """
+    if team is not None and team.team_shot_min_override is not None:
+        return team.team_shot_min_override
+    return shots_pct_chart_def.shot_min_attempts or 0
 
 
 def _chart_applies_to_team(chart_def, team_id):
@@ -876,6 +892,9 @@ def run_migrations():
     _run_alter('ALTER TABLE chart_definition ADD COLUMN IF NOT EXISTS shot_min_attempts INTEGER DEFAULT 0')
     # Renombrar "Gráfico Principal" → "Valoración total"
     _run_alter("UPDATE chart_definition SET name = 'Valoración total' WHERE system_key = 'main' AND name = 'Gráfico Principal'")
+    # Overrides de estadísticas por equipo
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS team_top_n_override INTEGER')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS team_shot_min_override INTEGER')
     # Color de destacados en gráficos
     _run_alter('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS chart_highlight_count INTEGER DEFAULT 1')
     _run_alter("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS chart_highlight_color VARCHAR(20) DEFAULT 'yellow'")
@@ -2500,7 +2519,15 @@ def view_team(id):
     # Ordenar por display_order
     gallery_items_ordered.sort(key=lambda x: x.gallery_order)
     
-    return render_template('view_team.html', team=team, is_owner=is_owner, sessions=sessions, actions=team_actions, rankings=team_rankings, categories=categories, gallery_items_ordered=gallery_items_ordered)
+    # Valores globales del usuario para mostrar como referencia en la UI
+    _ensure_user_charts(current_user.id)
+    global_top_n = current_user.chart_default_top_n or 0
+    shots_pct_chart = ChartDefinition.query.filter_by(user_id=current_user.id, system_key='shots_pct').first()
+    global_shot_min = shots_pct_chart.shot_min_attempts if shots_pct_chart else 0
+    return render_template('view_team.html', team=team, is_owner=is_owner, sessions=sessions,
+                           actions=team_actions, rankings=team_rankings, categories=categories,
+                           gallery_items_ordered=gallery_items_ordered,
+                           global_top_n=global_top_n, global_shot_min=global_shot_min)
 
 def _user_teams():
     owned = Team.query.filter_by(user_id=current_user.id).all()
@@ -2802,32 +2829,24 @@ def api_save_analytics_settings():
     """Guardar configuración de analytics del portal público"""
     data = request.json
     team_id = data.get('team_id')
-    analytics_visible = data.get('analytics_visible', False)
-    analytics_players_count = data.get('analytics_players_count', 5)
-    
+
     team = Team.query.get_or_404(team_id)
     is_owner = (team.user_id == current_user.id)
     is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
     if not is_owner and not is_staff:
         return jsonify({'error': 'Unauthorized'}), 403
-    
-    team.analytics_visible = analytics_visible
-    team.analytics_players_count = int(analytics_players_count)
-    
-    # Guardar configuración de gráficos individuales
-    if 'chart_all_visible' in data:
-        team.chart_all_visible = data.get('chart_all_visible', False)
-    if 'chart_attack_visible' in data:
-        team.chart_attack_visible = data.get('chart_attack_visible', False)
-    if 'chart_attack_no_shots_visible' in data:
-        team.chart_attack_no_shots_visible = data.get('chart_attack_no_shots_visible', False)
-    if 'chart_defense_visible' in data:
-        team.chart_defense_visible = data.get('chart_defense_visible', False)
-    if 'chart_shots_visible' in data:
-        team.chart_shots_visible = data.get('chart_shots_visible', False)
-    if 'shot_min_attempts' in data:
-        team.shot_min_attempts = max(0, int(data.get('shot_min_attempts', 0)))
-    
+
+    if 'analytics_visible' in data:
+        team.analytics_visible = data['analytics_visible']
+
+    # Overrides por equipo: None = usar config global
+    if 'team_top_n_override' in data:
+        v = data['team_top_n_override']
+        team.team_top_n_override = int(v) if v is not None and v != '' else None
+    if 'team_shot_min_override' in data:
+        v = data['team_shot_min_override']
+        team.team_shot_min_override = max(0, int(v)) if v is not None and v != '' else None
+
     db.session.commit()
     return jsonify({'status': 'ok'})
 
@@ -3445,14 +3464,14 @@ def public_team_ranking_logic(team):
                 continue
             if cd.system_key == 'shots_pct':
                 shots_pct_def = cd
-                limit_shot = _resolve_chart_limit(cd, chart_owner)
+                limit_shot = _resolve_chart_limit(cd, chart_owner, team)
                 charts_list.append({'id': str(cd.id), 'is_shots_pct': True,
                                     'display_order': cd.display_order,
                                     'description': cd.description or '',
                                     'limit': limit_shot,
                                     'team_shot_stats': {}, 'players_shot_stats': []})
                 continue
-            limit = _resolve_chart_limit(cd, chart_owner)
+            limit = _resolve_chart_limit(cd, chart_owner, team)
             if cd.system_key == 'plus_minus':
                 data = _calc_plus_minus(match_ids, team.players)
                 if limit:
@@ -3489,8 +3508,8 @@ def public_team_ranking_logic(team):
     
     # Rellenar datos de shots_pct en su posición dentro de charts_list
     if shots_pct_def:
-        t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def.shot_min_attempts or 0)
-        limit_shot = _resolve_chart_limit(shots_pct_def, chart_owner)
+        t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=_resolve_shot_min(shots_pct_def, team))
+        limit_shot = _resolve_chart_limit(shots_pct_def, chart_owner, team)
         if limit_shot:
             p_shot = p_shot[:limit_shot]
         for entry in charts_list:
@@ -3642,14 +3661,14 @@ def team_stats(id):
             continue
         if cd.system_key == 'shots_pct':
             shots_pct_def_coach = cd
-            limit_shot_coach = _resolve_chart_limit(cd, chart_owner)
+            limit_shot_coach = _resolve_chart_limit(cd, chart_owner, team)
             extra_charts.append({'title': '% DE TIROS', 'is_shots_pct': True,
                                  'display_order': cd.display_order,
                                  'description': cd.description or '',
                                  'limit': limit_shot_coach,
                                  'team_shot_stats': {}, 'players_shot_stats': []})
             continue
-        limit = _resolve_chart_limit(cd, chart_owner)
+        limit = _resolve_chart_limit(cd, chart_owner, team)
         if cd.system_key == 'plus_minus':
             data = _calc_plus_minus(match_ids, team.players)
             if limit:
@@ -3667,8 +3686,8 @@ def team_stats(id):
 
     # Rellenar datos shots_pct en su posición
     if shots_pct_def_coach:
-        t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def_coach.shot_min_attempts or 0)
-        limit_shot = _resolve_chart_limit(shots_pct_def_coach, chart_owner)
+        t_shot, p_shot = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=_resolve_shot_min(shots_pct_def_coach, team))
+        limit_shot = _resolve_chart_limit(shots_pct_def_coach, chart_owner, team)
         if limit_shot:
             p_shot = p_shot[:limit_shot]
         for entry in extra_charts:
