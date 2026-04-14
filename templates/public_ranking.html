@@ -306,7 +306,12 @@
                         {% else %}
                             {% set max_val = chart.data[0].points if chart.data else 1 %}
                             {% set width = (p.points / max_val * 100) if max_val > 0 else 0 %}
-                            <div class="bar-neon {% if loop.first %}gold{% else %}blue{% endif %}" style="width: {{ width }}%"></div>
+                            {% set is_hl = loop.index <= (hl_count or 1) and hl_color %}
+                            {% if is_hl %}
+                            <div class="bar-neon" style="width:{{ width }}%;background:{{ hl_color }};box-shadow:0 0 10px {{ hl_color }}80;"></div>
+                            {% else %}
+                            <div class="bar-neon blue" style="width:{{ width }}%;"></div>
+                            {% endif %}
                         {% endif %}
                     </div>
                     {% if chart.is_pm %}
@@ -314,7 +319,8 @@
                         {{ '+' if p.points > 0 else '' }}{{ p.points }}
                     </span>
                     {% else %}
-                    <span class="player-value {% if loop.first %}gold{% else %}blue{% endif %}">Val: {{ p.points|round(1) }}</span>
+                    {% set is_hl = loop.index <= (hl_count or 1) and hl_color %}
+                    <span class="player-value" style="color:{{ hl_color if is_hl else '#4a9eff' }};">Val: {{ p.points|round(1) }}</span>
                     {% endif %}
                 </div>
                 {% endfor %}

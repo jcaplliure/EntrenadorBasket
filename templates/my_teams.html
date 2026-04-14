@@ -151,14 +151,34 @@
                 </button>
             </div>
             <!-- Configuración global -->
-            <div class="d-flex align-items-center gap-3 mb-3 p-2 rounded" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
-                <span style="font-size:0.82rem;color:var(--cream);white-space:nowrap;"><i class="bi bi-gear me-1"></i>Config. global:</span>
-                <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalTopN">Top jugadores</label>
-                <input type="number" id="globalTopN" min="0" max="100" placeholder="0 = Todos"
-                    class="form-control form-control-sm" style="width:110px;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);"
-                    onchange="saveGlobalConfig()">
-                <span style="font-size:0.72rem;color:rgba(255,255,255,0.35);">(0 = todos)</span>
-                <span id="globalSaved" style="font-size:0.72rem;color:#4ade80;display:none;">✓ Guardado</span>
+            <div class="p-2 rounded mb-3" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+                <div class="d-flex align-items-center flex-wrap gap-3">
+                    <span style="font-size:0.82rem;color:var(--cream);white-space:nowrap;"><i class="bi bi-gear me-1"></i>Config. global:</span>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalTopN">Top jugadores</label>
+                        <input type="number" id="globalTopN" min="0" max="100" placeholder="0 = Todos"
+                            class="form-control form-control-sm" style="width:90px;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);"
+                            onchange="saveGlobalConfig()">
+                        <span style="font-size:0.72rem;color:rgba(255,255,255,0.35);">(0 = todos)</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalHlCount">Destacar top</label>
+                        <input type="number" id="globalHlCount" min="0" max="100" placeholder="1"
+                            class="form-control form-control-sm" style="width:70px;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);"
+                            onchange="saveGlobalConfig()">
+                        <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalHlColor">con color</label>
+                        <select id="globalHlColor" class="form-select form-select-sm" style="width:auto;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);" onchange="onHighlightColorChange()">
+                            <option value="yellow">Amarillo</option>
+                            <option value="none">Sin destacar</option>
+                            <option value="custom">Color personalizado</option>
+                        </select>
+                        <span id="customColorPreview" style="display:none;width:20px;height:20px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);flex-shrink:0;"></span>
+                    </div>
+
+                    <span id="globalSaved" style="font-size:0.72rem;color:#4ade80;display:none;">✓ Guardado</span>
+                </div>
             </div>
 
             <div id="chartList">
@@ -308,19 +328,49 @@
         loadCharts();
     });
 
+    let _userThemeColor = '#FFD700';
+
     async function loadGlobalConfig() {
         const res = await fetch('/api/chart_global_config');
         const data = await res.json();
         document.getElementById('globalTopN').value = data.chart_default_top_n ?? 0;
+        document.getElementById('globalHlCount').value = data.chart_highlight_count ?? 1;
+        document.getElementById('globalHlColor').value = data.chart_highlight_color || 'yellow';
+        _userThemeColor = data.theme_color || '#FFD700';
+        updateColorPreview(data.chart_highlight_color || 'yellow');
+    }
+
+    function updateColorPreview(mode) {
+        const preview = document.getElementById('customColorPreview');
+        if (mode === 'custom') {
+            preview.style.display = 'inline-block';
+            preview.style.background = _userThemeColor;
+            preview.title = _userThemeColor;
+        } else if (mode === 'yellow') {
+            preview.style.display = 'inline-block';
+            preview.style.background = '#FFD700';
+            preview.title = '#FFD700';
+        } else {
+            preview.style.display = 'none';
+        }
+    }
+
+    function onHighlightColorChange() {
+        updateColorPreview(document.getElementById('globalHlColor').value);
+        saveGlobalConfig();
     }
 
     async function saveGlobalConfig() {
-        const raw = document.getElementById('globalTopN').value;
-        const val = raw === '' ? 0 : Math.max(0, parseInt(raw) || 0);
-        document.getElementById('globalTopN').value = val;
+        const rawN = document.getElementById('globalTopN').value;
+        const topN = rawN === '' ? 0 : Math.max(0, parseInt(rawN) || 0);
+        document.getElementById('globalTopN').value = topN;
+        const rawHl = document.getElementById('globalHlCount').value;
+        const hlCount = rawHl === '' ? 1 : Math.max(0, parseInt(rawHl) || 1);
+        document.getElementById('globalHlCount').value = hlCount;
+        const hlColor = document.getElementById('globalHlColor').value;
         await fetch('/api/chart_global_config', {
             method: 'PUT', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ chart_default_top_n: val })
+            body: JSON.stringify({ chart_default_top_n: topN, chart_highlight_count: hlCount, chart_highlight_color: hlColor })
         });
         const badge = document.getElementById('globalSaved');
         badge.style.display = 'inline';

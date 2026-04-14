@@ -109,7 +109,9 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     theme_color = db.Column(db.String(7), nullable=True)
-    chart_default_top_n = db.Column(db.Integer, default=0)  # 0 = todos
+    chart_default_top_n = db.Column(db.Integer, default=0)       # 0 = todos
+    chart_highlight_count = db.Column(db.Integer, default=1)      # nº jugadores a destacar
+    chart_highlight_color = db.Column(db.String(20), default='yellow')  # 'yellow'|'none'|'custom'
     last_blocks_config = db.Column(db.String(500), nullable=True, default="Calentamiento,Técnica Individual,Tiro,Táctica,Físico,Vuelta a la Calma")
     favoritos = db.relationship('Drill', secondary=favorites, backref=db.backref('favorited_by', lazy='dynamic'))
     owned_teams = db.relationship('Team', backref='owner', lazy=True)
@@ -653,6 +655,19 @@ def _ensure_user_charts(user_id):
         db.session.commit()
 
 
+def _get_highlight_config(user):
+    """Devuelve (highlight_count, highlight_css_color) para usar en templates."""
+    count = user.chart_highlight_count if user.chart_highlight_count is not None else 1
+    mode = user.chart_highlight_color or 'yellow'
+    if mode == 'yellow':
+        color = '#FFD700'
+    elif mode == 'none':
+        color = None   # sin destacar
+    else:  # custom
+        color = user.theme_color or '#FFD700'
+    return count, color
+
+
 def _resolve_chart_limit(chart_def, user):
     """Devuelve el nº de jugadores a mostrar: top_n individual > global > None (= todos)."""
     if chart_def.top_n is not None:
@@ -859,6 +874,9 @@ def run_migrations():
     _run_alter('ALTER TABLE chart_definition ADD COLUMN IF NOT EXISTS shot_min_attempts INTEGER DEFAULT 0')
     # Renombrar "Gráfico Principal" → "Valoración total"
     _run_alter("UPDATE chart_definition SET name = 'Valoración total' WHERE system_key = 'main' AND name = 'Gráfico Principal'")
+    # Color de destacados en gráficos
+    _run_alter('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS chart_highlight_count INTEGER DEFAULT 1')
+    _run_alter("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS chart_highlight_color VARCHAR(20) DEFAULT 'yellow'")
     # Top N jugadores: config global del usuario y por gráfico
     _run_alter('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS chart_default_top_n INTEGER DEFAULT 0')
     _run_alter('ALTER TABLE chart_definition ADD COLUMN IF NOT EXISTS top_n INTEGER')
@@ -2363,9 +2381,16 @@ def api_delete_chart_definition(cid):
 @login_required
 def api_chart_global_config():
     if request.method == 'GET':
-        return jsonify({'chart_default_top_n': current_user.chart_default_top_n or 0})
+        return jsonify({
+            'chart_default_top_n': current_user.chart_default_top_n or 0,
+            'chart_highlight_count': current_user.chart_highlight_count if current_user.chart_highlight_count is not None else 1,
+            'chart_highlight_color': current_user.chart_highlight_color or 'yellow',
+            'theme_color': current_user.theme_color or '#FFD700'
+        })
     data = request.get_json()
     current_user.chart_default_top_n = int(data.get('chart_default_top_n', 0))
+    current_user.chart_highlight_count = int(data.get('chart_highlight_count', 1))
+    current_user.chart_highlight_color = data.get('chart_highlight_color', 'yellow')
     db.session.commit()
     return jsonify({'status': 'ok'})
 
@@ -3432,8 +3457,9 @@ def public_team_ranking_logic(team):
     if team.analytics_visible and shots_pct_def and shots_pct_def.visible_public and _chart_applies_to_team(shots_pct_def, team.id):
         team_shot_stats, players_shot_stats = _calc_shot_stats(match_ids, all_actions, team.players, min_attempts=shots_pct_def.shot_min_attempts or 0)
 
-    return render_template('public_ranking.html', 
-                          team=team, 
+    hl_count, hl_color = _get_highlight_config(chart_owner)
+    return render_template('public_ranking.html',
+                          team=team,
                           charts=charts,
                           all_matches=all_matches,
                           filter_type=filter_type,
@@ -3441,7 +3467,9 @@ def public_team_ranking_logic(team):
                           num_matches=num_matches,
                           gallery_drills=gallery_drills_ordered,
                           team_shot_stats=team_shot_stats,
-                          players_shot_stats=players_shot_stats)
+                          players_shot_stats=players_shot_stats,
+                          hl_count=hl_count,
+                          hl_color=hl_color)
 
 @app.route('/team/<int:id>/stats')
 @login_required
@@ -3589,8 +3617,9 @@ def team_stats(id):
         if data:
             extra_charts.append({'title': cd.name.upper(), 'data': data, 'description': cd.description or '', 'is_pm': cd.system_key == 'plus_minus'})
 
-    return render_template('team_stats.html', 
-                         team=team, 
+    hl_count, hl_color = _get_highlight_config(chart_owner)
+    return render_template('team_stats.html',
+                         team=team,
                          ranking=ranking,
                          num_matches=num_matches,
                          filter_type=filter_type,
@@ -3601,7 +3630,9 @@ def team_stats(id):
                          actions_by_section=actions_by_section,
                          team_shot_stats=team_shot_stats,
                          players_shot_stats=players_shot_stats,
-                         extra_charts=extra_charts)
+                         extra_charts=extra_charts,
+                         hl_count=hl_count,
+                         hl_color=hl_color)
 
 @app.route('/delete_player/<int:id>')
 @login_required
