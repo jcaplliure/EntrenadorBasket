@@ -372,8 +372,9 @@
                 });
             }
 
-            // Ocultar acciones para shots_pct
-            document.getElementById('actionsRow').style.display = c.system_key === 'shots_pct' ? 'none' : '';
+            // Ocultar acciones para gráficos de sistema con cálculo propio
+            const hideActions = c.system_key === 'shots_pct' || c.system_key === 'plus_minus';
+            document.getElementById('actionsRow').style.display = hideActions ? 'none' : '';
             document.getElementById('deleteChartBtn').style.display = c.is_system ? 'none' : 'block';
         } else {
             document.getElementById('chartModalTitle').textContent = 'Nuevo gráfico';

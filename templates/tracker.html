@@ -670,6 +670,12 @@
 
         function recordAction(actionId) {
             if (!selectedPlayerId) { alert('Selecciona un jugador primero'); return; }
+            const onCourt = courtLineup.filter(pid => pid).length;
+            if (onCourt < 5) {
+                if (!confirm('⚠️ Solo hay ' + onCourt + ' jugador(es) en pista. El +/- puede no ser exacto.\n¿Registrar la acción igualmente?')) return;
+            }
+            // Enviar lineup inicial si es la primera acción del partido
+            sendInitialLineupIfNeeded();
             const a = actions.find(x => x.id === actionId);
             if (a && a.name === 'Falta') {
                 const s = stats[selectedPlayerId] || { fouls: 0 };
@@ -796,6 +802,28 @@
             });
         }
 
+        // Indica si ya se enviaron los lineup events iniciales en esta sesión
+        let initialLineupSent = false;
+
+        function sendLineupEvents(events) {
+            // events: [{player_id, action: 'in'|'out'}]
+            if (!events.length) return;
+            fetch('/api/match/' + matchId + '/lineup_event', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ events, period: currentPeriod })
+            }).catch(() => {});
+        }
+
+        function sendInitialLineupIfNeeded() {
+            if (initialLineupSent) return;
+            initialLineupSent = true;
+            const current = courtLineup.filter(pid => pid);
+            if (current.length > 0) {
+                sendLineupEvents(current.map(pid => ({ player_id: pid, action: 'in' })));
+            }
+        }
+
         function saveState() {
             fetch('/api/match/' + matchId + '/save_state', {
                 method: 'POST',
@@ -817,14 +845,17 @@
             const prevCourtCount = modalMode === 'add' && lineupBeforeRemove > 0 ? 
                 lineupBeforeRemove : 
                 courtLineup.filter(pid => pid).length;
-            
+
+            // Registrar eventos de lineup para +/-
             if (modalMode === 'add') {
-                Array.from(selectedPlayers).forEach(pid => {
-                    if (courtLineup.length < 5) {
-                        courtLineup.push(pid);
-                    }
+                const newPlayers = Array.from(selectedPlayers);
+                sendLineupEvents(newPlayers.map(pid => ({ player_id: pid, action: 'in' })));
+                newPlayers.forEach(pid => {
+                    if (courtLineup.length < 5) courtLineup.push(pid);
                 });
             } else if (modalMode === 'remove') {
+                const removedPlayers = Array.from(selectedPlayers);
+                sendLineupEvents(removedPlayers.map(pid => ({ player_id: pid, action: 'out' })));
                 courtLineup = courtLineup.filter(pid => !selectedPlayers.has(pid));
             }
             

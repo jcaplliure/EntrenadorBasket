@@ -452,11 +452,24 @@
             <div class="player-row">
                 <span class="player-name">{{ p.name }}</span>
                 <div class="bar-container">
-                    {% set max_val = chart.data[0].points if chart.data else 1 %}
-                    {% set w = (p.points / max_val * 100) | round | int if max_val > 0 else 0 %}
-                    <div class="bar-neon {% if loop.first %}gold{% else %}blue{% endif %}" style="width:{{ w }}%;"></div>
+                    {% if chart.is_pm %}
+                        {% set max_abs = (chart.data | map(attribute='points') | map('abs') | max) or 1 %}
+                        {% set w = (p.points | abs / max_abs * 100) | round | int %}
+                        {% set bar_color = '#4ade80' if p.points >= 0 else '#f87171' %}
+                        <div class="bar-neon" style="width:{{ w }}%;background:{{ bar_color }};box-shadow:0 0 8px {{ bar_color }};"></div>
+                    {% else %}
+                        {% set max_val = chart.data[0].points if chart.data else 1 %}
+                        {% set w = (p.points / max_val * 100) | round | int if max_val > 0 else 0 %}
+                        <div class="bar-neon {% if loop.first %}gold{% else %}blue{% endif %}" style="width:{{ w }}%;"></div>
+                    {% endif %}
                 </div>
+                {% if chart.is_pm %}
+                <span class="player-value" style="color:{% if p.points >= 0 %}#4ade80{% else %}#f87171{% endif %};">
+                    {{ '+' if p.points > 0 else '' }}{{ p.points }}
+                </span>
+                {% else %}
                 <span class="player-value {% if loop.first %}gold{% else %}blue{% endif %}">Val: {{ p.points }}</span>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

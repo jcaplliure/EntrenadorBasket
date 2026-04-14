@@ -293,6 +293,15 @@ class MatchEvent(db.Model):
     player = db.relationship('Player', backref='events')
     action = db.relationship('ActionDefinition', backref='events')
 
+class MatchLineupEvent(db.Model):
+    """Registra cada entrada/salida de jugador durante un partido (para calcular +/-)."""
+    id = db.Column(db.Integer, primary_key=True)
+    match_id = db.Column(db.Integer, db.ForeignKey('match.id'), nullable=False)
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    action = db.Column(db.String(3), nullable=False)   # 'in' | 'out'
+    period = db.Column(db.Integer, default=1)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
 class ChartDefinition(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -629,6 +638,12 @@ def _ensure_user_charts(user_id):
             visible_coach=True, visible_public=False, metric='sum', format='avg', display_order=2
         ))
         changed = True
+    if 'plus_minus' not in existing_keys:
+        db.session.add(ChartDefinition(
+            user_id=user_id, name='+- en pista', is_system=True, system_key='plus_minus',
+            visible_coach=True, visible_public=False, metric='sum', format='avg', display_order=3
+        ))
+        changed = True
     if changed:
         db.session.commit()
 
@@ -697,6 +712,73 @@ def _calc_chart_data(chart_def, match_ids, all_actions, num_matches, players, li
     return ranking[:limit]
 
 
+def _calc_plus_minus(match_ids, players):
+    """Calcula el +/- de cada jugador usando MatchLineupEvent y MatchEvent."""
+    if not match_ids:
+        return []
+
+    player_map = {p.id: p for p in players}
+    pm = {p.id: 0.0 for p in players}
+
+    for match_id in match_ids:
+        # Obtener eventos de lineup ordenados por timestamp
+        lineup_events = MatchLineupEvent.query.filter_by(match_id=match_id)\
+            .order_by(MatchLineupEvent.timestamp).all()
+        if not lineup_events:
+            continue
+
+        # Obtener eventos de partido (puntos) ordenados por timestamp
+        match_events = MatchEvent.query.filter_by(match_id=match_id)\
+            .order_by(MatchEvent.timestamp).all()
+
+        # Reconstruir quinteto en cada momento usando timestamps
+        # Combinar ambos tipos de eventos y ordenar
+        timeline = []
+        for le in lineup_events:
+            timeline.append(('lineup', le.timestamp, le.player_id, le.action))
+        for me in match_events:
+            # Solo eventos con puntos (nuestros o rival)
+            pts_us = 0
+            pts_them = 0
+            if me.action_id:
+                a = ActionDefinition.query.get(me.action_id)
+                if a and a.score_value and a.score_value > 0:
+                    pts_us = a.score_value
+            if me.opponent_points and me.opponent_points > 0:
+                pts_them = me.opponent_points
+            if pts_us > 0 or pts_them > 0:
+                timeline.append(('score', me.timestamp, pts_us, pts_them))
+
+        timeline.sort(key=lambda x: x[1])
+
+        # Simular la pista
+        on_court = set()
+        for event in timeline:
+            if event[0] == 'lineup':
+                _, ts, pid, action = event
+                if action == 'in':
+                    on_court.add(pid)
+                elif action == 'out':
+                    on_court.discard(pid)
+            elif event[0] == 'score':
+                _, ts, pts_us, pts_them = event
+                net = pts_us - pts_them
+                for pid in on_court:
+                    if pid in pm:
+                        pm[pid] += net
+
+    # Construir ranking solo con jugadores que tienen datos
+    result = []
+    for pid, val in pm.items():
+        if val != 0:
+            player = player_map.get(pid)
+            if player:
+                result.append({'name': player.name, 'points': round(val, 1), 'photo': player.photo_file, 'dorsal': player.dorsal, 'is_pm': True})
+
+    result.sort(key=lambda x: x['points'], reverse=True)
+    return result
+
+
 def _run_alter(cmd):
     try:
         db.session.execute(text(cmd))
@@ -754,6 +836,15 @@ def run_migrations():
     # URL pública con código aleatorio por equipo
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_slug VARCHAR(80)')
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_token VARCHAR(8)')
+    # Eventos de quinteto para cálculo de +/-
+    _run_alter('''CREATE TABLE IF NOT EXISTS match_lineup_event (
+        id SERIAL PRIMARY KEY,
+        match_id INTEGER NOT NULL REFERENCES match(id),
+        player_id INTEGER NOT NULL REFERENCES player(id),
+        action VARCHAR(3) NOT NULL,
+        period INTEGER DEFAULT 1,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
     # Sistema de gráficos dinámicos
     _run_alter('''CREATE TABLE IF NOT EXISTS chart_definition (
         id SERIAL PRIMARY KEY,
@@ -3262,10 +3353,13 @@ def public_team_ranking_logic(team):
                 continue
             if cd.system_key == 'shots_pct':
                 continue  # Se calcula aparte más abajo
-            data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
+            if cd.system_key == 'plus_minus':
+                data = _calc_plus_minus(match_ids, team.players)
+            else:
+                data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
             if data:
                 fmt_label = ' (total)' if cd.format == 'total' else ''
-                charts[str(cd.id)] = {'title': cd.name.upper() + fmt_label, 'data': data, 'description': cd.description or ''}
+                charts[str(cd.id)] = {'title': cd.name.upper() + fmt_label, 'data': data, 'description': cd.description or '', 'is_pm': cd.system_key == 'plus_minus'}
 
     # Obtener ejercicios de la galería ordenados con notas
     gallery_items = TeamGalleryItem.query.filter_by(team_id=team.id).order_by(TeamGalleryItem.display_order).all()
@@ -3438,9 +3532,12 @@ def team_stats(id):
     for cd in chart_defs:
         if not _chart_applies_to_team(cd, team.id):
             continue
-        data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
+        if cd.system_key == 'plus_minus':
+            data = _calc_plus_minus(match_ids, team.players)
+        else:
+            data = _calc_chart_data(cd, match_ids, all_actions, num_matches, team.players, limit)
         if data:
-            extra_charts.append({'title': cd.name.upper(), 'data': data, 'description': cd.description or ''})
+            extra_charts.append({'title': cd.name.upper(), 'data': data, 'description': cd.description or '', 'is_pm': cd.system_key == 'plus_minus'})
 
     return render_template('team_stats.html', 
                          team=team, 
@@ -3923,6 +4020,27 @@ def api_match_save_state(match_id):
     match.court_lineup = json.dumps(data.get('lineup', []))
     db.session.commit()
     return jsonify({'status': 'ok'})
+
+@app.route('/api/match/<int:match_id>/lineup_event', methods=['POST'])
+@login_required
+def api_match_lineup_event(match_id):
+    """Registra una entrada ('in') o salida ('out') de jugador para calcular +/-."""
+    match = Match.query.get_or_404(match_id)
+    if match.user_id != current_user.id:
+        st = TeamStaff.query.filter_by(team_id=match.team_id, email=current_user.email, status='accepted').first()
+        if not st:
+            return jsonify({'error': 'No autorizado'}), 403
+    data = request.json
+    events = data.get('events', [])  # [{player_id, action: 'in'|'out'}, ...]
+    period = data.get('period', 1)
+    for ev in events:
+        pid = ev.get('player_id')
+        action = ev.get('action')
+        if pid and action in ('in', 'out'):
+            db.session.add(MatchLineupEvent(match_id=match_id, player_id=pid, action=action, period=period))
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
 
 @app.route('/api/last_events')
 @login_required
