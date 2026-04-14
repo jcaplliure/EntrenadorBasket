@@ -279,8 +279,7 @@ class Match(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False) 
     roster = db.relationship('Player', secondary=match_roster, backref='matches_played')
-    events = db.relationship('MatchEvent', backref='match', lazy=True, cascade="all, delete-orphan", overlaps="lineup_events")
-    lineup_events = db.relationship('MatchLineupEvent', lazy=True, cascade="all, delete-orphan", overlaps="events")
+    events = db.relationship('MatchEvent', backref='match', lazy=True, cascade="all, delete-orphan")
 
 class MatchEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -296,10 +295,12 @@ class MatchEvent(db.Model):
 
 class MatchLineupEvent(db.Model):
     """Registra cada entrada/salida de jugador durante un partido (para calcular +/-)."""
+    __tablename__ = 'match_lineup_event'
     id = db.Column(db.Integer, primary_key=True)
-    match_id = db.Column(db.Integer, db.ForeignKey('match.id'), nullable=False)
-    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
-    action = db.Column(db.String(3), nullable=False)   # 'in' | 'out'
+    # Sin ForeignKey para evitar conflictos de mapper en SQLAlchemy 2.x
+    match_id = db.Column(db.Integer, nullable=False)
+    player_id = db.Column(db.Integer, nullable=False)
+    lineup_action = db.Column('action', db.String(3), nullable=False)   # 'in' | 'out'
     period = db.Column(db.Integer, default=1)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -742,7 +743,7 @@ def _calc_plus_minus(match_ids, players):
         # Combinar ambos tipos de eventos y ordenar
         timeline = []
         for le in lineup_events:
-            timeline.append(('lineup', le.timestamp, le.player_id, le.action))
+            timeline.append(('lineup', le.timestamp, le.player_id, le.lineup_action))
         for me in match_events:
             # Solo eventos con puntos (nuestros o rival)
             pts_us = 0
@@ -4044,7 +4045,7 @@ def api_match_lineup_event(match_id):
         pid = ev.get('player_id')
         action = ev.get('action')
         if pid and action in ('in', 'out'):
-            db.session.add(MatchLineupEvent(match_id=match_id, player_id=pid, action=action, period=period))
+            db.session.add(MatchLineupEvent(match_id=match_id, player_id=pid, lineup_action=action, period=period))
     db.session.commit()
     return jsonify({'status': 'ok'})
 
