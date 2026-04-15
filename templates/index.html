@@ -218,6 +218,12 @@
             padding: 6px 8px;
             border-radius: 6px;
             margin: 4px 6px 2px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+        .select2-container--default .select2-results__group:hover {
+            background: #243554;
         }
         .select2-container--default .select2-results__option { background: #0f1b2e; color: #dfe6f2; }
         .select2-container--default .select2-results__option--highlighted[aria-selected] { background: #1a2a46; }
@@ -401,10 +407,33 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $(document).ready(function() {
-            $('#tagSelect').select2({
+            var $sel = $('#tagSelect');
+            $sel.select2({
                 placeholder: "Filtrar Etiquetas",
                 allowClear: true,
                 width: '100%'
+            });
+
+            $(document).on('click', '.select2-results__group', function(e) {
+                e.stopPropagation();
+                var groupLabel = $(this).text().trim();
+                var $optgroup = $sel.find('optgroup').filter(function() {
+                    return $(this).attr('label').trim() === groupLabel;
+                });
+                if (!$optgroup.length) return;
+
+                var childVals = $optgroup.find('option').map(function() { return $(this).val(); }).get();
+                var current = $sel.val() || [];
+                var allSelected = childVals.every(function(v) { return current.indexOf(v) !== -1; });
+
+                if (allSelected) {
+                    $sel.val(current.filter(function(v) { return childVals.indexOf(v) === -1; }));
+                } else {
+                    var merged = current.slice();
+                    childVals.forEach(function(v) { if (merged.indexOf(v) === -1) merged.push(v); });
+                    $sel.val(merged);
+                }
+                $sel.trigger('change');
             });
         });
 
