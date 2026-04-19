@@ -161,8 +161,12 @@ class Team(db.Model):
     analytics_visible = db.Column(db.Boolean, default=False)
     analytics_players_count = db.Column(db.Integer, default=5)
     # Overrides por equipo (None = usar config global del usuario)
-    team_top_n_override = db.Column(db.Integer, nullable=True)      # override top jugadores
-    team_shot_min_override = db.Column(db.Integer, nullable=True)   # override mínimo intentos % tiros
+    team_top_n_override = db.Column(db.Integer, nullable=True)
+    team_shot_min_override = db.Column(db.Integer, nullable=True)
+    # Convocatorias
+    convocatoria_visible = db.Column(db.Boolean, default=False)
+    convocatoria_text = db.Column(db.Text, nullable=True)
+    convocatoria_last_n = db.Column(db.Integer, default=5)
     # Gráficos individuales visibles en portal (legacy)
     chart_all_visible = db.Column(db.Boolean, default=True)
     chart_attack_visible = db.Column(db.Boolean, default=False)
@@ -202,6 +206,15 @@ class Player(db.Model):
     dorsal = db.Column(db.Integer, nullable=False)
     photo_file = db.Column(db.String(120), nullable=True)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
+    shield = db.relationship('PlayerShield', backref='player', uselist=False, lazy=True, cascade="all, delete-orphan")
+
+class PlayerShield(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
+    points = db.Column(db.Integer, default=20)
+    match_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class TrainingSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -218,6 +231,7 @@ class SessionAttendance(db.Model):
     session_id = db.Column(db.Integer, db.ForeignKey('training_session.id'), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
     is_present = db.Column(db.Boolean, default=False)
+    attendance_type = db.Column(db.String(20), default='absent')
     player = db.relationship('Player', backref='session_attendances')
 
 class SessionScore(db.Model):
@@ -910,6 +924,21 @@ def run_migrations():
         period INTEGER DEFAULT 1,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+    # Sistema de asistencia con tipo (puntual, tarde, ausente)
+    _run_alter("ALTER TABLE session_attendance ADD COLUMN IF NOT EXISTS attendance_type VARCHAR(20) DEFAULT 'absent'")
+    # Tabla de escudos de no convocatoria
+    _run_alter('''CREATE TABLE IF NOT EXISTS player_shield (
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER NOT NULL REFERENCES player(id),
+        points INTEGER DEFAULT 20,
+        match_date DATE,
+        notes VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    # Visibilidad tabla convocatorias y texto explicativo
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS convocatoria_visible BOOLEAN DEFAULT FALSE')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS convocatoria_text TEXT')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS convocatoria_last_n INTEGER DEFAULT 5')
     # Sistema de gráficos dinámicos
     _run_alter('''CREATE TABLE IF NOT EXISTS chart_definition (
         id SERIAL PRIMARY KEY,
@@ -1374,7 +1403,15 @@ def create_plan():
 @login_required
 def my_plans():
     plans = TrainingPlan.query.filter_by(user_id=current_user.id).order_by(TrainingPlan.date.desc()).all()
-    return render_template('my_plans.html', plans=plans)
+    owned = Team.query.filter_by(user_id=current_user.id).all()
+    staff_teams = [s.team for s in TeamStaff.query.filter_by(user_id=current_user.id, status='accepted').all()]
+    my_teams = list({t.id: t for t in owned + staff_teams}.values())
+    team_ids = [t.id for t in my_teams]
+    attendance_sessions = TrainingSession.query.filter(
+        TrainingSession.team_id.in_(team_ids),
+        TrainingSession.plan_id.is_(None)
+    ).order_by(TrainingSession.date.desc()).all()
+    return render_template('my_plans.html', plans=plans, teams=my_teams, attendance_sessions=attendance_sessions)
 
 @app.route('/plan/<int:id>')
 @login_required
@@ -3075,6 +3112,214 @@ def api_get_team_players():
     
     return jsonify({'players': players})
 
+# ── APIs de Asistencia Rápida ──────────────────────────────────────
+
+@app.route('/api/attendance/create', methods=['POST'])
+@login_required
+def api_attendance_create():
+    data = request.json
+    team_id = data.get('team_id')
+    date_str = data.get('date')
+    attendances = data.get('attendances', [])
+
+    team = Team.query.get_or_404(team_id)
+    is_owner = (team.user_id == current_user.id)
+    is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+    if not is_owner and not is_staff:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    session_date = datetime.strptime(date_str, '%Y-%m-%d') if date_str else datetime.utcnow()
+    session = TrainingSession(team_id=team_id, plan_id=None, date=session_date, status='finished')
+    db.session.add(session)
+    db.session.flush()
+
+    for att_data in attendances:
+        att_type = att_data.get('type', 'absent')
+        is_present = att_type != 'absent'
+        att = SessionAttendance(
+            session_id=session.id,
+            player_id=att_data['player_id'],
+            is_present=is_present,
+            attendance_type=att_type
+        )
+        db.session.add(att)
+
+    db.session.commit()
+    return jsonify({'status': 'ok', 'session_id': session.id})
+
+@app.route('/api/attendance/update', methods=['POST'])
+@login_required
+def api_attendance_update():
+    data = request.json
+    session_id = data.get('session_id')
+    date_str = data.get('date')
+    attendances = data.get('attendances', [])
+
+    session = TrainingSession.query.get_or_404(session_id)
+    team = session.team
+    is_owner = (team.user_id == current_user.id)
+    is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+    if not is_owner and not is_staff:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    if date_str:
+        session.date = datetime.strptime(date_str, '%Y-%m-%d')
+
+    for att_data in attendances:
+        att = SessionAttendance.query.filter_by(session_id=session.id, player_id=att_data['player_id']).first()
+        att_type = att_data.get('type', 'absent')
+        if att:
+            att.attendance_type = att_type
+            att.is_present = att_type != 'absent'
+        else:
+            new_att = SessionAttendance(
+                session_id=session.id,
+                player_id=att_data['player_id'],
+                is_present=att_type != 'absent',
+                attendance_type=att_type
+            )
+            db.session.add(new_att)
+
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+@app.route('/api/attendance/delete', methods=['POST'])
+@login_required
+def api_attendance_delete():
+    data = request.json
+    session_id = data.get('session_id')
+    session = TrainingSession.query.get_or_404(session_id)
+    team = session.team
+    is_owner = (team.user_id == current_user.id)
+    is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+    if not is_owner and not is_staff:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    db.session.delete(session)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+@app.route('/api/attendance/get')
+@login_required
+def api_attendance_get():
+    session_id = request.args.get('session_id')
+    session = TrainingSession.query.get_or_404(session_id)
+    team = session.team
+    is_owner = (team.user_id == current_user.id)
+    is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+    if not is_owner and not is_staff:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    att_map = {a.player_id: a.attendance_type or ('punctual' if a.is_present else 'absent') for a in session.attendance}
+    players = []
+    for p in team.players:
+        players.append({
+            'id': p.id, 'name': p.name, 'dorsal': p.dorsal,
+            'attendance_type': att_map.get(p.id, 'absent')
+        })
+    return jsonify({'session_id': session.id, 'date': session.date.strftime('%Y-%m-%d'),
+                    'team_id': team.id, 'team_name': team.name, 'players': players})
+
+# ── APIs de Escudo y Convocatorias ─────────────────────────────────
+
+ATTENDANCE_POINTS = {'punctual': 10, 'late_mild': 8, 'late_severe': 5, 'absent': 0}
+
+@app.route('/api/shield/save', methods=['POST'])
+@login_required
+def api_shield_save():
+    data = request.json
+    player_id = data.get('player_id')
+    points = data.get('points', 20)
+    match_date_str = data.get('match_date')
+    player = Player.query.get_or_404(player_id)
+    team = player.team
+    if team.user_id != current_user.id:
+        is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+        if not is_staff:
+            return jsonify({'error': 'Unauthorized'}), 403
+    shield = PlayerShield.query.filter_by(player_id=player_id).first()
+    if points == 0 or points is None:
+        if shield:
+            db.session.delete(shield)
+            db.session.commit()
+        return jsonify({'status': 'ok', 'action': 'removed'})
+    match_date = datetime.strptime(match_date_str, '%Y-%m-%d').date() if match_date_str else None
+    if shield:
+        shield.points = points
+        shield.match_date = match_date
+    else:
+        shield = PlayerShield(player_id=player_id, points=points, match_date=match_date)
+        db.session.add(shield)
+    db.session.commit()
+    return jsonify({'status': 'ok', 'action': 'saved'})
+
+@app.route('/api/convocatoria/data')
+def api_convocatoria_data():
+    team_id = request.args.get('team_id', type=int)
+    token = request.args.get('token')
+    team = Team.query.get_or_404(team_id)
+
+    is_auth = False
+    if current_user.is_authenticated:
+        is_auth = team.user_id == current_user.id or \
+                  TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+    if not is_auth and token != team.public_token:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    last_n = team.convocatoria_last_n or 5
+    sessions = TrainingSession.query.filter(
+        TrainingSession.team_id == team.id,
+        TrainingSession.plan_id.is_(None)
+    ).order_by(TrainingSession.date.desc()).limit(last_n).all()
+    sessions.reverse()
+
+    players_data = []
+    for p in sorted(team.players, key=lambda x: x.dorsal):
+        shield = PlayerShield.query.filter_by(player_id=p.id).first()
+        shield_pts = shield.points if shield else 0
+        shield_date = shield.match_date.strftime('%d/%m/%Y') if shield and shield.match_date else None
+        training_pts = []
+        total = shield_pts
+        for s in sessions:
+            att = SessionAttendance.query.filter_by(session_id=s.id, player_id=p.id).first()
+            att_type = (att.attendance_type or ('punctual' if att.is_present else 'absent')) if att else 'absent'
+            pts = ATTENDANCE_POINTS.get(att_type, 0)
+            training_pts.append({'pts': pts, 'type': att_type})
+            total += pts
+        players_data.append({
+            'id': p.id, 'name': p.name, 'dorsal': p.dorsal,
+            'shield_pts': shield_pts, 'shield_date': shield_date,
+            'trainings': training_pts, 'total': total
+        })
+    players_data.sort(key=lambda x: x['total'], reverse=True)
+
+    training_dates = [s.date.strftime('%d/%m') for s in sessions]
+    return jsonify({
+        'players': players_data,
+        'training_dates': training_dates,
+        'convocatoria_text': team.convocatoria_text or '',
+        'last_n': last_n
+    })
+
+@app.route('/api/convocatoria/config', methods=['POST'])
+@login_required
+def api_convocatoria_config():
+    data = request.json
+    team_id = data.get('team_id')
+    team = Team.query.get_or_404(team_id)
+    if team.user_id != current_user.id:
+        is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+        if not is_staff:
+            return jsonify({'error': 'Unauthorized'}), 403
+    if 'visible' in data:
+        team.convocatoria_visible = data['visible']
+    if 'text' in data:
+        team.convocatoria_text = data['text']
+    if 'last_n' in data:
+        team.convocatoria_last_n = data['last_n']
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
 @app.route('/api/start_session_from_court', methods=['POST'])
 @login_required
 def api_start_session_from_court():
@@ -3691,7 +3936,8 @@ def public_team_ranking_logic(team):
                           num_matches=num_matches,
                           gallery_drills=gallery_drills_ordered,
                           hl_count=hl_count,
-                          hl_color=hl_color)
+                          hl_color=hl_color,
+                          publicToken=team.public_token)
 
 @app.route('/team/<int:id>/stats')
 @login_required

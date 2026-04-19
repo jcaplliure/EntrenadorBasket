@@ -198,6 +198,25 @@
             -webkit-box-orient: vertical; overflow: hidden;
         }
         .gallery-drill-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: auto; padding-top: 4px; }
+        /* Convocatorias */
+        .conv-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
+        .conv-table th {
+            background: rgba(255,255,255,0.06); padding: 8px 6px;
+            text-align: center; font-size: 0.7rem; color: rgba(231,237,247,0.7);
+            white-space: nowrap;
+        }
+        .conv-table th:first-child { text-align: left; }
+        .conv-table td { padding: 6px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .conv-table td:first-child { text-align: left; font-weight: 600; white-space: nowrap; }
+        .conv-table td:last-child { font-weight: 700; color: var(--accent, #4a9eff); }
+        .conv-type-punctual { color: #22c55e; }
+        .conv-type-late_mild { color: #f59e0b; }
+        .conv-type-late_severe { color: #f97316; }
+        .conv-type-absent { color: #ef4444; opacity: 0.6; }
+        .conv-shield { color: #a78bfa; font-weight: 700; }
+        .conv-text-preview { cursor: pointer; }
+        .conv-text-full { display: none; white-space: pre-wrap; font-size: 0.8rem; line-height: 1.5; }
+        .conv-text-full.show { display: block; }
         /* Filtros */
         .filters-container {
             background: rgba(13, 31, 45, 0.95);
@@ -442,6 +461,24 @@
         </div>
         {% endif %}
 
+        <!-- Tabla de Convocatorias -->
+        {% if team.convocatoria_visible %}
+        <div class="section-card">
+            <h4 class="mb-2 fw-bold"><i class="bi bi-clipboard-check"></i> Convocatorias</h4>
+            <div id="convTextSection" style="display:none;" class="mb-3">
+                <p class="conv-text-preview small opacity-75 mb-1" id="convTextPreview" onclick="toggleConvText()"></p>
+                <div class="conv-text-full small opacity-75" id="convTextFull"></div>
+            </div>
+            <div class="table-responsive">
+                <table class="conv-table" id="convTable">
+                    <thead id="convHead"></thead>
+                    <tbody id="convBody"></tbody>
+                </table>
+            </div>
+            <div id="convLoading" class="text-center py-3"><div class="spinner-border spinner-border-sm text-info"></div></div>
+        </div>
+        {% endif %}
+
         <!-- Galería de Ejercicios -->
         {% if gallery_drills %}
         <div class="section-card">
@@ -570,6 +607,58 @@
             window.location.href = `/p/${publicToken}?${params.toString()}`;
         }
         
+        // Convocatorias
+        {% if team.convocatoria_visible %}
+        (async function loadConvocatoria() {
+            try {
+                const res = await fetch(`/api/convocatoria/data?team_id={{ team.id }}&token={{ publicToken }}`);
+                const data = await res.json();
+                document.getElementById('convLoading').style.display = 'none';
+
+                if (data.convocatoria_text) {
+                    const sec = document.getElementById('convTextSection');
+                    sec.style.display = 'block';
+                    const preview = data.convocatoria_text.substring(0, 120) + (data.convocatoria_text.length > 120 ? '...' : '');
+                    document.getElementById('convTextPreview').textContent = preview + ' (ver más)';
+                    document.getElementById('convTextFull').textContent = data.convocatoria_text;
+                }
+
+                const thead = document.getElementById('convHead');
+                let hRow = '<tr><th>Jugador</th><th>🛡️</th>';
+                data.training_dates.forEach(d => { hRow += `<th>${d}</th>`; });
+                hRow += '<th>Total</th></tr>';
+                thead.innerHTML = hRow;
+
+                const tbody = document.getElementById('convBody');
+                data.players.forEach(p => {
+                    let row = `<td>#${p.dorsal} ${p.name}</td>`;
+                    const shieldLabel = p.shield_pts ? `${p.shield_pts}` : '-';
+                    const shieldTitle = p.shield_date ? `No convocado: ${p.shield_date}` : '';
+                    row += `<td class="conv-shield" title="${shieldTitle}">${shieldLabel}</td>`;
+                    p.trainings.forEach(t => {
+                        row += `<td class="conv-type-${t.type}">${t.pts}</td>`;
+                    });
+                    row += `<td>${p.total}</td>`;
+                    tbody.innerHTML += `<tr>${row}</tr>`;
+                });
+            } catch(e) {
+                document.getElementById('convLoading').innerHTML = '<span class="text-muted small">Error cargando datos</span>';
+            }
+        })();
+
+        function toggleConvText() {
+            const full = document.getElementById('convTextFull');
+            const preview = document.getElementById('convTextPreview');
+            if (full.classList.contains('show')) {
+                full.classList.remove('show');
+                preview.style.display = 'block';
+            } else {
+                full.classList.add('show');
+                preview.style.display = 'none';
+            }
+        }
+        {% endif %}
+
         // Funciones para abrir ejercicios (igual que en index.html)
         function openDrillContent(drillId, mediaType, externalLink, mediaFile) {
             if (mediaType === 'link' && externalLink) {

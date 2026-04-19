@@ -18,7 +18,7 @@
         .nav-link { color: #cfd6e3 !important; font-weight: 600; font-size: 0.85rem; }
         .nav-link.active, .nav-link:hover { color: #ffffff !important; }
         .page-title { color: #ffffff; }
-        .btn-accent { background: var(--accent-color); color: #0a1929; border: none; }
+        .btn-accent { background: var(--accent-color); color: #0a1929; border: none; font-weight: 700; }
         .btn-accent:hover { filter: brightness(1.05); }
         .plan-card {
             background: var(--bg-panel);
@@ -26,55 +26,81 @@
             border-radius: 16px;
             padding: 14px 16px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.25);
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 12px;
-            cursor: pointer;
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 12px; cursor: pointer;
             transition: border-color 0.2s, box-shadow 0.2s;
             text-decoration: none;
         }
-        .plan-card:hover {
-            border-color: var(--accent-color);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.35);
-        }
-        .plan-left {
-            min-width: 90px;
-            text-align: center;
-            color: var(--cream);
-        }
+        .plan-card:hover { border-color: var(--accent-color); box-shadow: 0 8px 20px rgba(0,0,0,0.35); }
+        .plan-left { min-width: 90px; text-align: center; color: var(--cream); }
         .plan-date { font-weight: 700; font-size: 0.95rem; }
         .plan-time { font-size: 0.8rem; opacity: 0.85; }
-        .plan-title {
-            color: #ffffff;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
+        .plan-title { color: #ffffff; font-weight: 700; margin-bottom: 6px; }
         .plan-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .pill {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 999px;
-            border: 1px solid var(--cream);
-            color: var(--cream);
-            font-size: 0.75rem;
-            line-height: 1;
+            display: inline-block; padding: 2px 8px; border-radius: 999px;
+            border: 1px solid var(--cream); color: var(--cream);
+            font-size: 0.75rem; line-height: 1;
         }
         .action-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 1px solid var(--cream);
-            color: var(--cream);
-            background: transparent;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            transition: all 0.2s ease;
+            width: 32px; height: 32px; border-radius: 50%;
+            border: 1px solid var(--cream); color: var(--cream);
+            background: transparent; display: inline-flex;
+            align-items: center; justify-content: center;
+            text-decoration: none; transition: all 0.2s ease;
         }
         .action-btn:hover { color: var(--accent-color); border-color: var(--accent-color); }
         .empty-state { color: rgba(255,255,255,0.65); }
+
+        /* Tabs */
+        .nav-tabs { border-bottom: 2px solid rgba(255,255,255,0.1); }
+        .nav-tabs .nav-link {
+            color: rgba(255,255,255,0.5); border: none; font-weight: 700;
+            padding: 10px 20px; font-size: 0.9rem;
+            border-bottom: 3px solid transparent; transition: all 0.2s;
+        }
+        .nav-tabs .nav-link:hover { color: rgba(255,255,255,0.8); border-bottom-color: rgba(255,255,255,0.2); }
+        .nav-tabs .nav-link.active {
+            color: var(--accent-color); background: transparent;
+            border-bottom-color: var(--accent-color);
+        }
+
+        /* Tabla asistencia */
+        .att-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .att-table th {
+            background: rgba(255,255,255,0.06); color: var(--cream);
+            padding: 8px 6px; font-size: 0.7rem; text-transform: uppercase;
+            letter-spacing: 0.5px; text-align: center; white-space: nowrap;
+        }
+        .att-table th:first-child { text-align: left; border-radius: 8px 0 0 0; }
+        .att-table th:last-child { border-radius: 0 8px 0 0; }
+        .att-table td { padding: 6px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .att-table td:first-child { text-align: left; font-weight: 600; font-size: 0.85rem; }
+        .att-table tr:last-child td { border-bottom: none; }
+        .att-radio { display: none; }
+        .att-label {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.12); transition: all 0.15s;
+            font-size: 1rem;
+        }
+        .att-label:hover { border-color: rgba(255,255,255,0.3); }
+        .att-radio:checked + .att-label.type-absent { background: #ef4444; border-color: #ef4444; }
+        .att-radio:checked + .att-label.type-punctual { background: #22c55e; border-color: #22c55e; }
+        .att-radio:checked + .att-label.type-late_mild { background: #f59e0b; border-color: #f59e0b; }
+        .att-radio:checked + .att-label.type-late_severe { background: #f97316; border-color: #f97316; }
+
+        .att-session-card {
+            background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 12px; cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .att-session-card:hover { border-color: var(--accent-color); }
+        .att-session-card .att-stats {
+            display: flex; gap: 8px; font-size: 0.75rem;
+        }
+        .att-stat { display: flex; align-items: center; gap: 3px; }
     </style>
 </head>
 <body>
@@ -117,10 +143,10 @@
         </div>
     </nav>
 
-    <div class="container" style="max-width: 800px;">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="fw-bold page-title">📚 Mis Entrenamientos</h3>
-            <a href="/create_plan" class="btn btn-accent fw-bold"><i class="bi bi-plus-lg"></i> Nuevo Plan</a>
+    <div class="container" style="max-width: 900px;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold page-title mb-0">📚 Mis Entrenamientos</h3>
+            <a href="/create_plan" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Nuevo Plan</a>
         </div>
 
         {% with messages = get_flashed_messages() %}
@@ -129,42 +155,259 @@
             {% endif %}
         {% endwith %}
 
-        <div>
-            {% for plan in plans %}
-            <div class="plan-card" onclick="window.location='/edit_plan/{{ plan.id }}'">
-                <div class="plan-left">
-                    <div class="plan-date">{{ plan.date.strftime('%d/%m/%Y') }}</div>
-                    {% if plan.date.strftime('%H:%M') != '00:00' %}
-                    <div class="plan-time">{{ plan.date.strftime('%H:%M') }}</div>
-                    {% endif %}
-                </div>
-                <div class="flex-grow-1">
-                    <div class="plan-title">{{ plan.name }}</div>
-                    <div class="plan-meta">
-                        {% if plan.team_name %}<span class="pill">{{ plan.team_name }}</span>{% endif %}
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-planes" type="button">
+                    <i class="bi bi-clipboard-check"></i> Planes
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-asistencias" type="button">
+                    <i class="bi bi-person-check"></i> Asistencias
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- TAB PLANES -->
+            <div class="tab-pane fade show active" id="tab-planes">
+                {% for plan in plans %}
+                <div class="plan-card" onclick="window.location='/edit_plan/{{ plan.id }}'">
+                    <div class="plan-left">
+                        <div class="plan-date">{{ plan.date.strftime('%d/%m/%Y') }}</div>
+                        {% if plan.date.strftime('%H:%M') != '00:00' %}
+                        <div class="plan-time">{{ plan.date.strftime('%H:%M') }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="plan-title">{{ plan.name }}</div>
+                        <div class="plan-meta">
+                            {% if plan.team_name %}<span class="pill">{{ plan.team_name }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2" onclick="event.stopPropagation()">
+                        <a href="/duplicate_plan/{{ plan.id }}" class="action-btn" title="Duplicar">
+                            <i class="bi bi-files"></i>
+                        </a>
+                        <a href="/edit_plan/{{ plan.id }}" class="action-btn" title="Editar">
+                            <i class="bi bi-pencil-fill"></i>
+                        </a>
+                        <a href="/delete_plan/{{ plan.id }}" class="action-btn" onclick="return confirm('¿Seguro que quieres borrar este plan entero?')" title="Borrar">
+                            <i class="bi bi-trash-fill"></i>
+                        </a>
                     </div>
                 </div>
-                <div class="d-flex gap-2" onclick="event.stopPropagation()">
-                    <a href="/duplicate_plan/{{ plan.id }}" class="action-btn" title="Duplicar">
-                        <i class="bi bi-files"></i>
-                    </a>
-                    <a href="/edit_plan/{{ plan.id }}" class="action-btn" title="Editar Bloques/Info">
-                        <i class="bi bi-pencil-fill"></i>
-                    </a>
-                    <a href="/delete_plan/{{ plan.id }}" class="action-btn" onclick="return confirm('¿Seguro que quieres borrar este plan entero?')" title="Borrar">
-                        <i class="bi bi-trash-fill"></i>
-                    </a>
+                {% else %}
+                <div class="text-center py-5 empty-state">
+                    <i class="bi bi-clipboard-x display-1 text-muted opacity-25"></i>
+                    <p class="mt-3 text-muted">Aún no has creado ningún entrenamiento.</p>
+                    <a href="/create_plan" class="btn btn-accent">Crear el primero</a>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- TAB ASISTENCIAS -->
+            <div class="tab-pane fade" id="tab-asistencias">
+                <!-- Formulario nuevo registro -->
+                <div class="card mb-4" style="background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px;">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle"></i> Registrar Asistencia</h5>
+                        <div class="row g-2 align-items-end mb-3">
+                            <div class="col-6 col-md-4">
+                                <label for="attTeamSelect" class="form-label small fw-bold">Equipo</label>
+                                <select class="form-select form-select-sm" id="attTeamSelect" onchange="loadAttPlayers()">
+                                    <option value="">Selecciona...</option>
+                                    {% for t in teams %}
+                                    <option value="{{ t.id }}">{{ t.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label for="attDate" class="form-label small fw-bold">Fecha</label>
+                                <input type="date" class="form-control form-control-sm" id="attDate"
+                                       value="{{ now_date if now_date else '' }}">
+                            </div>
+                            <div class="col-12 col-md-5 d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-light flex-grow-1" onclick="selectAllAtt('punctual')" title="Marcar todos Puntual">
+                                    <i class="bi bi-check-all"></i> Todos Puntual
+                                </button>
+                                <button class="btn btn-sm btn-outline-light flex-grow-1" onclick="selectAllAtt('absent')" title="Marcar todos Ausente">
+                                    <i class="bi bi-x-lg"></i> Todos Ausente
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="attTableContainer" style="display:none;">
+                            <div class="table-responsive">
+                                <table class="att-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="min-width:120px;">Jugador</th>
+                                            <th title="No asistencia (0 pts)">❌<br><span style="font-size:0.6rem;">0 pts</span></th>
+                                            <th title="Puntual (10 pts)">✅<br><span style="font-size:0.6rem;">10 pts</span></th>
+                                            <th title="Tarde 1-5 min (8 pts)">⏰<br><span style="font-size:0.6rem;">8 pts</span></th>
+                                            <th title="Tarde >5 min (5 pts)">🐢<br><span style="font-size:0.6rem;">5 pts</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="attPlayerRows">
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex gap-2 mt-3">
+                                <button class="btn btn-accent flex-grow-1" onclick="saveAttendance()">
+                                    <i class="bi bi-save"></i> Guardar Asistencia
+                                </button>
+                            </div>
+                        </div>
+                        <div id="attNoTeam" class="text-center py-3 text-muted small">
+                            Selecciona un equipo para registrar la asistencia.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Historial de sesiones -->
+                <h5 class="fw-bold mb-3"><i class="bi bi-clock-history"></i> Historial de Asistencias</h5>
+                <div id="attHistoryList">
+                    {% for s in attendance_sessions %}
+                    <div class="att-session-card" onclick="loadExistingAttendance({{ s.id }})">
+                        <div class="plan-left" style="min-width:80px;">
+                            <div class="plan-date">{{ s.date.strftime('%d/%m/%Y') }}</div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <span class="fw-bold">{{ s.team.name }}</span>
+                            <div class="att-stats mt-1">
+                                {% set present_count = s.attendance|selectattr('is_present')|list|length %}
+                                {% set total_count = s.attendance|list|length %}
+                                <span class="att-stat"><span style="color:#22c55e;">✅</span> {{ present_count }}</span>
+                                <span class="att-stat"><span style="color:#ef4444;">❌</span> {{ total_count - present_count }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2" onclick="event.stopPropagation()">
+                            <button class="action-btn" onclick="loadExistingAttendance({{ s.id }})" title="Editar">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>
+                            <button class="action-btn" onclick="deleteAttendance({{ s.id }})" title="Borrar">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted small" id="attEmptyHistory">
+                        <i class="bi bi-inbox display-4 opacity-25"></i>
+                        <p class="mt-2">No hay registros de asistencia todavía.</p>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
-            {% else %}
-            <div class="text-center py-5 empty-state">
-                <i class="bi bi-clipboard-x display-1 text-muted opacity-25"></i>
-                <p class="mt-3 text-muted">Aún no has creado ningún entrenamiento.</p>
-                <a href="/create_plan" class="btn btn-accent">Crear el primero</a>
-            </div>
-            {% endfor %}
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let attPlayers = [];
+        let editingSessionId = null;
+
+        async function loadAttPlayers() {
+            const teamId = document.getElementById('attTeamSelect').value;
+            if (!teamId) {
+                document.getElementById('attTableContainer').style.display = 'none';
+                document.getElementById('attNoTeam').style.display = 'block';
+                return;
+            }
+            editingSessionId = null;
+            const res = await fetch(`/api/get_team_players?team_id=${teamId}`);
+            const data = await res.json();
+            attPlayers = data.players || [];
+            renderAttTable(attPlayers.map(p => ({...p, attendance_type: 'absent'})));
+        }
+
+        function renderAttTable(players) {
+            const tbody = document.getElementById('attPlayerRows');
+            tbody.innerHTML = '';
+            players.forEach(p => {
+                const types = ['absent', 'punctual', 'late_mild', 'late_severe'];
+                const emojis = ['❌', '✅', '⏰', '🐢'];
+                let cells = `<td>#${p.dorsal} ${p.name}</td>`;
+                types.forEach((t, i) => {
+                    const checked = p.attendance_type === t ? 'checked' : '';
+                    cells += `<td>
+                        <input type="radio" class="att-radio" name="att_${p.id}" id="att_${p.id}_${t}" value="${t}" ${checked}>
+                        <label class="att-label type-${t}" for="att_${p.id}_${t}">${emojis[i]}</label>
+                    </td>`;
+                });
+                tbody.innerHTML += `<tr>${cells}</tr>`;
+            });
+            document.getElementById('attTableContainer').style.display = 'block';
+            document.getElementById('attNoTeam').style.display = 'none';
+        }
+
+        function selectAllAtt(type) {
+            document.querySelectorAll(`input.att-radio[value="${type}"]`).forEach(r => r.checked = true);
+        }
+
+        async function saveAttendance() {
+            const teamId = document.getElementById('attTeamSelect').value;
+            const date = document.getElementById('attDate').value;
+            if (!teamId) return alert('Selecciona un equipo');
+            if (!date) return alert('Selecciona una fecha');
+
+            const attendances = [];
+            const rows = document.querySelectorAll('#attPlayerRows tr');
+            rows.forEach(row => {
+                const radio = row.querySelector('input.att-radio:checked');
+                const playerId = parseInt(radio.name.replace('att_', ''));
+                attendances.push({ player_id: playerId, type: radio.value });
+            });
+
+            const url = editingSessionId ? '/api/attendance/update' : '/api/attendance/create';
+            const body = editingSessionId
+                ? { session_id: editingSessionId, date, attendances }
+                : { team_id: parseInt(teamId), date, attendances };
+
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+
+            if (res.ok) {
+                const verb = editingSessionId ? 'actualizada' : 'registrada';
+                alert(`Asistencia ${verb} correctamente`);
+                location.reload();
+            } else {
+                alert('Error al guardar la asistencia');
+            }
+        }
+
+        async function loadExistingAttendance(sessionId) {
+            const res = await fetch(`/api/attendance/get?session_id=${sessionId}`);
+            const data = await res.json();
+            editingSessionId = sessionId;
+
+            document.getElementById('attTeamSelect').value = data.team_id;
+            document.getElementById('attDate').value = data.date;
+            renderAttTable(data.players);
+
+            document.querySelector('[data-bs-target="#tab-asistencias"]').click();
+            document.getElementById('attTableContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteAttendance(sessionId) {
+            if (!confirm('¿Seguro que quieres borrar este registro de asistencia?')) return;
+            const res = await fetch('/api/attendance/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ session_id: sessionId })
+            });
+            if (res.ok) location.reload();
+            else alert('Error al borrar');
+        }
+
+        // Poner fecha de hoy por defecto
+        if (!document.getElementById('attDate').value) {
+            document.getElementById('attDate').value = new Date().toISOString().split('T')[0];
+        }
+    </script>
 </body>
 </html>
