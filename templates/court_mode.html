@@ -568,7 +568,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-bold">Jugadores Presentes</label>
                         <p class="small text-muted mb-2">Todos están preseleccionados. Desmarca los que no están.</p>
-                        <div id="sessionPlayersList" class="border rounded p-2 bg-white" style="max-height: 300px; overflow-y: auto;">
+                        <div id="sessionPlayersList" class="border rounded p-2" style="max-height: 300px; overflow-y: auto; background: rgba(255,255,255,0.08); color: var(--text-primary);">
                             <!-- Se llenará dinámicamente -->
                         </div>
                     </div>
@@ -656,10 +656,10 @@
                 <div class="modal-body">
                     {% if active_session %}
                     <p class="small text-muted mb-3">Selecciona los jugadores que han llegado tarde:</p>
-                    <div id="absentPlayersList" class="mb-3" style="max-height: 300px; overflow-y: auto;">
+                    <div id="latePlayersList" class="mb-3" style="max-height: 300px; overflow-y: auto;">
                         <!-- Se llenará dinámicamente -->
                     </div>
-                    <div id="noAbsentPlayers" class="alert alert-info small" style="display: none;">
+                    <div id="noLatePlayers" class="alert alert-info small" style="display: none;">
                         <i class="bi bi-info-circle"></i> Todos los jugadores del equipo ya están presentes.
                     </div>
                     {% else %}
@@ -1118,14 +1118,14 @@
             const response = await fetch(`/api/get_absent_players?session_id=${activeSessionId}`);
             const data = await response.json();
             
-            const listEl = document.getElementById('absentPlayersList');
-            const noAbsentEl = document.getElementById('noAbsentPlayers');
+            const listEl = document.getElementById('latePlayersList');
+            const noLateEl = document.getElementById('noLatePlayers');
             
             if (data.players.length === 0) {
                 listEl.innerHTML = '';
-                noAbsentEl.style.display = 'block';
+                noLateEl.style.display = 'block';
             } else {
-                noAbsentEl.style.display = 'none';
+                noLateEl.style.display = 'none';
                 listEl.innerHTML = '';
                 data.players.forEach(player => {
                     const div = document.createElement('div');
