@@ -267,6 +267,7 @@
         .floating-btn.show { display: flex; align-items: center; justify-content: center; }
         .floating-btn.ranking { bottom: 80px; }
         .floating-btn.add-player { bottom: 140px; background: #22c55e; box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4); }
+        .floating-btn.add-note { bottom: 200px; background: #f59e0b; box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4); }
 
         .done-btn {
             background: rgba(18,35,59,0.6);
@@ -415,20 +416,36 @@
     {% set ns = namespace(cumulative=0) %}
     
     {% for item in plan.items|sort(attribute='order') %}
+    {% set item_title = item.drill.title if item.drill else (item.custom_name or 'Nota') %}
+    {% set item_drill_id = item.drill.id if item.drill else 0 %}
+    {% set is_note = not item.drill %}
     <div class="drill-container {% if loop.first %}active{% endif %}" 
          id="drill-{{ loop.index0 }}" 
          data-item-id="{{ item.id }}"
-         data-title="{{ item.drill.title }}"
+         data-title="{{ item_title }}"
          data-duration="{{ item.duration }}"
-         data-drill-id="{{ item.drill.id }}"
-         data-planned-start="{{ ns.cumulative }}">
+         data-drill-id="{{ item_drill_id }}"
+         data-planned-start="{{ ns.cumulative }}"
+         data-is-note="{{ 'true' if is_note else 'false' }}">
         
         <div class="main-content">
             <div>
                 <span class="block-tag">{{ item.block_name }}</span>
-                <h1 class="exercise-title mt-3">{{ item.drill.title }}</h1>
+                {% if is_note %}
+                <h1 class="exercise-title mt-3"><i class="bi bi-sticky" style="color: var(--warning);"></i> {{ item_title }}</h1>
+                {% else %}
+                <h1 class="exercise-title mt-3">{{ item_title }}</h1>
+                {% endif %}
         </div>
 
+        {% if is_note %}
+        <div class="media-box" style="display:flex;align-items:center;justify-content:center;">
+            <div class="text-center">
+                <i class="bi bi-sticky-fill" style="font-size: 5rem; color: var(--warning); opacity: 0.6;"></i>
+                <p class="mt-2" style="font-size: 0.875rem; color: var(--text-muted);">Ejercicio libre (nota)</p>
+            </div>
+        </div>
+        {% else %}
         <div class="media-box" onclick="openMedia('{{ item.drill.media_type }}', '{{ item.drill.media_file }}', '{{ item.drill.external_link }}')">
                 {% if item.drill.cover_image %}
                     <img src="{{ url_for('static', filename='uploads/' + item.drill.cover_image) }}">
@@ -469,6 +486,7 @@
                     </div>
             {% endif %}
         </div>
+        {% endif %}
 
         <div class="timer-section">
                 <div class="timer-label">Tiempo del Ejercicio ({{ item.duration }} min)</div>
@@ -487,15 +505,17 @@
         </div>
 
             <div class="d-flex gap-2">
-                <button class="btn gamify-btn flex-grow-1" onclick="openGamificationModal({{ item.drill.id }}, '{{ item.drill.title }}', {{ loop.index0 }})">
+                {% if not is_note %}
+                <button class="btn gamify-btn flex-grow-1" onclick="openGamificationModal({{ item_drill_id }}, '{{ item_title }}', {{ loop.index0 }})">
                 <i class="bi bi-trophy-fill"></i> Gamificar
             </button>
-                <button class="btn done-btn" id="notDoneBtn-{{ loop.index0 }}" onclick="toggleExerciseDone({{ loop.index0 }}, {{ item.id }})" style="min-width: 120px;">
+                {% endif %}
+                <button class="btn done-btn {% if is_note %}flex-grow-1{% endif %}" id="notDoneBtn-{{ loop.index0 }}" onclick="toggleExerciseDone({{ loop.index0 }}, {{ item.id }})" style="min-width: 120px;">
                     <i class="bi bi-check-circle-fill"></i> <span id="notDoneText-{{ loop.index0 }}">Realizado</span>
             </button>
         </div>
 
-            {% if item.drill.description %}
+            {% if not is_note and item.drill.description %}
             <div class="exercise-description">
                 {{ item.drill.description }}
             </div>
@@ -521,6 +541,9 @@
     </button>
     <button class="floating-btn add-player" id="addPlayerBtn" onclick="openAddPlayerModal()" title="Añadir Jugador Tardío">
         <i class="bi bi-person-plus-fill"></i>
+    </button>
+    <button class="floating-btn add-note" id="addNoteBtn" onclick="openAddNoteModal()" title="Añadir Ejercicio Libre">
+        <i class="bi bi-sticky-fill"></i>
     </button>
 
     <!-- Gráfico de Ranking -->
@@ -645,6 +668,31 @@
         </div>
     </div>
 
+    <!-- Modal Añadir Ejercicio Libre -->
+    <div class="modal fade" id="addNoteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-sticky"></i> Ejercicio Libre</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre</label>
+                        <input type="text" class="form-control" id="courtNoteName" placeholder="Ej: Rueda de entradas">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Duración (min)</label>
+                        <input type="number" class="form-control" id="courtNoteDuration" value="10" min="1" max="120">
+                    </div>
+                    <button class="btn btn-warning w-100 fw-bold" onclick="addNoteExercise()">
+                        <i class="bi bi-plus-lg"></i> Insertar aquí
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Añadir Jugador Tardío -->
     <div class="modal fade" id="addPlayerModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -695,6 +743,7 @@
         {% if active_session %}
         document.getElementById('rankingToggleBtn').classList.add('show');
         document.getElementById('addPlayerBtn').classList.add('show');
+        document.getElementById('addNoteBtn').classList.add('show');
         {% endif %}
 
         function startSession() {
@@ -1167,6 +1216,38 @@
             }
         }
         
+        function openAddNoteModal() {
+            new bootstrap.Modal(document.getElementById('addNoteModal')).show();
+        }
+
+        async function addNoteExercise() {
+            const name = document.getElementById('courtNoteName').value.trim();
+            if (!name) return alert('Escribe un nombre');
+            const duration = parseInt(document.getElementById('courtNoteDuration').value) || 10;
+            const currentContainer = document.getElementById(`drill-${currentIdx}`);
+            const currentBlockTag = currentContainer ? currentContainer.querySelector('.block-tag') : null;
+            const blockName = currentBlockTag ? currentBlockTag.textContent : 'General';
+            const order = currentIdx;
+
+            const res = await fetch('/api/add_note_to_plan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    plan_id: {{ plan.id }},
+                    custom_name: name,
+                    block_name: blockName,
+                    duration: duration,
+                    order: order
+                })
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('addNoteModal')).hide();
+                location.reload();
+            } else {
+                alert('Error al añadir');
+            }
+        }
+
         // Estado de ejercicios realizados/no realizados
         let exerciseStates = {}; // {item_id: {was_completed: true/false, duration: X}}
         
@@ -1312,6 +1393,7 @@
                 
                 document.getElementById('rankingToggleBtn').classList.add('show');
                 document.getElementById('addPlayerBtn').classList.add('show');
+                document.getElementById('addNoteBtn').classList.add('show');
                 
                 // Iniciar la sesión de Modo Pista
                 sessionStartTime = new Date();

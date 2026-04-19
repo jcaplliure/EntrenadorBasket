@@ -409,10 +409,12 @@ class TrainingPlan(db.Model):
 class TrainingItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     training_plan_id = db.Column(db.Integer, db.ForeignKey('training_plan.id'), nullable=False)
-    drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
+    drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=True)
     block_name = db.Column(db.String(50), nullable=False)
     order = db.Column(db.Integer, default=0)
-    duration = db.Column(db.Integer, default=10) 
+    duration = db.Column(db.Integer, default=10)
+    custom_name = db.Column(db.String(200), nullable=True)
+    custom_tag_ids = db.Column(db.Text, nullable=True)
     drill = db.relationship('Drill')
 
 @login_manager.user_loader
@@ -924,6 +926,10 @@ def run_migrations():
         period INTEGER DEFAULT 1,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+    # Ejercicios como nota (sin drill_id)
+    _run_alter('ALTER TABLE training_item ALTER COLUMN drill_id DROP NOT NULL')
+    _run_alter('ALTER TABLE training_item ADD COLUMN IF NOT EXISTS custom_name VARCHAR(200)')
+    _run_alter('ALTER TABLE training_item ADD COLUMN IF NOT EXISTS custom_tag_ids TEXT')
     # Sistema de asistencia con tipo (puntual, tarde, ausente)
     _run_alter("ALTER TABLE session_attendance ADD COLUMN IF NOT EXISTS attendance_type VARCHAR(20) DEFAULT 'absent'")
     # Tabla de escudos de no convocatoria
@@ -1425,7 +1431,8 @@ def view_plan(id):
     owned = Team.query.filter_by(user_id=current_user.id).all()
     staff_teams = [s.team for s in TeamStaff.query.filter_by(user_id=current_user.id, status='accepted').all()]
     my_teams = list(set(owned + staff_teams))
-    return render_template('view_plan.html', plan=plan, all_drills=all_drills, tags=tags, total_minutes=total_minutes, teams=my_teams)
+    tag_groups = get_tag_groups_for_user(current_user)
+    return render_template('view_plan.html', plan=plan, all_drills=all_drills, tags=tags, total_minutes=total_minutes, teams=my_teams, tag_groups=tag_groups)
 
 @app.route('/add_item_to_plan', methods=['POST'])
 @login_required
@@ -1457,6 +1464,35 @@ def api_add_item_to_plan():
         return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
     
     item = TrainingItem(training_plan_id=plan.id, drill_id=drill_id, block_name=block_name, duration=duration)
+    db.session.add(item)
+    db.session.commit()
+    return jsonify({'status': 'ok', 'item_id': item.id})
+
+@app.route('/api/add_note_to_plan', methods=['POST'])
+@login_required
+def api_add_note_to_plan():
+    data = request.json
+    plan_id = data.get('plan_id')
+    custom_name = data.get('custom_name', 'Ejercicio libre')
+    block_name = data.get('block_name', 'General')
+    duration = data.get('duration', 10)
+    tag_ids = data.get('tag_ids', [])
+    order = data.get('order')
+
+    plan = TrainingPlan.query.get(plan_id)
+    if not plan or plan.user_id != current_user.id:
+        return jsonify({'status': 'error', 'message': 'No autorizado'}), 403
+
+    if order is None:
+        max_order = max((it.order for it in plan.items), default=-1)
+        order = max_order + 1
+
+    item = TrainingItem(
+        training_plan_id=plan.id, drill_id=None,
+        block_name=block_name, duration=duration, order=order,
+        custom_name=custom_name,
+        custom_tag_ids=json.dumps(tag_ids) if tag_ids else None
+    )
     db.session.add(item)
     db.session.commit()
     return jsonify({'status': 'ok', 'item_id': item.id})

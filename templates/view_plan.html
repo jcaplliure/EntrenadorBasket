@@ -58,12 +58,21 @@
                 <div class="list-group-item d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center overflow-hidden">
                         <span class="badge bg-primary me-2">{{ item.duration }}'</span>
+                        {% if item.drill %}
                         <div class="text-truncate">
                             <strong>{{ item.drill.title }}</strong>
                         </div>
+                        {% else %}
+                        <div class="text-truncate">
+                            <i class="bi bi-sticky text-warning me-1"></i>
+                            <strong>{{ item.custom_name or 'Nota' }}</strong>
+                        </div>
+                        {% endif %}
                     </div>
                     <div>
+                        {% if item.drill %}
                         <a href="/drill/{{ item.drill.id }}" class="btn btn-link text-dark p-0 me-2" data-bs-toggle="modal" data-bs-target="#viewDrillModal" onclick="loadDrill({{ item.drill.id }})"><i class="bi bi-eye"></i></a>
+                        {% endif %}
                         <a href="/delete_plan_item/{{ item.id }}" class="text-danger"><i class="bi bi-trash"></i></a>
                     </div>
                 </div>
@@ -83,23 +92,68 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form action="/add_item_to_plan" method="POST">
-                        <input type="hidden" name="plan_id" value="{{ plan.id }}">
-                        <input type="hidden" name="block_name" id="inputBlockName">
-                        
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Buscar Ejercicio</label>
-                            <select name="drill_id" class="form-select" id="drillSelect" style="width: 100%;">
-                                <option></option>
-                                {% for drill in all_drills %}
-                                <option value="{{ drill.id }}">{{ drill.title }}</option>
-                                {% endfor %}
-                            </select>
+                    <!-- Tabs: Biblioteca o Nota -->
+                    <ul class="nav nav-tabs nav-fill mb-3" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabDrill">
+                                <i class="bi bi-collection"></i> Biblioteca
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabNote">
+                                <i class="bi bi-sticky"></i> Nota libre
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="tabDrill">
+                            <form action="/add_item_to_plan" method="POST">
+                                <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                                <input type="hidden" name="block_name" id="inputBlockName">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Buscar Ejercicio</label>
+                                    <select name="drill_id" class="form-select" id="drillSelect" style="width: 100%;">
+                                        <option></option>
+                                        {% for drill in all_drills %}
+                                        <option value="{{ drill.id }}">{{ drill.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success fw-bold">Añadir</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-success fw-bold">Añadir</button>
+                        <div class="tab-pane fade" id="tabNote">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Nombre del ejercicio</label>
+                                <input type="text" class="form-control" id="noteName" placeholder="Ej: Rueda de entradas">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Duración (min)</label>
+                                <input type="number" class="form-control" id="noteDuration" value="10" min="1" max="120">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Grupo / Etiqueta</label>
+                                <select class="form-select" id="noteTagSelect" multiple>
+                                    {% for group in tag_groups %}
+                                    {% if group.tags %}
+                                    <optgroup label="{{ group.group.name }}">
+                                        {% for tag in group.tags %}
+                                        <option value="{{ tag.id }}">{{ tag.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="d-grid">
+                                <button type="button" class="btn btn-warning fw-bold" onclick="addNoteItem()">
+                                    <i class="bi bi-sticky"></i> Añadir como nota
+                                </button>
+                            </div>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -127,6 +181,28 @@
 
         function loadDrill(id) {
             $('.modal-content').load('/drill/' + id);
+        }
+
+        async function addNoteItem() {
+            const name = document.getElementById('noteName').value.trim();
+            if (!name) return alert('Escribe un nombre para el ejercicio');
+            const duration = parseInt(document.getElementById('noteDuration').value) || 10;
+            const tagSelect = document.getElementById('noteTagSelect');
+            const tagIds = Array.from(tagSelect.selectedOptions).map(o => parseInt(o.value));
+            const blockName = document.getElementById('inputBlockName').value;
+            const res = await fetch('/api/add_note_to_plan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    plan_id: {{ plan.id }},
+                    custom_name: name,
+                    block_name: blockName,
+                    duration: duration,
+                    tag_ids: tagIds
+                })
+            });
+            if (res.ok) location.reload();
+            else alert('Error al añadir');
         }
     </script>
 </body>
