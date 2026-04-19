@@ -155,6 +155,62 @@
             {% endif %}
         {% endwith %}
 
+        <!-- Gráfico Distribución -->
+        <div class="card mb-3" style="background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2" style="cursor:pointer;" onclick="toggleDistChart()">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-pie-chart"></i> Distribución de Ejercicios</h6>
+                    <i class="bi bi-chevron-up" id="distChevron"></i>
+                </div>
+                <div id="distChartPanel">
+                    <div class="row g-2 align-items-end mb-3">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small fw-bold" for="distTeam">Equipo</label>
+                            <select class="form-select form-select-sm" id="distTeam" onchange="loadDistChart()">
+                                <option value="">Selecciona...</option>
+                                {% for t in teams %}
+                                <option value="{{ t.id }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small fw-bold" for="distMode">Modo</label>
+                            <select class="form-select form-select-sm" id="distMode" onchange="toggleDistMode()">
+                                <option value="last_n">Últimos N</option>
+                                <option value="dates">Fechas</option>
+                            </select>
+                        </div>
+                        <div class="col-4 col-md-2" id="distLastNWrap">
+                            <label class="form-label small fw-bold" for="distLastN">Cantidad</label>
+                            <input type="number" class="form-control form-control-sm" id="distLastN" value="10" min="1" max="100">
+                        </div>
+                        <div class="col-6 col-md-2" id="distDateFromWrap" style="display:none;">
+                            <label class="form-label small fw-bold" for="distDateFrom">Desde</label>
+                            <input type="date" class="form-control form-control-sm" id="distDateFrom">
+                        </div>
+                        <div class="col-6 col-md-2" id="distDateToWrap" style="display:none;">
+                            <label class="form-label small fw-bold" for="distDateTo">Hasta</label>
+                            <input type="date" class="form-control form-control-sm" id="distDateTo">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-sm btn-accent" onclick="loadDistChart()"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="text-center small fw-bold opacity-75 mb-1">Por Grupo</p>
+                            <canvas id="distGroupChart" height="200"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="text-center small fw-bold opacity-75 mb-1">Por Etiqueta</p>
+                            <canvas id="distTagChart" height="200"></canvas>
+                        </div>
+                    </div>
+                    <p class="text-center small text-muted mt-2" id="distInfo"></p>
+                </div>
+            </div>
+        </div>
+
         <!-- Tabs -->
         <ul class="nav nav-tabs mb-3" role="tablist">
             <li class="nav-item">
@@ -304,9 +360,98 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         let attPlayers = [];
         let editingSessionId = null;
+        let distGroupChart = null;
+        let distTagChart = null;
+
+        const CHART_COLORS = [
+            '#4aa3ff','#22c55e','#f59e0b','#ef4444','#a78bfa',
+            '#f97316','#06b6d4','#ec4899','#84cc16','#8b5cf6',
+            '#14b8a6','#f43f5e','#eab308','#6366f1','#10b981'
+        ];
+
+        function toggleDistChart() {
+            const panel = document.getElementById('distChartPanel');
+            const chevron = document.getElementById('distChevron');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                chevron.className = 'bi bi-chevron-up';
+            } else {
+                panel.style.display = 'none';
+                chevron.className = 'bi bi-chevron-down';
+            }
+        }
+
+        function toggleDistMode() {
+            const mode = document.getElementById('distMode').value;
+            document.getElementById('distLastNWrap').style.display = mode === 'last_n' ? 'block' : 'none';
+            document.getElementById('distDateFromWrap').style.display = mode === 'dates' ? 'block' : 'none';
+            document.getElementById('distDateToWrap').style.display = mode === 'dates' ? 'block' : 'none';
+        }
+
+        async function loadDistChart() {
+            const teamId = document.getElementById('distTeam').value;
+            if (!teamId) return;
+            const mode = document.getElementById('distMode').value;
+            let url = `/api/training_distribution?team_id=${teamId}`;
+            if (mode === 'last_n') {
+                url += `&last_n=${document.getElementById('distLastN').value}`;
+            } else {
+                const from = document.getElementById('distDateFrom').value;
+                const to = document.getElementById('distDateTo').value;
+                if (from && to) url += `&date_from=${from}&date_to=${to}`;
+            }
+            const res = await fetch(url);
+            const data = await res.json();
+
+            document.getElementById('distInfo').textContent = 
+                `${data.session_count} sesiones · ${data.total_minutes} min totales`;
+
+            renderDonut('distGroupChart', data.groups, 'distGroupChart');
+            renderDonut('distTagChart', data.tags, 'distTagChart');
+        }
+
+        function renderDonut(canvasId, dataObj, chartVar) {
+            const canvas = document.getElementById(canvasId);
+            const labels = Object.keys(dataObj);
+            const values = Object.values(dataObj);
+            const total = values.reduce((a, b) => a + b, 0) || 1;
+
+            if (chartVar === 'distGroupChart' && distGroupChart) distGroupChart.destroy();
+            if (chartVar === 'distTagChart' && distTagChart) distTagChart.destroy();
+
+            const chart = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: labels.map((l, i) => {
+                        const pct = ((values[i] / total) * 100).toFixed(1);
+                        return `${l} (${pct}%)`;
+                    }),
+                    datasets: [{
+                        data: values,
+                        backgroundColor: labels.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
+                        borderWidth: 1,
+                        borderColor: 'rgba(11,20,36,0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: '#c7d2e3', font: { size: 11 }, padding: 8, boxWidth: 12 }
+                        }
+                    },
+                    cutout: '55%'
+                }
+            });
+
+            if (chartVar === 'distGroupChart') distGroupChart = chart;
+            else distTagChart = chart;
+        }
 
         async function loadAttPlayers() {
             const teamId = document.getElementById('attTeamSelect').value;

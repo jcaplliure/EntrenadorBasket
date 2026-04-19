@@ -17,7 +17,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import or_, and_, func, desc, case, text
-from datetime import datetime
+from datetime import datetime, timedelta
 from authlib.integrations.flask_client import OAuth
 from io import BytesIO
 from PIL import Image, ImageDraw
@@ -3355,6 +3355,85 @@ def api_convocatoria_config():
         team.convocatoria_last_n = data['last_n']
     db.session.commit()
     return jsonify({'status': 'ok'})
+
+@app.route('/api/training_distribution')
+@login_required
+def api_training_distribution():
+    team_id = request.args.get('team_id', type=int)
+    last_n = request.args.get('last_n', type=int)
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+
+    if not team_id:
+        return jsonify({'error': 'team_id required'}), 400
+
+    team = Team.query.get_or_404(team_id)
+    is_owner = (team.user_id == current_user.id)
+    is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+    if not is_owner and not is_staff:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    sessions_q = TrainingSession.query.filter(
+        TrainingSession.team_id == team_id,
+        TrainingSession.plan_id.isnot(None)
+    ).order_by(TrainingSession.date.desc())
+
+    if date_from and date_to:
+        sessions_q = sessions_q.filter(
+            TrainingSession.date >= datetime.strptime(date_from, '%Y-%m-%d'),
+            TrainingSession.date <= datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+        )
+    elif last_n:
+        sessions_q = sessions_q.limit(last_n)
+
+    sessions = sessions_q.all()
+    plan_ids = list({s.plan_id for s in sessions if s.plan_id})
+
+    if not plan_ids:
+        return jsonify({'groups': {}, 'tags': {}, 'total_minutes': 0, 'session_count': len(sessions)})
+
+    items = TrainingItem.query.filter(TrainingItem.training_plan_id.in_(plan_ids)).all()
+
+    group_minutes = {}
+    tag_minutes = {}
+
+    for item in items:
+        dur = item.duration or 0
+        if item.drill and item.drill.primary_tag:
+            tag = item.drill.primary_tag
+            tag_name = tag.name
+            group_name = tag.group.name if tag.group else 'Sin grupo'
+        elif item.custom_tag_ids:
+            try:
+                c_tag_ids = json.loads(item.custom_tag_ids)
+                if c_tag_ids:
+                    first_tag = Tag.query.get(c_tag_ids[0])
+                    if first_tag:
+                        tag_name = first_tag.name
+                        group_name = first_tag.group.name if first_tag.group else 'Sin grupo'
+                    else:
+                        tag_name = 'Sin etiqueta'
+                        group_name = 'Sin grupo'
+                else:
+                    tag_name = 'Sin etiqueta'
+                    group_name = 'Sin grupo'
+            except Exception:
+                tag_name = 'Sin etiqueta'
+                group_name = 'Sin grupo'
+        else:
+            tag_name = 'Sin etiqueta'
+            group_name = 'Sin grupo'
+
+        group_minutes[group_name] = group_minutes.get(group_name, 0) + dur
+        tag_minutes[tag_name] = tag_minutes.get(tag_name, 0) + dur
+
+    total = sum(group_minutes.values())
+    return jsonify({
+        'groups': group_minutes,
+        'tags': tag_minutes,
+        'total_minutes': total,
+        'session_count': len(sessions)
+    })
 
 @app.route('/api/start_session_from_court', methods=['POST'])
 @login_required
