@@ -166,7 +166,7 @@ class Team(db.Model):
     # Convocatorias
     convocatoria_visible = db.Column(db.Boolean, default=False)
     convocatoria_text = db.Column(db.Text, nullable=True)
-    convocatoria_last_n = db.Column(db.Integer, default=5)
+    convocatoria_last_n = db.Column(db.Integer, default=6)
     # Gráficos individuales visibles en portal (legacy)
     chart_all_visible = db.Column(db.Boolean, default=True)
     chart_attack_visible = db.Column(db.Boolean, default=False)
@@ -947,7 +947,9 @@ def run_migrations():
     # Visibilidad tabla convocatorias y texto explicativo
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS convocatoria_visible BOOLEAN DEFAULT FALSE')
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS convocatoria_text TEXT')
-    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS convocatoria_last_n INTEGER DEFAULT 5')
+    _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS convocatoria_last_n INTEGER DEFAULT 6')
+    # Cambio de 5 a 6 entrenamientos por defecto (solo afecta a equipos con el valor antiguo explícito)
+    _run_alter('UPDATE team SET convocatoria_last_n = 6 WHERE convocatoria_last_n = 5')
     # Sistema de gráficos dinámicos
     _run_alter('''CREATE TABLE IF NOT EXISTS chart_definition (
         id SERIAL PRIMARY KEY,
@@ -3342,7 +3344,7 @@ def api_convocatoria_data():
     if not is_auth and token != team.public_token:
         return jsonify({'error': 'Unauthorized'}), 403
 
-    last_n = team.convocatoria_last_n or 5
+    last_n = team.convocatoria_last_n or 6
     sessions = TrainingSession.query.filter(
         TrainingSession.team_id == team.id,
         TrainingSession.plan_id.is_(None)

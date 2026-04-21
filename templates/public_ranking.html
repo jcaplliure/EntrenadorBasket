@@ -192,21 +192,23 @@
             line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2;
             -webkit-box-orient: vertical; overflow: hidden;
         }
+        .gallery-drill-note-wrap { position: relative; }
         .gallery-drill-note {
             font-size: 0.78rem; color: rgba(231,237,247,0.65); line-height: 1.4;
             display: -webkit-box; -webkit-line-clamp: 3;
             -webkit-box-orient: vertical; overflow: hidden;
+            padding-right: 20px;
         }
         .gallery-drill-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: auto; padding-top: 4px; }
-        .gallery-drill-more {
-            position: absolute; top: 8px; right: 8px; z-index: 4;
-            width: 28px; height: 28px; border-radius: 50%;
-            border: none; background: rgba(0,0,0,0.55); color: #fff;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.85rem; cursor: pointer;
-            transition: background 0.15s, transform 0.15s;
+        .gallery-drill-more-inline {
+            position: absolute; right: 0; bottom: 0;
+            border: none; background: transparent; padding: 0;
+            color: rgba(120,180,255,0.85);
+            font-size: 0.95rem; line-height: 1; cursor: pointer;
+            transition: color 0.15s, transform 0.15s;
         }
-        .gallery-drill-more:hover { background: rgba(0,0,0,0.85); transform: scale(1.1); }
+        .gallery-drill-more-inline:hover { color: #ffffff; transform: scale(1.15); }
+        .gallery-drill-more-inline.no-note { position: static; align-self: flex-end; margin-top: -4px; }
         /* Convocatorias */
         .conv-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
         .conv-table th {
@@ -497,11 +499,6 @@
                     <div class="gallery-drill-play">
                         <div class="play-btn"><i class="bi bi-play-fill"></i></div>
                     </div>
-                    <button type="button" class="gallery-drill-more"
-                            title="Ver texto completo"
-                            onclick="event.stopPropagation(); openDrillInfoModal({{ drill.id }})">
-                        <i class="bi bi-info-circle-fill"></i>
-                    </button>
                     {% if drill.origin == 'youtube' %}
                         <img src="{{ get_config_url('youtube_overlay') }}" class="overlay-img">
                     {% elif drill.origin == 'pdf' %}
@@ -518,7 +515,20 @@
                          data-title="{{ drill.title }}"
                          data-note="{{ drill.gallery_note or '' }}">{{ drill.title }}</div>
                     {% if drill.gallery_note %}
-                    <div class="gallery-drill-note"><i class="bi bi-chat-left-text me-1"></i>{{ drill.gallery_note }}</div>
+                    <div class="gallery-drill-note-wrap">
+                        <div class="gallery-drill-note"><i class="bi bi-chat-left-text me-1"></i>{{ drill.gallery_note }}</div>
+                        <button type="button" class="gallery-drill-more-inline"
+                                title="Ver texto completo"
+                                onclick="event.stopPropagation(); openDrillInfoModal({{ drill.id }})">
+                            <i class="bi bi-info-circle-fill"></i>
+                        </button>
+                    </div>
+                    {% else %}
+                    <button type="button" class="gallery-drill-more-inline no-note"
+                            title="Ver texto completo"
+                            onclick="event.stopPropagation(); openDrillInfoModal({{ drill.id }})">
+                        <i class="bi bi-info-circle-fill"></i>
+                    </button>
                     {% endif %}
                     <div class="gallery-drill-tags">
                         {% if drill.primary_tag %}
