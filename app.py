@@ -212,7 +212,7 @@ class Player(db.Model):
 class PlayerShield(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     player_id = db.Column(db.Integer, db.ForeignKey('player.id'), nullable=False)
-    points = db.Column(db.Integer, default=20)
+    points = db.Column(db.Integer, default=100)
     match_date = db.Column(db.Date, nullable=True)
     notes = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -939,7 +939,7 @@ def run_migrations():
     _run_alter('''CREATE TABLE IF NOT EXISTS player_shield (
         id SERIAL PRIMARY KEY,
         player_id INTEGER NOT NULL REFERENCES player(id),
-        points INTEGER DEFAULT 20,
+        points INTEGER DEFAULT 100,
         match_date DATE,
         notes VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
