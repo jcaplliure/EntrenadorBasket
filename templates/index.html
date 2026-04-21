@@ -449,15 +449,6 @@
         // Función para abrir el contenido directamente
         function openDrillContent(drillId, mediaType, externalLink, mediaFile) {
             if (mediaType === 'link' && externalLink) {
-                // Si es YouTube, abrir en embed
-                if (externalLink.includes('youtu')) {
-                    const videoId = extractYouTubeId(externalLink);
-                    if (videoId) {
-                        window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
-                        return;
-                    }
-                }
-                // Otros enlaces externos
                 window.open(externalLink, '_blank');
             } else if (mediaType === 'pdf' && mediaFile) {
                 // Abrir PDF en nueva pestaña

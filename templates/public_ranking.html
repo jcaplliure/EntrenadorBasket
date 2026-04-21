@@ -198,6 +198,15 @@
             -webkit-box-orient: vertical; overflow: hidden;
         }
         .gallery-drill-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: auto; padding-top: 4px; }
+        .gallery-drill-more {
+            position: absolute; top: 8px; right: 8px; z-index: 4;
+            width: 28px; height: 28px; border-radius: 50%;
+            border: none; background: rgba(0,0,0,0.55); color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.85rem; cursor: pointer;
+            transition: background 0.15s, transform 0.15s;
+        }
+        .gallery-drill-more:hover { background: rgba(0,0,0,0.85); transform: scale(1.1); }
         /* Convocatorias */
         .conv-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8rem; }
         .conv-table th {
@@ -301,16 +310,6 @@
             <h2 class="fw-bold">{{ team.name }}</h2>
             <p class="opacity-75">🏆 Portal del Equipo</p>
         </div>
-
-        <!-- Notas del Entrenador (PRIMERO) -->
-        {% if team.public_notes %}
-        <div class="section-card">
-            <h4 class="mb-3 fw-bold"><i class="bi bi-sticky-fill"></i> Notas del Entrenador</h4>
-            <div class="opacity-90" style="white-space: pre-line; line-height: 1.6;">
-                {{ team.public_notes }}
-            </div>
-        </div>
-        {% endif %}
 
         <!-- Gráficos de Analytics (solo si analytics_visible y hay gráficos habilitados) -->
         {% if team.analytics_visible and charts %}
@@ -479,50 +478,100 @@
         </div>
         {% endif %}
 
-        <!-- Galería de Ejercicios -->
-        {% if gallery_drills %}
+        <!-- Notas del Entrenador (justo antes de la galería) -->
+        {% if team.public_notes %}
         <div class="section-card">
-            <h4 class="mb-3 fw-bold"><i class="bi bi-collection-play-fill"></i> Ejercicios Recomendados</h4>
-            <p class="opacity-75 small mb-3">Material para entrenar en casa</p>
-            <div class="row row-cols-2 row-cols-md-3 g-3">
-                {% for drill in gallery_drills %}
-                {% set img_url = url_for('static', filename='uploads/' + drill.cover_image) if drill.cover_image else (url_for('static', filename='uploads/' + drill.cover_fallback) if drill.cover_fallback else (url_for('static', filename='uploads/' + drill.media_file) if drill.media_type == 'image' and drill.media_file else get_config_url('generic_bg'))) %}
-                <div class="col">
-                    <div class="gallery-drill-card" onclick="openDrillContent({{ drill.id }}, '{{ drill.media_type }}', '{{ drill.external_link or '' }}', '{{ drill.media_file or '' }}')">
-                        <!-- Zona imagen -->
-                        <div class="gallery-drill-media" style="background-image:url('{{ img_url }}');">
-                            <div class="gallery-drill-overlay"></div>
-                            <div class="gallery-drill-play">
-                                <div class="play-btn"><i class="bi bi-play-fill"></i></div>
-                            </div>
-                            {% if drill.origin == 'youtube' %}
-                                <img src="{{ get_config_url('youtube_overlay') }}" class="overlay-img">
-                            {% elif drill.origin == 'pdf' %}
-                                <img src="{{ get_config_url('pdf_overlay') }}" class="overlay-img">
-                            {% elif drill.origin == 'tiktok' %}
-                                <img src="{{ get_config_url('tiktok_overlay') }}" class="overlay-img">
-                            {% elif drill.origin == 'instagram' %}
-                                <img src="{{ get_config_url('instagram_overlay') }}" class="overlay-img">
-                            {% endif %}
-                        </div>
-                        <!-- Zona info -->
-                        <div class="gallery-drill-info">
-                            <div class="gallery-drill-title">{{ drill.title }}</div>
-                            {% if drill.gallery_note %}
-                            <div class="gallery-drill-note"><i class="bi bi-chat-left-text me-1"></i>{{ drill.gallery_note }}</div>
-                            {% endif %}
-                            <div class="gallery-drill-tags">
-                                {% if drill.primary_tag %}
-                                    <span class="pill pill-primary">{{ drill.primary_tag.name }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
+            <h4 class="mb-3 fw-bold"><i class="bi bi-sticky-fill"></i> Notas del Entrenador</h4>
+            <div class="opacity-90" style="white-space: pre-line; line-height: 1.6;">
+                {{ team.public_notes }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% macro gallery_public_card(drill) %}
+        {% set img_url = url_for('static', filename='uploads/' + drill.cover_image) if drill.cover_image else (url_for('static', filename='uploads/' + drill.cover_fallback) if drill.cover_fallback else (url_for('static', filename='uploads/' + drill.media_file) if drill.media_type == 'image' and drill.media_file else get_config_url('generic_bg'))) %}
+        <div class="col">
+            <div class="gallery-drill-card" onclick="openDrillContent({{ drill.id }}, '{{ drill.media_type }}', '{{ drill.external_link or '' }}', '{{ drill.media_file or '' }}')">
+                <div class="gallery-drill-media" style="background-image:url('{{ img_url }}');">
+                    <div class="gallery-drill-overlay"></div>
+                    <div class="gallery-drill-play">
+                        <div class="play-btn"><i class="bi bi-play-fill"></i></div>
+                    </div>
+                    <button type="button" class="gallery-drill-more"
+                            title="Ver texto completo"
+                            onclick="event.stopPropagation(); openDrillInfoModal({{ drill.id }})">
+                        <i class="bi bi-info-circle-fill"></i>
+                    </button>
+                    {% if drill.origin == 'youtube' %}
+                        <img src="{{ get_config_url('youtube_overlay') }}" class="overlay-img">
+                    {% elif drill.origin == 'pdf' %}
+                        <img src="{{ get_config_url('pdf_overlay') }}" class="overlay-img">
+                    {% elif drill.origin == 'tiktok' %}
+                        <img src="{{ get_config_url('tiktok_overlay') }}" class="overlay-img">
+                    {% elif drill.origin == 'instagram' %}
+                        <img src="{{ get_config_url('instagram_overlay') }}" class="overlay-img">
+                    {% endif %}
+                </div>
+                <div class="gallery-drill-info">
+                    <div class="gallery-drill-title"
+                         data-drill-id="{{ drill.id }}"
+                         data-title="{{ drill.title }}"
+                         data-note="{{ drill.gallery_note or '' }}">{{ drill.title }}</div>
+                    {% if drill.gallery_note %}
+                    <div class="gallery-drill-note"><i class="bi bi-chat-left-text me-1"></i>{{ drill.gallery_note }}</div>
+                    {% endif %}
+                    <div class="gallery-drill-tags">
+                        {% if drill.primary_tag %}
+                            <span class="pill pill-primary">{{ drill.primary_tag.name }}</span>
+                        {% endif %}
                     </div>
                 </div>
+            </div>
+        </div>
+        {% endmacro %}
+
+        <!-- Galería: Ejercicios de equipo -->
+        {% if gallery_team %}
+        <div class="section-card">
+            <h4 class="mb-3 fw-bold"><i class="bi bi-people-fill"></i> Ejercicios de equipo</h4>
+            <p class="opacity-75 small mb-3">Ejercicios que practicamos en equipo</p>
+            <div class="row row-cols-2 row-cols-md-3 g-3">
+                {% for drill in gallery_team %}
+                    {{ gallery_public_card(drill) }}
                 {% endfor %}
             </div>
         </div>
         {% endif %}
+
+        <!-- Galería: Ejercicios colectivos -->
+        {% if gallery_collective %}
+        <div class="section-card">
+            <h4 class="mb-3 fw-bold"><i class="bi bi-collection-play-fill"></i> Ejercicios colectivos</h4>
+            <p class="opacity-75 small mb-3">Material para practicar también en casa</p>
+            <div class="row row-cols-2 row-cols-md-3 g-3">
+                {% for drill in gallery_collective %}
+                    {{ gallery_public_card(drill) }}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Modal Ver más -->
+        <div class="modal fade" id="drillInfoModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="background:#1a2332;color:#e7edf7;border:1px solid rgba(255,255,255,0.12);">
+                    <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.1);">
+                        <h5 class="modal-title fw-bold" id="drillInfoModalTitle"></h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="drillInfoModalNote" style="white-space: pre-line; line-height: 1.6; font-size: 0.95rem; color: rgba(231,237,247,0.85);"></div>
+                        <div id="drillInfoModalNoNote" class="opacity-50 fst-italic small" style="display:none;">Sin notas del entrenador.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         
 
         <div class="text-center mt-5 mb-4">
@@ -659,18 +708,30 @@
         }
         {% endif %}
 
+        // Abrir modal con título y nota completos
+        function openDrillInfoModal(drillId) {
+            const el = document.querySelector('.gallery-drill-title[data-drill-id="' + drillId + '"]');
+            if (!el) return;
+            const title = el.dataset.title || '';
+            const note = el.dataset.note || '';
+            document.getElementById('drillInfoModalTitle').textContent = title;
+            const noteEl = document.getElementById('drillInfoModalNote');
+            const noNote = document.getElementById('drillInfoModalNoNote');
+            if (note && note.trim().length > 0) {
+                noteEl.textContent = note;
+                noteEl.style.display = '';
+                noNote.style.display = 'none';
+            } else {
+                noteEl.textContent = '';
+                noteEl.style.display = 'none';
+                noNote.style.display = '';
+            }
+            new bootstrap.Modal(document.getElementById('drillInfoModal')).show();
+        }
+
         // Funciones para abrir ejercicios (igual que en index.html)
         function openDrillContent(drillId, mediaType, externalLink, mediaFile) {
             if (mediaType === 'link' && externalLink) {
-                // Si es YouTube, abrir en embed
-                if (externalLink.includes('youtu')) {
-                    const videoId = extractYouTubeId(externalLink);
-                    if (videoId) {
-                        window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
-                        return;
-                    }
-                }
-                // Otros enlaces externos
                 window.open(externalLink, '_blank');
             } else if (mediaType === 'pdf' && mediaFile) {
                 // Abrir PDF en nueva pestaña

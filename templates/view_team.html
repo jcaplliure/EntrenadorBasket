@@ -750,72 +750,91 @@
                 </div>
             </div>
 
-            <!-- Galería de Ejercicios -->
-            <div class="public-section">
-                <h6 class="public-title"><i class="bi bi-collection-play"></i> Galería de Ejercicios</h6>
-                <p class="public-subtitle">Añade ejercicios que los jugadores puedan ver y practicar en casa. Arrastra para reordenar.</p>
-                
-                <div class="mb-3">
-                    <button type="button" class="btn w-100" style="background: var(--bg-input); border: 1px dashed var(--accent-color); color: var(--accent-color); padding: 12px;" onclick="openLibraryModal()">
-                        <i class="bi bi-plus-circle"></i> Añadir ejercicio de la biblioteca
-                    </button>
-                </div>
-                
-                <div id="galleryDrills" class="row row-cols-1 row-cols-md-2 g-3">
-                    {% for drill in gallery_items_ordered %}
-                    <div class="col gallery-item" data-drill-id="{{ drill.id }}">
-                        <div class="card h-100 shadow-sm position-relative" style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px;">
-                            <div class="row g-0 align-items-stretch">
-                                <!-- Imagen del ejercicio -->
-                                <div class="col-4">
-                                    <div class="card-img-zone h-100" style="min-height: 120px; border-radius: 12px 0 0 12px;" 
-                                         onclick="openDrillContent({{ drill.id }}, '{{ drill.media_type }}', '{{ drill.external_link or '' }}', '{{ drill.media_file or '' }}')">
-                                        {% if drill.cover_image %}
-                                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
-                                        {% elif drill.cover_fallback %}
-                                            <img src="{{ url_for('static', filename='uploads/' + drill.cover_fallback) }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
-                                        {% elif drill.media_type == 'image' and drill.media_file %}
-                                            <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
-                                        {% else %}
-                                            <img src="{{ get_config_url('generic_bg') }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
-                                        {% endif %}
-
-                                        {% if drill.origin == 'youtube' %}
-                                            <img src="{{ get_config_url('youtube_overlay') }}" class="overlay-img">
-                                        {% elif drill.origin == 'pdf' %}
-                                            <img src="{{ get_config_url('pdf_overlay') }}" class="overlay-img">
-                                        {% endif %}
+            {% macro gallery_card(drill) %}
+            <div class="col gallery-item" data-drill-id="{{ drill.id }}">
+                <div class="card h-100 shadow-sm position-relative" style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px;">
+                    <div class="row g-0 align-items-stretch">
+                        <div class="col-4">
+                            <div class="card-img-zone h-100" style="min-height: 120px; border-radius: 12px 0 0 12px;"
+                                 onclick="openDrillContent({{ drill.id }}, '{{ drill.media_type }}', '{{ drill.external_link or '' }}', '{{ drill.media_file or '' }}')">
+                                {% if drill.cover_image %}
+                                    <img src="{{ url_for('static', filename='uploads/' + drill.cover_image) }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
+                                {% elif drill.cover_fallback %}
+                                    <img src="{{ url_for('static', filename='uploads/' + drill.cover_fallback) }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
+                                {% elif drill.media_type == 'image' and drill.media_file %}
+                                    <img src="{{ url_for('static', filename='uploads/' + drill.media_file) }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
+                                {% else %}
+                                    <img src="{{ get_config_url('generic_bg') }}" loading="lazy" style="border-radius: 12px 0 0 12px;">
+                                {% endif %}
+                                {% if drill.origin == 'youtube' %}
+                                    <img src="{{ get_config_url('youtube_overlay') }}" class="overlay-img">
+                                {% elif drill.origin == 'pdf' %}
+                                    <img src="{{ get_config_url('pdf_overlay') }}" class="overlay-img">
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-8">
+                            <div class="card-body p-3 d-flex flex-column h-100">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title fw-bold mb-0" style="font-size: 0.95rem; color: var(--cream);">{{ drill.title }}</h6>
+                                    <div class="d-flex gap-1">
+                                        <button class="btn btn-sm btn-outline-secondary drag-handle" title="Arrastrar para reordenar" style="cursor: grab;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger"
+                                                onclick="removeFromGallery({{ drill.id }})"
+                                                title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                     </div>
                                 </div>
-                                <!-- Contenido -->
-                                <div class="col-8">
-                                    <div class="card-body p-3 d-flex flex-column h-100">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <h6 class="card-title fw-bold mb-0" style="font-size: 0.95rem; color: var(--cream);">{{ drill.title }}</h6>
-                                            <div class="d-flex gap-1">
-                                                <button class="btn btn-sm btn-outline-secondary drag-handle" title="Arrastrar para reordenar" style="cursor: grab;">
-                                                    <i class="bi bi-grip-vertical"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" 
-                                                        onclick="removeFromGallery({{ drill.id }})" 
-                                                        title="Eliminar">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <textarea class="form-control form-control-sm drill-note" 
-                                                      data-drill-id="{{ drill.id }}"
-                                                      placeholder="Añade una nota para los jugadores..."
-                                                      style="font-size: 0.85rem; resize: none; height: 60px;"
-                                                      oninput="scheduleSaveNote({{ drill.id }}, this.value)"
-                                                      onblur="saveDrillNote({{ drill.id }}, this.value)">{{ drill.gallery_note or '' }}</textarea>
-                                        </div>
-                                    </div>
+                                <div class="flex-grow-1">
+                                    <textarea class="form-control form-control-sm drill-note"
+                                              data-drill-id="{{ drill.id }}"
+                                              placeholder="Añade una nota para los jugadores..."
+                                              style="font-size: 0.85rem; resize: none; height: 60px;"
+                                              oninput="scheduleSaveNote({{ drill.id }}, this.value)"
+                                              onblur="saveDrillNote({{ drill.id }}, this.value)">{{ drill.gallery_note or '' }}</textarea>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            {% endmacro %}
+
+            <!-- Galería: Ejercicios de equipo -->
+            <div class="public-section">
+                <h6 class="public-title"><i class="bi bi-people"></i> Ejercicios de equipo</h6>
+                <p class="public-subtitle">Ejercicios que los jugadores pueden practicar por su cuenta. Arrastra para reordenar.</p>
+
+                <div class="mb-3">
+                    <button type="button" class="btn w-100" style="background: var(--bg-input); border: 1px dashed var(--accent-color); color: var(--accent-color); padding: 12px;" onclick="openLibraryModal('team')">
+                        <i class="bi bi-plus-circle"></i> Añadir ejercicio de la biblioteca
+                    </button>
+                </div>
+
+                <div id="galleryDrillsTeam" class="row row-cols-1 row-cols-md-2 g-3" data-gallery-type="team">
+                    {% for drill in gallery_team %}
+                        {{ gallery_card(drill) }}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Galería: Ejercicios colectivos -->
+            <div class="public-section">
+                <h6 class="public-title"><i class="bi bi-collection-play"></i> Ejercicios colectivos</h6>
+                <p class="public-subtitle">Ejercicios que ejecutamos en equipo durante los entrenamientos. Arrastra para reordenar.</p>
+
+                <div class="mb-3">
+                    <button type="button" class="btn w-100" style="background: var(--bg-input); border: 1px dashed var(--accent-color); color: var(--accent-color); padding: 12px;" onclick="openLibraryModal('collective')">
+                        <i class="bi bi-plus-circle"></i> Añadir ejercicio de la biblioteca
+                    </button>
+                </div>
+
+                <div id="galleryDrillsCollective" class="row row-cols-1 row-cols-md-2 g-3" data-gallery-type="collective">
+                    {% for drill in gallery_collective %}
+                        {{ gallery_card(drill) }}
                     {% endfor %}
                 </div>
             </div>
@@ -896,7 +915,7 @@
         <div class="modal-dialog modal-xl">
             <div class="modal-content" style="background: var(--bg-panel); border: 1px solid var(--border-color);">
                 <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
-                    <h5 class="modal-title" style="color: var(--cream);"><i class="bi bi-collection-play"></i> Añadir ejercicio de la biblioteca</h5>
+                    <h5 class="modal-title" id="libraryModalLabel" style="color: var(--cream);"><i class="bi bi-collection-play"></i> Añadir ejercicio de la biblioteca</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -1097,36 +1116,33 @@
         
         // Drag and drop reordering
         function initSortable() {
-            const gallery = document.getElementById('galleryDrills');
-            if (!gallery) return;
-            
+            ['galleryDrillsTeam', 'galleryDrillsCollective'].forEach(gid => {
+                const gallery = document.getElementById(gid);
+                if (!gallery) return;
+                initSortableFor(gallery);
+            });
+        }
+
+        function initSortableFor(gallery) {
             let draggedItem = null;
-            
             gallery.querySelectorAll('.gallery-item').forEach(item => {
                 item.setAttribute('draggable', 'true');
-                
                 item.addEventListener('dragstart', function(e) {
                     draggedItem = this;
                     this.style.opacity = '0.5';
                 });
-                
                 item.addEventListener('dragend', function(e) {
                     this.style.opacity = '1';
                     draggedItem = null;
                     saveGalleryOrder();
                 });
-                
-                item.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                });
-                
+                item.addEventListener('dragover', function(e) { e.preventDefault(); });
                 item.addEventListener('drop', function(e) {
                     e.preventDefault();
-                    if (draggedItem !== this) {
-                        const allItems = Array.from(gallery.querySelectorAll('.gallery-item'));
+                    if (draggedItem && draggedItem !== this && draggedItem.parentNode === this.parentNode) {
+                        const allItems = Array.from(this.parentNode.querySelectorAll('.gallery-item'));
                         const draggedIdx = allItems.indexOf(draggedItem);
                         const targetIdx = allItems.indexOf(this);
-                        
                         if (draggedIdx < targetIdx) {
                             this.parentNode.insertBefore(draggedItem, this.nextSibling);
                         } else {
@@ -1136,9 +1152,9 @@
                 });
             });
         }
-        
+
         async function saveGalleryOrder() {
-            const items = document.querySelectorAll('.gallery-item');
+            const items = document.querySelectorAll('#galleryDrillsTeam .gallery-item, #galleryDrillsCollective .gallery-item');
             const order = Array.from(items).map(item => parseInt(item.dataset.drillId));
             
             const response = await fetch('/api/reorder_gallery', {
@@ -1160,12 +1176,19 @@
         
         // Library Modal
         let librarySearchTimeout = null;
+        let currentGalleryType = 'team';
 
-        function openLibraryModal() {
+        function openLibraryModal(galleryType) {
+            currentGalleryType = galleryType || 'team';
             document.getElementById('librarySearchInput').value = '';
-            // Limpiar selects
             Array.from(document.getElementById('libraryTagSelect').options).forEach(o => o.selected = false);
             document.getElementById('libraryOriginSelect').value = '';
+            const title = document.getElementById('libraryModalLabel');
+            if (title) {
+                title.textContent = currentGalleryType === 'collective'
+                    ? 'Añadir a Ejercicios colectivos'
+                    : 'Añadir a Ejercicios de equipo';
+            }
             searchLibrary();
             new bootstrap.Modal(document.getElementById('libraryModal')).show();
         }
@@ -1222,7 +1245,7 @@
             const response = await fetch('/api/add_to_gallery', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({team_id: {{ team.id }}, drill_id: drillId})
+                body: JSON.stringify({team_id: {{ team.id }}, drill_id: drillId, gallery_type: currentGalleryType})
             });
             
             if (response.ok) {
@@ -1236,13 +1259,6 @@
         // Drill functions
         function openDrillContent(drillId, mediaType, externalLink, mediaFile) {
             if (mediaType === 'link' && externalLink) {
-                if (externalLink.includes('youtu')) {
-                    const videoId = extractYouTubeId(externalLink);
-                    if (videoId) {
-                        window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
-                        return;
-                    }
-                }
                 window.open(externalLink, '_blank');
             } else if (mediaType === 'pdf' && mediaFile) {
                 window.open('/static/uploads/' + mediaFile, '_blank');

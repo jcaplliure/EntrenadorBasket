@@ -196,8 +196,9 @@ class TeamGalleryItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
     drill_id = db.Column(db.Integer, db.ForeignKey('drill.id'), nullable=False)
-    note = db.Column(db.Text, nullable=True)  # Nota del entrenador para los niños
+    note = db.Column(db.Text, nullable=True)
     display_order = db.Column(db.Integer, default=0)
+    gallery_type = db.Column(db.String(20), default='team')
     drill = db.relationship('Drill', backref='gallery_items')
 
 class Player(db.Model):
@@ -932,6 +933,8 @@ def run_migrations():
     _run_alter('ALTER TABLE training_item ADD COLUMN IF NOT EXISTS custom_tag_ids TEXT')
     # Sistema de asistencia con tipo (puntual, tarde, ausente)
     _run_alter("ALTER TABLE session_attendance ADD COLUMN IF NOT EXISTS attendance_type VARCHAR(20) DEFAULT 'absent'")
+    # Galerías separadas: equipo vs colectivos
+    _run_alter("ALTER TABLE team_gallery_item ADD COLUMN IF NOT EXISTS gallery_type VARCHAR(20) DEFAULT 'team'")
     # Tabla de escudos de no convocatoria
     _run_alter('''CREATE TABLE IF NOT EXISTS player_shield (
         id SERIAL PRIMARY KEY,
@@ -2598,9 +2601,10 @@ def view_team(id):
     gallery_items = TeamGalleryItem.query.filter_by(team_id=team.id).order_by(TeamGalleryItem.display_order).all()
     drill_notes = {item.drill_id: (item.note or '') for item in gallery_items}
     drill_order = {item.drill_id: item.display_order for item in gallery_items}
-    
-    # Ordenar gallery_drills según TeamGalleryItem.display_order
-    gallery_items_ordered = []
+    drill_types = {item.drill_id: (item.gallery_type or 'team') for item in gallery_items}
+
+    gallery_team = []
+    gallery_collective = []
     for d in team.gallery_drills:
         if not d.cover_image and d.primary_tag:
             d.cover_fallback = pick_cover_from_tag(d.primary_tag)
@@ -2609,10 +2613,15 @@ def view_team(id):
         d.origin = get_drill_origin(d)
         d.gallery_note = drill_notes.get(d.id, '')
         d.gallery_order = drill_order.get(d.id, 999)
-        gallery_items_ordered.append(d)
-    
-    # Ordenar por display_order
-    gallery_items_ordered.sort(key=lambda x: x.gallery_order)
+        gtype = drill_types.get(d.id, 'team')
+        if gtype == 'collective':
+            gallery_collective.append(d)
+        else:
+            gallery_team.append(d)
+
+    gallery_team.sort(key=lambda x: x.gallery_order)
+    gallery_collective.sort(key=lambda x: x.gallery_order)
+    gallery_items_ordered = gallery_team + gallery_collective
     
     # Valores globales del usuario para mostrar como referencia en la UI
     _ensure_user_charts(current_user.id)
@@ -2623,6 +2632,7 @@ def view_team(id):
     return render_template('view_team.html', team=team, is_owner=is_owner, sessions=sessions,
                            actions=team_actions, rankings=team_rankings, categories=categories,
                            gallery_items_ordered=gallery_items_ordered,
+                           gallery_team=gallery_team, gallery_collective=gallery_collective,
                            global_top_n=global_top_n, global_shot_min=global_shot_min,
                            tag_groups=tag_groups)
 
@@ -2892,6 +2902,9 @@ def api_add_to_gallery():
     data = request.json
     team_id = data.get('team_id')
     drill_id = data.get('drill_id')
+    gallery_type = data.get('gallery_type', 'team')
+    if gallery_type not in ('team', 'collective'):
+        gallery_type = 'team'
     team = Team.query.get_or_404(team_id)
     drill = Drill.query.get_or_404(drill_id)
     is_owner = (team.user_id == current_user.id)
@@ -2899,7 +2912,13 @@ def api_add_to_gallery():
     if not is_owner and not is_staff: return jsonify({'error': 'Unauthorized'}), 403
     if drill not in team.gallery_drills:
         team.gallery_drills.append(drill)
-        db.session.commit()
+    item = TeamGalleryItem.query.filter_by(team_id=team_id, drill_id=drill_id).first()
+    if not item:
+        item = TeamGalleryItem(team_id=team_id, drill_id=drill_id, gallery_type=gallery_type)
+        db.session.add(item)
+    else:
+        item.gallery_type = gallery_type
+    db.session.commit()
     return jsonify({'status': 'ok'})
 
 @app.route('/api/remove_from_gallery', methods=['POST'])
@@ -4016,8 +4035,10 @@ def public_team_ranking_logic(team):
     gallery_items = TeamGalleryItem.query.filter_by(team_id=team.id).order_by(TeamGalleryItem.display_order).all()
     drill_notes = {item.drill_id: (item.note or '') for item in gallery_items}
     drill_order = {item.drill_id: item.display_order for item in gallery_items}
-    
-    gallery_drills_ordered = []
+    drill_types = {item.drill_id: (item.gallery_type or 'team') for item in gallery_items}
+
+    gallery_team_pub = []
+    gallery_collective_pub = []
     for d in (team.gallery_drills if team.gallery_drills else []):
         if not d.cover_image and d.primary_tag:
             d.cover_fallback = pick_cover_from_tag(d.primary_tag)
@@ -4026,9 +4047,15 @@ def public_team_ranking_logic(team):
         d.origin = get_drill_origin(d)
         d.gallery_note = drill_notes.get(d.id, '')
         d.gallery_order = drill_order.get(d.id, 999)
-        gallery_drills_ordered.append(d)
-    
-    gallery_drills_ordered.sort(key=lambda x: x.gallery_order)
+        gtype = drill_types.get(d.id, 'team')
+        if gtype == 'collective':
+            gallery_collective_pub.append(d)
+        else:
+            gallery_team_pub.append(d)
+
+    gallery_team_pub.sort(key=lambda x: x.gallery_order)
+    gallery_collective_pub.sort(key=lambda x: x.gallery_order)
+    gallery_drills_ordered = gallery_team_pub + gallery_collective_pub
     
     # Rellenar datos de shots_pct en su posición dentro de charts_list
     if shots_pct_def:
@@ -4050,6 +4077,8 @@ def public_team_ranking_logic(team):
                           selected_match_ids=selected_match_ids,
                           num_matches=num_matches,
                           gallery_drills=gallery_drills_ordered,
+                          gallery_team=gallery_team_pub,
+                          gallery_collective=gallery_collective_pub,
                           hl_count=hl_count,
                           hl_color=hl_color,
                           publicToken=team.public_token)
