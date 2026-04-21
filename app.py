@@ -950,6 +950,8 @@ def run_migrations():
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS convocatoria_last_n INTEGER DEFAULT 6')
     # Cambio de 5 a 6 entrenamientos por defecto (solo afecta a equipos con el valor antiguo explícito)
     _run_alter('UPDATE team SET convocatoria_last_n = 6 WHERE convocatoria_last_n = 5')
+    # Migrar escudos antiguos (20 pts) al nuevo valor de inmunidad (100 pts)
+    _run_alter('UPDATE player_shield SET points = 100 WHERE points = 20')
     # Sistema de gráficos dinámicos
     _run_alter('''CREATE TABLE IF NOT EXISTS chart_definition (
         id SERIAL PRIMARY KEY,
