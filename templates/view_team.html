@@ -730,21 +730,21 @@
                               placeholder="Pega aquí el mensaje sobre el sistema de convocatorias..."
                               onblur="saveConvConfig()">{{ team.convocatoria_text or '' }}</textarea>
                 </div>
-                <h6 class="fw-bold mt-4 mb-2" style="font-size:0.85rem;"><i class="bi bi-shield-check"></i> Escudos de no convocatoria</h6>
-                <p class="public-subtitle">Añade puntos extra a jugadores que fueron descartados de un partido</p>
+                <h6 class="fw-bold mt-4 mb-2" style="font-size:0.85rem;"><i class="bi bi-shield-check"></i> Inmunidad por no convocatoria</h6>
+                <p class="public-subtitle">Marca a los jugadores que fueron descartados de un partido. Cada inmunidad suma 100 puntos.</p>
                 <div id="shieldsList">
                     {% for p in team.players|sort(attribute='dorsal') %}
                     <div class="d-flex align-items-center gap-2 mb-2 p-2 rounded" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
-                        <span class="fw-bold" style="min-width:130px;font-size:0.85rem;">#{{ p.dorsal }} {{ p.name }}</span>
-                        <input type="number" class="form-control form-control-sm" style="width:80px;" min="0" max="999"
-                               id="shield_pts_{{ p.id }}" placeholder="100"
-                               value="{{ p.shield.points if p.shield else '' }}">
-                        <input type="date" class="form-control form-control-sm" style="width:140px;"
-                               id="shield_date_{{ p.id }}"
-                               value="{{ p.shield.match_date.strftime('%Y-%m-%d') if p.shield and p.shield.match_date else '' }}">
-                        <button class="btn btn-sm btn-outline-light" onclick="saveShield({{ p.id }})">
-                            <i class="bi bi-save"></i>
-                        </button>
+                        <span class="fw-bold flex-grow-1" style="font-size:0.85rem;">#{{ p.dorsal }} {{ p.name }}</span>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="shield_chk_{{ p.id }}"
+                                   {% if p.shield %}checked{% endif %}
+                                   onchange="toggleShield({{ p.id }}, this)">
+                            <label class="form-check-label small" for="shield_chk_{{ p.id }}">
+                                <span id="shield_lbl_{{ p.id }}">{% if p.shield %}Inmune (+100){% else %}Sin inmunidad{% endif %}</span>
+                            </label>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
@@ -1035,25 +1035,22 @@
             });
         }
 
-        async function saveShield(playerId) {
-            const rawPts = document.getElementById(`shield_pts_${playerId}`).value;
-            const date = document.getElementById(`shield_date_${playerId}`).value || null;
-            // Si hay fecha y no puntos: escudo por defecto 100. Si no hay ni fecha ni puntos: 0 (lo borra).
-            let pts;
-            if (rawPts === '' || rawPts === null) {
-                pts = date ? 100 : 0;
-            } else {
-                pts = parseInt(rawPts) || 0;
-            }
+        async function toggleShield(playerId, checkbox) {
+            const immune = !!checkbox.checked;
+            const lbl = document.getElementById(`shield_lbl_${playerId}`);
+            const prev = lbl.textContent;
+            lbl.textContent = 'Guardando…';
             const res = await fetch('/api/shield/save', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ player_id: playerId, points: pts, match_date: date })
+                body: JSON.stringify({ player_id: playerId, immune: immune })
             });
             if (res.ok) {
-                const btn = event.currentTarget;
-                btn.innerHTML = '<i class="bi bi-check-lg"></i>';
-                setTimeout(() => { btn.innerHTML = '<i class="bi bi-save"></i>'; }, 1500);
+                lbl.textContent = immune ? 'Inmune (+100)' : 'Sin inmunidad';
+            } else {
+                lbl.textContent = prev;
+                checkbox.checked = !immune;
+                alert('Error al guardar la inmunidad');
             }
         }
 

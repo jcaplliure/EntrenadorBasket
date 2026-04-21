@@ -466,7 +466,7 @@
             <h4 class="mb-2 fw-bold"><i class="bi bi-clipboard-check"></i> Convocatorias</h4>
             <div id="convTextSection" style="display:none;" class="mb-3">
                 <p class="conv-text-preview small opacity-75 mb-1" id="convTextPreview" onclick="toggleConvText()"></p>
-                <div class="conv-text-full small opacity-75" id="convTextFull"></div>
+                <div class="conv-text-full small opacity-75" id="convTextFull" onclick="toggleConvText()" style="cursor:pointer;"></div>
             </div>
             <div class="table-responsive">
                 <table class="conv-table" id="convTable">
@@ -669,7 +669,7 @@
                     sec.style.display = 'block';
                     const preview = data.convocatoria_text.substring(0, 120) + (data.convocatoria_text.length > 120 ? '...' : '');
                     document.getElementById('convTextPreview').textContent = preview + ' (ver más)';
-                    document.getElementById('convTextFull').textContent = data.convocatoria_text;
+                    document.getElementById('convTextFull').textContent = data.convocatoria_text + '  (ver menos)';
                 }
 
                 const thead = document.getElementById('convHead');

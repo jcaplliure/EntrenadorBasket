@@ -3284,8 +3284,9 @@ ATTENDANCE_POINTS = {'punctual': 10, 'late_mild': 8, 'late_severe': 5, 'absent':
 def api_shield_save():
     data = request.json
     player_id = data.get('player_id')
-    points = data.get('points', 20)
-    match_date_str = data.get('match_date')
+    # Nuevo formato: immune (bool). Si True, aplica inmunidad con 100 puntos; si False, elimina.
+    # Se mantiene compat con formato antiguo (points/match_date).
+    immune = data.get('immune')
     player = Player.query.get_or_404(player_id)
     team = player.team
     if team.user_id != current_user.id:
@@ -3293,6 +3294,26 @@ def api_shield_save():
         if not is_staff:
             return jsonify({'error': 'Unauthorized'}), 403
     shield = PlayerShield.query.filter_by(player_id=player_id).first()
+
+    if immune is not None:
+        if immune:
+            if shield:
+                shield.points = 100
+                shield.match_date = None
+            else:
+                shield = PlayerShield(player_id=player_id, points=100, match_date=None)
+                db.session.add(shield)
+            db.session.commit()
+            return jsonify({'status': 'ok', 'action': 'immune'})
+        else:
+            if shield:
+                db.session.delete(shield)
+                db.session.commit()
+            return jsonify({'status': 'ok', 'action': 'removed'})
+
+    # Compat legacy
+    points = data.get('points', 100)
+    match_date_str = data.get('match_date')
     if points == 0 or points is None:
         if shield:
             db.session.delete(shield)
