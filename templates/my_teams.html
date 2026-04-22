@@ -24,24 +24,28 @@
         .team-card {
             background: var(--bg-panel);
             border: 1px solid var(--cream);
-            border-radius: 18px;
-            padding: 18px;
-            box-shadow: 0 12px 24px rgba(0,0,0,0.25);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.2);
         }
         .team-logo {
-            width: 120px;
-            height: 120px;
-            border-radius: 16px;
+            width: 56px;
+            height: 56px;
+            border-radius: 10px;
             border: 1px solid var(--cream);
             background: rgba(255,255,255,0.06);
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            margin: 0 auto 14px;
+            margin: 0 auto 6px;
         }
-        .team-name { color: var(--cream); font-weight: 700; }
-        .team-season { color: var(--cream); opacity: 0.85; }
+        .team-logo i { font-size: 1.4rem !important; }
+        .team-name { color: var(--cream); font-weight: 700; font-size: 0.92rem; margin-bottom: 1px !important; line-height: 1.15; }
+        .team-season { color: var(--cream); opacity: 0.8; font-size: 0.7rem; margin-bottom: 8px !important; }
+        .team-card .btn-accent { font-size: 0.72rem; padding: 4px 8px; }
+        .team-card .btn-outline-danger { font-size: 0.68rem; padding: 2px 6px; }
+        .team-card .d-grid { gap: 4px !important; }
         .new-team-card {
             background: var(--bg-panel);
             border: 1px solid rgba(255,255,255,0.08);
@@ -109,7 +113,7 @@
         </div>
 
         <!-- Grid de equipos (primero, visible al entrar) -->
-        <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-2 mb-4">
             {% for team in teams %}
             <div class="col">
                 <div class="team-card text-center h-100">
@@ -117,13 +121,13 @@
                         {% if team.logo_file %}
                             <img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" style="width: 100%; height: 100%; object-fit: cover;">
                         {% else %}
-                            <i class="bi bi-shield-shaded fs-1 text-light"></i>
+                            <i class="bi bi-shield-shaded text-light"></i>
                         {% endif %}
                     </div>
-                    <h4 class="fw-bold mb-1 team-name">{{ team.name }}</h4>
-                    <p class="small mb-3 team-season">{{ team.category }}</p>
-                    <div class="d-grid gap-2">
-                        <a href="/team/{{ team.id }}" class="btn btn-accent"><i class="bi bi-person-lines-fill"></i> Gestionar Plantilla</a>
+                    <div class="team-name">{{ team.name }}</div>
+                    <div class="team-season">{{ team.category }}</div>
+                    <div class="d-grid">
+                        <a href="/team/{{ team.id }}" class="btn btn-accent"><i class="bi bi-person-lines-fill"></i> Gestionar</a>
                         <a href="/delete_team/{{ team.id }}" class="btn btn-outline-danger btn-sm" onclick="return confirm('¿Borrar equipo y jugadores?')">Eliminar</a>
                     </div>
                 </div>
