@@ -132,43 +132,8 @@
 </head>
 <body>
 
-    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm p-1 mb-4">
-        <div class="container">
-            <a class="navbar-brand fw-bold fs-6" href="/">
-                🏀 Train<span class="text-warning">Basket</span>
-            </a>
-            <ul class="navbar-nav flex-row gap-3 ms-3">
-                <li class="nav-item"><a class="nav-link" href="/">Biblioteca</a></li>
-                <li class="nav-item"><a class="nav-link" href="/my_teams">Equipos</a></li>
-                <li class="nav-item"><a class="nav-link" href="/my_plans">Entrenamientos</a></li>
-                <li class="nav-item"><a class="nav-link active" href="/matches">Partidos</a></li>
-                <li class="nav-item"><a class="nav-link" href="/analytics">Analytics</a></li>
-            </ul>
-            <div class="d-flex align-items-center gap-2">
-                {% if current_user.is_authenticated %}
-                    {% if current_user.is_admin %}
-                        <a class="btn btn-outline-light btn-sm" href="/admin/config" title="Configuración">
-                            <i class="bi bi-gear"></i>
-                        </a>
-                    {% endif %}
-                    <div class="dropdown">
-                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.7rem;">
-                            <i class="bi bi-person-circle"></i> Usuario
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li>
-                                <a class="dropdown-item" href="/user/tags">
-                                    <i class="bi bi-tags-fill"></i> Mis Etiquetas
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a></li>
-                        </ul>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-    </nav>
+    {% include '_navbar.html' %}
+    {% include '_theme_modal.html' %}
 
     <div class="container pb-5">
         <div class="d-grid gap-2 mb-4">

@@ -19,7 +19,10 @@
 </head>
 <body>
 
-    <nav class="navbar navbar-dark bg-dark sticky-top shadow-sm px-3 justify-content-between">
+    {% include '_navbar.html' %}
+    {% include '_theme_modal.html' %}
+
+    <nav class="navbar navbar-dark bg-dark shadow-sm px-3 justify-content-between">
         <div class="d-flex align-items-center gap-2">
             <a href="/team/{{ session.team_id }}" class="text-white text-decoration-none"><i class="bi bi-arrow-left"></i></a>
             <span class="fw-bold text-white">Editar Sesión</span>

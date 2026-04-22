@@ -9,9 +9,13 @@
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-dark bg-dark mb-3 sticky-top">
+    {% include '_navbar.html' %}
+    {% include '_theme_modal.html' %}
+
+    <nav class="navbar navbar-dark bg-dark mb-3">
         <div class="container">
             <span class="navbar-brand fw-bold fs-6">
+                <a href="/match_stats/{{ match.id }}" class="text-white text-decoration-none me-2"><i class="bi bi-arrow-left"></i></a>
                 <i class="bi bi-camera-reels"></i> Log vs {{ match.opponent }}
             </span>
             <a href="/match_stats/{{ match.id }}" class="btn btn-outline-light btn-sm">Volver</a>

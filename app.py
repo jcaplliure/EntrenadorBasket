@@ -434,7 +434,18 @@ def inject_config():
     # Inyectar color del tema
     theme_color = get_user_theme_color()
     
-    return dict(site_config=site_config, get_config_url=get_config_url, theme_color=theme_color)
+    # Invitaciones pendientes (para mostrar badge en navbar)
+    try:
+        nav_pending_invites = TeamStaff.query.filter_by(email=current_user.email, status='pending').all() if current_user.is_authenticated else []
+    except Exception:
+        nav_pending_invites = []
+    
+    return dict(
+        site_config=site_config,
+        get_config_url=get_config_url,
+        theme_color=theme_color,
+        nav_pending_invites=nav_pending_invites,
+    )
 
 def get_user_theme_color():
     """Devuelve el color del tema: primero del usuario, luego global, luego por defecto"""

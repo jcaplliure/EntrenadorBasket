@@ -1,0 +1,100 @@
+{#
+  Modal de personalización del color de tema por usuario.
+  Incluir en cualquier página donde esté la navbar:
+    {% include '_theme_modal.html' %}
+#}
+{% if current_user.is_authenticated %}
+<div class="modal fade" id="themeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-palette-fill"></i> Personalización del Tema</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Personaliza el color principal de la aplicación. Deja vacío para usar el color por defecto.</p>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Color Principal:</label>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input type="color" id="userColorPicker" class="form-control form-control-color" value="{{ theme_color }}" style="width: 60px;">
+                        <input type="text" id="userColorText" class="form-control" value="{% if current_user.theme_color %}{{ current_user.theme_color }}{% endif %}" placeholder="Usar color por defecto" maxlength="7">
+                    </div>
+                    <small class="text-muted">Color global de la app: <span class="badge" style="background-color: {{ theme_color }}; color: #0a1929;">{{ theme_color }}</span></small>
+                </div>
+
+                <div class="p-3 rounded text-center mb-3" style="background: #0a1929;">
+                    <p class="text-light small mb-2">Vista previa:</p>
+                    <button class="btn fw-bold text-dark" id="userPreviewBtn" style="background: {{ theme_color }};">
+                        🏀 Botón de Ejemplo
+                    </button>
+                </div>
+
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetUserColor()">
+                    <i class="bi bi-arrow-clockwise"></i> Restaurar Color por Defecto
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveUserColor()">
+                    <i class="bi bi-check-lg"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const userColorPicker = document.getElementById('userColorPicker');
+    const userColorText = document.getElementById('userColorText');
+    const userPreviewBtn = document.getElementById('userPreviewBtn');
+    if (!userColorPicker) return;
+
+    userColorPicker.addEventListener('input', (e) => {
+        userColorText.value = e.target.value.toUpperCase();
+        userPreviewBtn.style.background = e.target.value;
+    });
+
+    userColorText.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (val.match(/^#[0-9A-Fa-f]{6}$/)) {
+            userColorPicker.value = val;
+            userPreviewBtn.style.background = val;
+        } else if (val === '') {
+            userPreviewBtn.style.background = '{{ theme_color }}';
+        }
+    });
+
+    window.saveUserColor = async function() {
+        const color = userColorText.value.trim();
+        if (color && !color.match(/^#[0-9A-Fa-f]{6}$/)) {
+            alert('Color inválido. Usa formato #RRGGBB (ej: #FFD700) o déjalo vacío.');
+            return;
+        }
+        try {
+            const response = await fetch('/user/update_theme_color', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ color })
+            });
+            const data = await response.json();
+            if (data.status === 'ok') {
+                alert('✅ Color guardado. Recarga la página para ver los cambios.');
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (data.error || 'Error desconocido'));
+            }
+        } catch (error) {
+            alert('❌ Error de conexión');
+        }
+    }
+
+    window.resetUserColor = function() {
+        userColorText.value = '';
+        userColorPicker.value = '{{ theme_color }}';
+        userPreviewBtn.style.background = '{{ theme_color }}';
+    }
+})();
+</script>
+{% endif %}

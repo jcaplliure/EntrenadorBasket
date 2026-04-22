@@ -1,0 +1,260 @@
+{#
+  Navbar global TrainBasket.
+  Se incluye en todas las páginas autenticadas (excepto login, register, portal público,
+  court_mode, tracker y session_tracker).
+
+  Uso:
+    {% include '_navbar.html' %}
+
+  La sección activa se detecta automáticamente a partir de request.endpoint / request.path.
+  Para forzar una sección concreta, define antes del include la variable `nav_active`:
+    {% set nav_active = 'teams' %}
+    {% include '_navbar.html' %}
+#}
+
+{% set _path = request.path %}
+{% if nav_active is not defined %}
+  {% if _path == '/' or _path.startswith('/drill') or _path.startswith('/edit_drill') or _path.startswith('/create') or _path.startswith('/manage_tags') or _path.startswith('/user/tags') %}
+    {% set nav_active = 'drills' %}
+  {% elif _path.startswith('/my_teams') or _path.startswith('/team/') or _path.startswith('/edit_player') or _path.startswith('/view_team') %}
+    {% set nav_active = 'teams' %}
+  {% elif _path.startswith('/my_plans') or _path.startswith('/plan') or _path.startswith('/view_plan') or _path.startswith('/edit_plan') or _path.startswith('/create_plan') or _path.startswith('/session') or _path.startswith('/edit_session') or _path.startswith('/court_mode') %}
+    {% set nav_active = 'training' %}
+  {% elif _path.startswith('/matches') or _path.startswith('/new_match') or _path.startswith('/match') or _path.startswith('/tracker') or _path.startswith('/game_config') %}
+    {% set nav_active = 'games' %}
+  {% elif _path.startswith('/analytics') or _path.startswith('/team_stats') %}
+    {% set nav_active = 'analytics' %}
+  {% else %}
+    {% set nav_active = '' %}
+  {% endif %}
+{% endif %}
+
+<style>
+    :root {
+        --tb-nav-bg: #0d172a;
+        --tb-nav-border: rgba(59, 130, 246, 0.18);
+        --tb-nav-text: rgba(233, 237, 242, 0.72);
+        --tb-nav-text-hover: #ffffff;
+        --tb-nav-active: var(--accent-color, #FFD700);
+        --tb-nav-sep: rgba(233, 237, 242, 0.25);
+    }
+    .tb-navbar {
+        background: var(--tb-nav-bg);
+        border-bottom: 1px solid var(--tb-nav-border);
+        position: sticky;
+        top: 0;
+        z-index: 1030;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+    }
+    .tb-navbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 16px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    .tb-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+        letter-spacing: 0.01em;
+        flex-shrink: 0;
+    }
+    .tb-brand img { width: 26px; height: 26px; object-fit: contain; }
+    .tb-brand .tb-brand-emoji { font-size: 1.3rem; line-height: 1; }
+    .tb-brand .tb-brand-text { color: #fff; }
+    .tb-brand .tb-brand-text .accent { color: var(--accent-color, #FFD700); }
+
+    .tb-nav-items {
+        display: inline-flex;
+        align-items: center;
+        gap: 0;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+    .tb-nav-link {
+        color: var(--tb-nav-text);
+        text-decoration: none;
+        padding: 6px 10px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        transition: color 0.15s ease, transform 0.15s ease;
+        white-space: nowrap;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+    .tb-nav-link:hover { color: var(--tb-nav-text-hover); }
+    .tb-nav-link.active {
+        color: var(--tb-nav-active);
+    }
+    .tb-nav-link.active::after {
+        content: "";
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 2px;
+        height: 2px;
+        background: var(--tb-nav-active);
+        border-radius: 2px;
+        box-shadow: 0 0 8px var(--tb-nav-active);
+    }
+    .tb-nav-sep {
+        color: var(--tb-nav-sep);
+        font-size: 0.8rem;
+        user-select: none;
+        pointer-events: none;
+    }
+
+    /* Icono Analytics (solo móvil): cuadrado negro, barras azul eléctrico */
+    .tb-analytics-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+        background: #0a0a0a;
+        border: 1px solid rgba(0, 217, 255, 0.35);
+        box-shadow: 0 0 10px rgba(0, 217, 255, 0.25), inset 0 0 6px rgba(0, 217, 255, 0.08);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .tb-nav-link:hover .tb-analytics-icon { transform: scale(1.05); box-shadow: 0 0 14px rgba(0, 217, 255, 0.5); }
+    .tb-nav-link.active .tb-analytics-icon {
+        box-shadow: 0 0 14px rgba(0, 217, 255, 0.6);
+        border-color: rgba(0, 217, 255, 0.7);
+    }
+    .tb-analytics-icon svg { width: 18px; height: 18px; }
+    .tb-analytics-bar {
+        fill: #00d9ff;
+        filter: drop-shadow(0 0 2px rgba(0, 217, 255, 0.9));
+    }
+
+    .tb-nav-right {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+    .tb-nav-right .btn { padding: 4px 10px; font-size: 0.78rem; }
+    .tb-nav-right .dropdown-toggle::after { display: none; }
+
+    /* Desktop: mostrar texto "Analytics", ocultar icono */
+    .tb-nav-items .tb-label-analytics { display: inline; }
+    .tb-nav-items .tb-icon-analytics { display: none; }
+    /* Ocultar el texto "TrainBasket" por defecto (solo se ve en desktop) */
+    .tb-brand .tb-brand-text { display: none; }
+
+    @media (min-width: 768px) {
+        .tb-brand .tb-brand-text { display: inline; }
+    }
+
+    /* Móvil: sustituir "Analytics" por icono + permitir pequeño scroll si es necesario */
+    @media (max-width: 767.98px) {
+        .tb-navbar-inner { padding: 8px 10px; gap: 8px; }
+        .tb-brand { font-size: 0.95rem; gap: 4px; }
+        .tb-nav-items {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .tb-nav-items::-webkit-scrollbar { display: none; }
+        .tb-nav-link { padding: 4px 6px; font-size: 0.8rem; }
+        .tb-nav-sep { font-size: 0.7rem; }
+        .tb-nav-items .tb-label-analytics { display: none; }
+        .tb-nav-items .tb-icon-analytics { display: inline-flex; }
+    }
+</style>
+
+<nav class="tb-navbar">
+    <div class="tb-navbar-inner">
+        <a class="tb-brand" href="/" aria-label="TrainBasket – ir a Drills">
+            <span class="tb-brand-emoji">🏀</span>
+            <span class="tb-brand-text">Train<span class="accent">Basket</span></span>
+        </a>
+
+        <div class="tb-nav-items" id="tbNavItems">
+            <a class="tb-nav-link {% if nav_active == 'teams' %}active{% endif %}" href="/my_teams">Teams</a>
+            <span class="tb-nav-sep">›</span>
+            <a class="tb-nav-link {% if nav_active == 'drills' %}active{% endif %}" href="/">Drills</a>
+            <span class="tb-nav-sep">›</span>
+            <a class="tb-nav-link {% if nav_active == 'training' %}active{% endif %}" href="/my_plans">Training</a>
+            <span class="tb-nav-sep">›</span>
+            <a class="tb-nav-link {% if nav_active == 'games' %}active{% endif %}" href="/matches">Games</a>
+            <span class="tb-nav-sep">›</span>
+            <a class="tb-nav-link {% if nav_active == 'analytics' %}active{% endif %}" href="/analytics" aria-label="Analytics">
+                <span class="tb-label-analytics">Analytics</span>
+                <span class="tb-icon-analytics tb-analytics-icon" title="Analytics">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <rect class="tb-analytics-bar" x="3"  y="12" width="4" height="9" rx="1"/>
+                        <rect class="tb-analytics-bar" x="10" y="7"  width="4" height="14" rx="1"/>
+                        <rect class="tb-analytics-bar" x="17" y="3"  width="4" height="18" rx="1"/>
+                    </svg>
+                </span>
+            </a>
+        </div>
+
+        <div class="tb-nav-right">
+            {% if current_user.is_authenticated %}
+                {% if current_user.is_admin %}
+                    <a class="btn btn-outline-light" href="/admin/config" title="Configuración">
+                        <i class="bi bi-gear"></i>
+                    </a>
+                {% endif %}
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="tbUserDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle"></i>
+                        {% if nav_pending_invites %}
+                            <span class="badge bg-warning text-dark" style="font-size:0.55rem;padding:2px 5px;">{{ nav_pending_invites|length }}</span>
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="tbUserDropdown">
+                        {% if nav_pending_invites %}
+                            {% for invite in nav_pending_invites %}
+                                <li>
+                                    <a class="dropdown-item text-warning" href="/accept_invite/{{ invite.id }}">
+                                        <i class="bi bi-envelope-exclamation"></i> {{ invite.team.name }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                            <li><hr class="dropdown-divider"></li>
+                        {% endif %}
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#themeModal">
+                                <i class="bi bi-palette-fill"></i> Personalización
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="/user/tags">
+                                <i class="bi bi-tags-fill"></i> Mis Etiquetas
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right"></i> Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+            {% else %}
+                <a href="/login" class="btn btn-primary btn-sm fw-bold">Entrar</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<script>
+    (function () {
+        // Auto-scroll para centrar la sección activa en móvil
+        var items = document.getElementById('tbNavItems');
+        if (!items) return;
+        var active = items.querySelector('.tb-nav-link.active');
+        if (active && items.scrollWidth > items.clientWidth) {
+            active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'instant' });
+        }
+    })();
+</script>

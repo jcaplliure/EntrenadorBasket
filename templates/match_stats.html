@@ -15,14 +15,17 @@
 </head>
 <body class="bg-light">
 
+    {% include '_navbar.html' %}
+    {% include '_theme_modal.html' %}
+
     <nav class="navbar navbar-dark bg-dark mb-4">
         <div class="container">
             <span class="navbar-brand fw-bold fs-6 text-truncate">
+                <a href="/matches" class="text-white text-decoration-none me-2"><i class="bi bi-arrow-left"></i></a>
                 📊 Stats vs {{ match.opponent }}
             </span>
             <div>
                 <a href="/matches" class="btn btn-outline-light btn-sm">Historial</a>
-                <a href="/" class="btn btn-outline-secondary btn-sm ms-1">Salir</a>
             </div>
         </div>
     </nav>

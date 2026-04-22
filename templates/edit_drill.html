@@ -545,7 +545,10 @@
     </style>
 </head>
 <body>
-    
+
+    {% include '_navbar.html' %}
+    {% include '_theme_modal.html' %}
+
     <div class="page-wrapper">
         <div class="edit-panel">
             <h2 class="panel-title">{% if is_new %}Nuevo Ejercicio{% else %}Editar Ejercicio{% endif %}</h2>

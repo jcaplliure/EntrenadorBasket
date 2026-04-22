@@ -30,16 +30,19 @@
     </style>
 </head>
 <body class="bg-light">
-    <nav class="navbar navbar-expand navbar-dark bg-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand fw-bold">👮‍♂️ Zona Admin</span>
-            <div class="navbar-nav">
-                <a class="nav-link active fw-bold" href="/admin/tags">Etiquetas</a>
-                <a class="nav-link" href="/admin/config">Configuración</a>
-                <a class="nav-link text-warning ms-3" href="/">Volver a Web</a>
-            </div>
+    {% include '_navbar.html' %}
+    {% include '_theme_modal.html' %}
+
+    <div class="container mt-3 mb-3" style="max-width: 900px;">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="/" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
+            <span class="fw-bold ms-2">👮‍♂️ Zona Admin</span>
+            <span class="ms-auto d-flex gap-2">
+                <a class="btn btn-sm btn-warning fw-bold" href="/admin/tags">Etiquetas</a>
+                <a class="btn btn-sm btn-outline-light" href="/admin/config">Configuración</a>
+            </span>
         </div>
-    </nav>
+    </div>
 
     <div class="container" style="max-width: 900px;">
         <h4 class="mb-3">🏷️ Gestionar Etiquetas y Imágenes</h4>
