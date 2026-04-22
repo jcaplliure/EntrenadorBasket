@@ -605,17 +605,44 @@
         <div class="tab-content-area" id="tab-public">
             <!-- Link al portal -->
             <div class="public-section" style="padding:14px 20px;">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div>
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                    <div class="flex-grow-1" style="min-width:0;">
                         <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-bottom:2px;">Link al portal público del equipo</div>
-                        <a href="/team/{{ team.id }}/public" target="_blank"
+                        <a href="/team/{{ team.id }}/public" target="_blank" id="portalLinkPreview"
                            style="font-size:0.85rem;color:var(--accent-color);word-break:break-all;">
                             trainbasket.com/p/{{ team.public_token or '' }}
                         </a>
                     </div>
-                    <a href="/team/{{ team.id }}/public" target="_blank" class="btn-portal" style="flex-shrink:0;">
-                        <i class="bi bi-box-arrow-up-right"></i> Abrir portal
-                    </a>
+                    <div class="d-flex gap-2 flex-shrink-0">
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="copyPortalUrl()" title="Copiar URL">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                        <a href="/team/{{ team.id }}/public" target="_blank" class="btn-portal">
+                            <i class="bi bi-box-arrow-up-right"></i> Abrir portal
+                        </a>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-link p-0 text-muted" style="font-size:0.78rem;text-decoration:none;"
+                            onclick="togglePortalUrlEditor()" id="portalUrlToggleBtn">
+                        <i class="bi bi-pencil"></i> Personalizar URL
+                    </button>
+                    <div id="portalUrlEditor" style="display:none;margin-top:0.6rem;">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span style="font-size:0.8rem;color:rgba(255,255,255,0.55);">trainbasket.com/p/</span>
+                            <input type="text" id="portalUrlInput" class="form-control form-control-sm" style="max-width:280px;"
+                                   value="{{ team.public_token or '' }}"
+                                   placeholder="mi-equipo"
+                                   oninput="checkPortalUrl()" maxlength="60">
+                            <button type="button" class="btn btn-sm btn-primary" id="portalUrlSave" onclick="savePortalUrl()" disabled>
+                                Guardar
+                            </button>
+                        </div>
+                        <div id="portalUrlFeedback" style="font-size:0.75rem;margin-top:4px;min-height:18px;"></div>
+                        <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:2px;">
+                            Solo minúsculas, números y guiones. Ejemplo: <code>infantil-a</code>. Al cambiarla, la URL antigua dejará de funcionar.
+                        </div>
+                    </div>
                 </div>
             </div>
             <!-- Notas del Entrenador -->
@@ -989,7 +1016,76 @@
         
         
         // Portal Público functions
-        
+
+        function copyPortalUrl() {
+            const txt = document.getElementById('portalLinkPreview').textContent.trim();
+            const url = txt.startsWith('http') ? txt : ('https://' + txt);
+            navigator.clipboard.writeText(url).then(() => {
+                const btns = document.querySelectorAll('button[onclick="copyPortalUrl()"]');
+                btns.forEach(b => {
+                    const html = b.innerHTML;
+                    b.innerHTML = '<i class="bi bi-check-lg"></i>';
+                    setTimeout(() => { b.innerHTML = html; }, 1200);
+                });
+            });
+        }
+
+        function togglePortalUrlEditor() {
+            const ed = document.getElementById('portalUrlEditor');
+            ed.style.display = ed.style.display === 'none' ? 'block' : 'none';
+        }
+
+        let portalUrlCheckTimeout = null;
+        function checkPortalUrl() {
+            const input = document.getElementById('portalUrlInput');
+            const feedback = document.getElementById('portalUrlFeedback');
+            const saveBtn = document.getElementById('portalUrlSave');
+            const val = input.value.trim().toLowerCase();
+            input.value = val;
+            saveBtn.disabled = true;
+
+            if (!val) { feedback.textContent = ''; return; }
+            if (val === '{{ team.public_token or '' }}') {
+                feedback.textContent = ''; return;
+            }
+            const valid = /^[a-z0-9][a-z0-9-]{2,59}$/.test(val) && !val.includes('--') && !val.endsWith('-');
+            if (!valid) {
+                feedback.innerHTML = '<span style="color:#f87171;">Formato no válido (3-60 chars, minúsculas, números, guiones)</span>';
+                return;
+            }
+            feedback.innerHTML = '<span style="color:rgba(255,255,255,0.5);">Comprobando disponibilidad…</span>';
+            clearTimeout(portalUrlCheckTimeout);
+            portalUrlCheckTimeout = setTimeout(async () => {
+                const res = await fetch(`/api/check_portal_url?team_id={{ team.id }}&token=${encodeURIComponent(val)}`);
+                const data = await res.json();
+                if (data.available) {
+                    feedback.innerHTML = '<span style="color:#86efac;"><i class="bi bi-check-circle-fill"></i> Disponible</span>';
+                    saveBtn.disabled = false;
+                } else {
+                    feedback.innerHTML = data.reason === 'format'
+                        ? '<span style="color:#f87171;">Formato no válido</span>'
+                        : '<span style="color:#f87171;">Esa URL ya está en uso</span>';
+                }
+            }, 350);
+        }
+
+        async function savePortalUrl() {
+            const val = document.getElementById('portalUrlInput').value.trim().toLowerCase();
+            const feedback = document.getElementById('portalUrlFeedback');
+            const res = await fetch('/api/update_portal_url', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ team_id: {{ team.id }}, token: val })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                feedback.innerHTML = '<span style="color:#86efac;">URL actualizada. Recargando…</span>';
+                setTimeout(() => location.reload(), 600);
+            } else {
+                feedback.innerHTML = '<span style="color:#f87171;">' + (data.error || 'Error al guardar') + '</span>';
+            }
+        }
+
         async function removeFromGallery(drillId) {
             if (!confirm('¿Eliminar este ejercicio de la galería?')) return;
             

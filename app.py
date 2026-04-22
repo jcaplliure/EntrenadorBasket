@@ -151,7 +151,7 @@ class Team(db.Model):
     logo_file = db.Column(db.String(120), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     public_slug = db.Column(db.String(80), nullable=True)
-    public_token = db.Column(db.String(8), nullable=True)
+    public_token = db.Column(db.String(80), nullable=True)
     visibility_top_x = db.Column(db.Integer, default=3)
     visibility_top_pct = db.Column(db.Integer, default=25)
     visibility_mode = db.Column(db.String(20), default='fixed')
@@ -905,6 +905,7 @@ def run_migrations():
     # URL pública con código aleatorio por equipo
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_slug VARCHAR(80)')
     _run_alter('ALTER TABLE team ADD COLUMN IF NOT EXISTS public_token VARCHAR(8)')
+    _run_alter('ALTER TABLE team ALTER COLUMN public_token TYPE VARCHAR(80)')
     # Mínimo intentos de tiro en ChartDefinition (para % de Tiros)
     _run_alter('ALTER TABLE chart_definition ADD COLUMN IF NOT EXISTS shot_min_attempts INTEGER DEFAULT 0')
     # Renombrar "Gráfico Principal" → "Valoración total"
@@ -2358,6 +2359,44 @@ def send_invitation_email(email, token):
         server.login(smtp_user, smtp_pass)
         server.sendmail(smtp_user, email, msg.as_string())
 
+def send_staff_invitation_email(email, token, team_name, inviter_name):
+    """Enviar email de invitación a entrenador (staff) con enlace de registro."""
+    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', 587))
+    smtp_user = os.environ.get('SMTP_USER', '')
+    smtp_pass = os.environ.get('SMTP_PASS', '')
+    if not smtp_user or not smtp_pass:
+        raise Exception('SMTP no configurado. Configura SMTP_USER y SMTP_PASS')
+    base_url = os.getenv('APP_BASE_URL', 'http://localhost:5001')
+    register_url = f"{base_url}/register/{token}"
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f'🏀 Invitación a colaborar en el equipo {team_name}'
+    msg['From'] = smtp_user
+    msg['To'] = email
+
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background: #0a1929; color: white; padding: 20px;">
+        <div style="max-width: 520px; margin: 0 auto; background: #0d1f2d; padding: 30px; border-radius: 12px;">
+            <h1 style="color: #3b82f6;">🏀 EntrenadorBasket</h1>
+            <p><strong>{inviter_name}</strong> te ha invitado a colaborar como entrenador en el equipo <strong>{team_name}</strong>.</p>
+            <p>Para empezar, crea tu cuenta con el siguiente enlace:</p>
+            <a href="{register_url}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 20px 0;">
+                Crear mi cuenta
+            </a>
+            <p>Una vez dentro, acepta la invitación al equipo desde tu página de inicio.</p>
+            <p style="color: #888; font-size: 12px;">Si no esperabas esta invitación, puedes ignorar este mensaje.</p>
+        </div>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, 'html'))
+    with smtplib.SMTP(smtp_host, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(smtp_user, email, msg.as_string())
+
 @app.route('/register/<token>', methods=['GET', 'POST'])
 def register_with_invitation(token):
     """Registro con token de invitación"""
@@ -3763,17 +3802,33 @@ def manage_staff(id):
     if team.user_id != current_user.id: return "Solo el propietario puede gestionar staff", 403
     action = request.form.get('action')
     if action == 'invite':
-        email = request.form.get('email').strip()
+        email = request.form.get('email', '').strip().lower()
         if email and email != current_user.email:
             existing_user = User.query.filter_by(email=email).first()
             uid = existing_user.id if existing_user else None
             exists = TeamStaff.query.filter_by(team_id=team.id, email=email).first()
-            if not exists:
+            if exists:
+                flash('Usuario ya invitado')
+            else:
                 new_staff = TeamStaff(team_id=team.id, user_id=uid, email=email, status='pending')
                 db.session.add(new_staff)
                 db.session.commit()
-                flash(f'Invitación enviada a {email}')
-            else: flash('Usuario ya invitado')
+                # Si el email no tiene cuenta, crear invitación de registro
+                if not existing_user:
+                    invitation = Invitation.query.filter_by(email=email).first()
+                    if not invitation:
+                        invitation = Invitation(email=email, token=secrets.token_urlsafe(32))
+                        db.session.add(invitation)
+                        db.session.commit()
+                    try:
+                        send_staff_invitation_email(email, invitation.token, team.name, current_user.name or current_user.email)
+                        flash(f'Invitación y enlace de registro enviados a {email}')
+                    except Exception as e:
+                        base_url = os.getenv('APP_BASE_URL', request.host_url.rstrip('/'))
+                        register_url = f"{base_url}/register/{invitation.token}"
+                        flash(f'Invitación creada. No se pudo enviar email ({str(e)}). Comparte este enlace manualmente: {register_url}')
+                else:
+                    flash(f'Invitación enviada a {email}. Debe aceptarla desde su página de inicio.')
     elif action == 'remove':
         staff_id = request.form.get('staff_id')
         staff = TeamStaff.query.get(staff_id)
@@ -3971,9 +4026,52 @@ def finish_session(id):
 
 @app.route('/p/<token>')
 def public_team_by_token(token):
-    """URL pública corta: trainbasket.com/p/xK9m2p"""
+    """URL pública corta: trainbasket.com/p/xK9m2p o slug personalizado."""
     team = Team.query.filter_by(public_token=token).first_or_404()
     return public_team_ranking_logic(team)
+
+@app.route('/api/update_portal_url', methods=['POST'])
+@login_required
+def api_update_portal_url():
+    """Permite al entrenador personalizar la URL del portal público."""
+    data = request.json or {}
+    team_id = data.get('team_id')
+    new_token = (data.get('token') or '').strip().lower()
+    team = Team.query.get_or_404(team_id)
+    if team.user_id != current_user.id:
+        is_staff = TeamStaff.query.filter_by(team_id=team.id, email=current_user.email, status='accepted').first()
+        if not is_staff:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+    # Validación: minúsculas, números y guiones. 3-60 chars.
+    if not re.match(r'^[a-z0-9][a-z0-9-]{2,59}$', new_token):
+        return jsonify({'error': 'Solo minúsculas, números y guiones (3-60 caracteres, empieza con letra/número)'}), 400
+    if new_token.startswith('-') or new_token.endswith('-') or '--' in new_token:
+        return jsonify({'error': 'No se permiten guiones al inicio, al final o duplicados'}), 400
+    # Palabras reservadas que podrían chocar con rutas internas
+    reserved = {'admin', 'api', 'login', 'logout', 'register', 'my_teams', 'my_plans', 'team', 'static', 'session', 'settings'}
+    if new_token in reserved:
+        return jsonify({'error': 'Esa URL está reservada, elige otra'}), 400
+
+    # Comprobar disponibilidad
+    existing = Team.query.filter(Team.public_token == new_token, Team.id != team.id).first()
+    if existing:
+        return jsonify({'error': 'Esa URL ya está en uso por otro equipo'}), 409
+
+    team.public_token = new_token
+    db.session.commit()
+    return jsonify({'status': 'ok', 'token': new_token})
+
+@app.route('/api/check_portal_url')
+@login_required
+def api_check_portal_url():
+    """Comprueba si una URL de portal está disponible (para feedback en tiempo real)."""
+    team_id = request.args.get('team_id', type=int)
+    candidate = (request.args.get('token') or '').strip().lower()
+    if not re.match(r'^[a-z0-9][a-z0-9-]{2,59}$', candidate) or '--' in candidate:
+        return jsonify({'available': False, 'reason': 'format'})
+    existing = Team.query.filter(Team.public_token == candidate, Team.id != team_id).first()
+    return jsonify({'available': existing is None})
 
 @app.route('/team/<int:id>/public')
 def public_team_ranking(id):

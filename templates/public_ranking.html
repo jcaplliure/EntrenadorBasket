@@ -4,6 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Portal - {{ team.name }}</title>
+
+    {# ---- Open Graph / Twitter Cards para previsualización en WhatsApp, Telegram, etc. ---- #}
+    {% set _portal_url = request.url_root.rstrip('/') + '/p/' + team.public_token %}
+    {% if team.logo_file %}
+        {% set _portal_img = request.url_root.rstrip('/') + url_for('static', filename='uploads/' + team.logo_file) %}
+    {% else %}
+        {% set _portal_img = 'https://placehold.co/600x600/0a1929/3b82f6?text=TrainBasket' %}
+    {% endif %}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="TrainBasket">
+    <meta property="og:title" content="{{ team.name }} — Portal del equipo">
+    <meta property="og:description" content="Consulta estadísticas, convocatorias y ejercicios del equipo {{ team.name }}.">
+    <meta property="og:url" content="{{ _portal_url }}">
+    <meta property="og:image" content="{{ _portal_img }}">
+    <meta property="og:image:width" content="600">
+    <meta property="og:image:height" content="600">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ team.name }} — Portal del equipo">
+    <meta name="twitter:description" content="Estadísticas, convocatorias y ejercicios del equipo {{ team.name }}.">
+    <meta name="twitter:image" content="{{ _portal_img }}">
+    <meta name="theme-color" content="#0a1929">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
@@ -303,8 +325,26 @@
     </style>
 </head>
 <body>
+    <div class="tb-topbar" style="background:rgba(0,0,0,0.35);backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,0.08);padding:8px 0;">
+        <div class="container d-flex justify-content-between align-items-center" style="max-width:480px;">
+            <a href="https://www.trainbasket.com" target="_blank" rel="noopener"
+               style="display:inline-flex;align-items:center;gap:0.4rem;text-decoration:none;color:#e9edf2;font-weight:700;font-size:0.85rem;letter-spacing:0.02em;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    <path d="M2 12h20"/>
+                </svg>
+                <span>TrainBasket</span>
+            </a>
+            <a href="https://www.trainbasket.com" target="_blank" rel="noopener"
+               style="font-size:0.75rem;color:rgba(255,255,255,0.55);text-decoration:none;">
+                trainbasket.com <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i>
+            </a>
+        </div>
+    </div>
+
     <div class="container py-4" style="max-width: 480px;">
-        
+
         <div class="text-center mb-4">
             {% if team.logo_file %}
                 <img src="{{ url_for('static', filename='uploads/' + team.logo_file) }}" width="80" class="rounded-circle mb-2 shadow">
