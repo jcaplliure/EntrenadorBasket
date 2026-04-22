@@ -108,54 +108,8 @@
             </div>
         </div>
 
-        <!-- Configuración de gráficos -->
-        <div class="chart-config-section" id="chart-config">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h5 class="fw-bold mb-0" style="color:var(--cream)"><i class="bi bi-bar-chart-line me-2"></i>Configuración de Gráficos</h5>
-                    <div class="text-muted" style="font-size:0.78rem;">Define qué gráficos mostrar en el portal público y en analytics</div>
-                </div>
-                <button class="btn btn-accent btn-sm fw-bold rounded-pill px-3" onclick="openChartModal(null)">
-                    <i class="bi bi-plus-circle"></i> Nuevo gráfico
-                </button>
-            </div>
-            <!-- Configuración global -->
-            <div class="p-2 rounded mb-3" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
-                <div class="d-flex align-items-center flex-wrap gap-3">
-                    <span style="font-size:0.82rem;color:var(--cream);white-space:nowrap;"><i class="bi bi-gear me-1"></i>Config. global:</span>
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalTopN">Top jugadores</label>
-                        <input type="number" id="globalTopN" min="0" max="100" placeholder="0 = Todos"
-                            class="form-control form-control-sm" style="width:90px;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);"
-                            onchange="saveGlobalConfig()">
-                        <span style="font-size:0.72rem;color:rgba(255,255,255,0.35);">(0 = todos)</span>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalHlCount">Destacar top</label>
-                        <input type="number" id="globalHlCount" min="0" max="100" placeholder="1"
-                            class="form-control form-control-sm" style="width:70px;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);"
-                            onchange="saveGlobalConfig()">
-                        <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalHlColor">con color</label>
-                        <select id="globalHlColor" class="form-select form-select-sm" style="width:auto;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);" onchange="onHighlightColorChange()">
-                            <option value="yellow">Amarillo</option>
-                            <option value="none">Sin destacar</option>
-                            <option value="custom">Color personalizado</option>
-                        </select>
-                        <span id="customColorPreview" style="display:none;width:20px;height:20px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);flex-shrink:0;"></span>
-                    </div>
-
-                    <span id="globalSaved" style="font-size:0.72rem;color:#4ade80;display:none;">✓ Guardado</span>
-                </div>
-            </div>
-
-            <div id="chartList">
-                <div class="text-muted text-center py-3" style="font-size:0.8rem;">Cargando...</div>
-            </div>
-        </div>
-
-        <div class="row row-cols-1 row-cols-md-3 g-4">
+        <!-- Grid de equipos (primero, visible al entrar) -->
+        <div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
             {% for team in teams %}
             <div class="col">
                 <div class="team-card text-center h-100">
@@ -183,6 +137,58 @@
             <p class="mt-3">Aún no tienes equipos creados.</p>
         </div>
         {% endif %}
+
+        <!-- Configuración de gráficos (debajo de los equipos, plegable, desplegada por defecto) -->
+        <div class="chart-config-section" id="chart-config">
+            <div class="d-flex justify-content-between align-items-center mb-3" style="cursor:pointer;" onclick="toggleChartConfig()">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-chevron-down" id="chartConfigChevron" style="color:var(--cream);transition:transform 0.2s ease;"></i>
+                    <div>
+                        <h5 class="fw-bold mb-0" style="color:var(--cream)"><i class="bi bi-bar-chart-line me-2"></i>Configuración de Gráficos</h5>
+                        <div class="text-muted" style="font-size:0.78rem;">Define qué gráficos mostrar en el portal público y en analytics</div>
+                    </div>
+                </div>
+                <button class="btn btn-accent btn-sm fw-bold rounded-pill px-3" onclick="event.stopPropagation(); openChartModal(null)">
+                    <i class="bi bi-plus-circle"></i> Nuevo gráfico
+                </button>
+            </div>
+            <div id="chartConfigBody">
+                <!-- Configuración global -->
+                <div class="p-2 rounded mb-3" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+                    <div class="d-flex align-items-center flex-wrap gap-3">
+                        <span style="font-size:0.82rem;color:var(--cream);white-space:nowrap;"><i class="bi bi-gear me-1"></i>Config. global:</span>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalTopN">Top jugadores</label>
+                            <input type="number" id="globalTopN" min="0" max="100" placeholder="0 = Todos"
+                                class="form-control form-control-sm" style="width:90px;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);"
+                                onchange="saveGlobalConfig()">
+                            <span style="font-size:0.72rem;color:rgba(255,255,255,0.35);">(0 = todos)</span>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalHlCount">Destacar top</label>
+                            <input type="number" id="globalHlCount" min="0" max="100" placeholder="1"
+                                class="form-control form-control-sm" style="width:70px;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);"
+                                onchange="saveGlobalConfig()">
+                            <label style="font-size:0.78rem;color:rgba(255,255,255,0.55);white-space:nowrap;" for="globalHlColor">con color</label>
+                            <select id="globalHlColor" class="form-select form-select-sm" style="width:auto;background:#0e1b2f;color:#dfe6f2;border-color:rgba(255,255,255,0.12);" onchange="onHighlightColorChange()">
+                                <option value="yellow">Amarillo</option>
+                                <option value="none">Sin destacar</option>
+                                <option value="custom">Color personalizado</option>
+                            </select>
+                            <span id="customColorPreview" style="display:none;width:20px;height:20px;border-radius:4px;border:1px solid rgba(255,255,255,0.2);flex-shrink:0;"></span>
+                        </div>
+
+                        <span id="globalSaved" style="font-size:0.72rem;color:#4ade80;display:none;">✓ Guardado</span>
+                    </div>
+                </div>
+
+                <div id="chartList">
+                    <div class="text-muted text-center py-3" style="font-size:0.8rem;">Cargando...</div>
+                </div>
+            </div>
+        </div>
 
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -291,7 +297,26 @@
         chartModal = new bootstrap.Modal(document.getElementById('chartModal'));
         loadGlobalConfig();
         loadCharts();
+
+        // Si llegan desde otro sitio con #chart-config, scrollea a la sección
+        if (window.location.hash === '#chart-config') {
+            const el = document.getElementById('chart-config');
+            if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        }
     });
+
+    function toggleChartConfig() {
+        const body = document.getElementById('chartConfigBody');
+        const chevron = document.getElementById('chartConfigChevron');
+        const isOpen = body.style.display !== 'none';
+        if (isOpen) {
+            body.style.display = 'none';
+            chevron.style.transform = 'rotate(-90deg)';
+        } else {
+            body.style.display = '';
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    }
 
     let _userThemeColor = '#FFD700';
 
