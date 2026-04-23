@@ -6,7 +6,7 @@
     <title>Portal - {{ team.name }}</title>
 
     {# ---- Open Graph / Twitter Cards para previsualización en WhatsApp, Telegram, etc. ---- #}
-    {% set _portal_url = request.url_root.rstrip('/') + '/p/' + team.public_token %}
+    {% set _portal_url = request.url_root.rstrip('/') + '/' + team.public_token %}
     {% if team.logo_file %}
         {% set _portal_img = request.url_root.rstrip('/') + url_for('static', filename='uploads/' + team.logo_file) %}
     {% else %}
@@ -682,7 +682,7 @@
                 openMatchesModal();
                 return;
             }
-            window.location.href = `/p/${publicToken}?filter=${filterType}`;
+            window.location.href = `/${publicToken}?filter=${filterType}`;
         }
         
         function openMatchesModal() {
@@ -703,7 +703,7 @@
             params.append('filter', 'custom');
             matchIds.forEach(id => params.append('match_ids', id));
             
-            window.location.href = `/p/${publicToken}?${params.toString()}`;
+            window.location.href = `/${publicToken}?${params.toString()}`;
         }
         
         // Convocatorias

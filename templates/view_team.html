@@ -612,10 +612,15 @@
                         <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-bottom:2px;">Link al portal público del equipo</div>
                         <a href="/team/{{ team.id }}/public" target="_blank" id="portalLinkPreview"
                            style="font-size:0.85rem;color:var(--accent-color);word-break:break-all;">
-                            trainbasket.com/p/{{ team.public_token or '' }}
+                            trainbasket.com/{{ team.public_token or '' }}
                         </a>
                     </div>
-                    <div class="d-flex gap-2 flex-shrink-0">
+                    <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
+                        <button type="button" class="btn btn-sm btn-warning fw-bold"
+                                style="background:#ffc107;color:#000;border:none;"
+                                onclick="togglePortalUrlEditor()" id="portalUrlToggleBtn">
+                            <i class="bi bi-pencil-square"></i> Personalizar URL
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-light" onclick="copyPortalUrl()" title="Copiar URL">
                             <i class="bi bi-clipboard"></i>
                         </button>
@@ -624,27 +629,20 @@
                         </a>
                     </div>
                 </div>
-                <div style="margin-top:12px;padding-top:10px;border-top:1px dashed rgba(255,255,255,0.08);">
-                    <button type="button" class="btn btn-sm btn-outline-light"
-                            style="font-size:0.78rem;border-color:rgba(255,255,255,0.2);color:rgba(255,255,255,0.85);"
-                            onclick="togglePortalUrlEditor()" id="portalUrlToggleBtn">
-                        <i class="bi bi-pencil-square me-1"></i> Personalizar URL del portal
-                    </button>
-                    <div id="portalUrlEditor" style="display:none;margin-top:0.8rem;">
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <span style="font-size:0.8rem;color:rgba(255,255,255,0.55);">trainbasket.com/p/</span>
-                            <input type="text" id="portalUrlInput" class="form-control form-control-sm" style="max-width:280px;"
-                                   value="{{ team.public_token or '' }}"
-                                   placeholder="mi-equipo"
-                                   oninput="checkPortalUrl()" maxlength="60">
-                            <button type="button" class="btn btn-sm btn-primary" id="portalUrlSave" onclick="savePortalUrl()" disabled>
-                                Guardar
-                            </button>
-                        </div>
-                        <div id="portalUrlFeedback" style="font-size:0.75rem;margin-top:4px;min-height:18px;"></div>
-                        <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-top:2px;">
-                            Solo minúsculas, números y guiones. Ejemplo: <code>infantil-a</code>. Al cambiarla, la URL antigua dejará de funcionar.
-                        </div>
+                <div id="portalUrlEditor" style="display:none;margin-top:12px;padding:12px;background:rgba(255,193,7,0.06);border:1px solid rgba(255,193,7,0.25);border-radius:8px;">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span style="font-size:0.85rem;color:rgba(255,255,255,0.7);">trainbasket.com/</span>
+                        <input type="text" id="portalUrlInput" class="form-control form-control-sm" style="max-width:280px;"
+                               value="{{ team.public_token or '' }}"
+                               placeholder="mi-equipo"
+                               oninput="checkPortalUrl()" maxlength="60">
+                        <button type="button" class="btn btn-sm btn-primary" id="portalUrlSave" onclick="savePortalUrl()" disabled>
+                            Guardar
+                        </button>
+                    </div>
+                    <div id="portalUrlFeedback" style="font-size:0.78rem;margin-top:6px;min-height:18px;"></div>
+                    <div style="font-size:0.72rem;color:rgba(255,255,255,0.45);margin-top:2px;">
+                        Solo minúsculas, números y guiones. Ejemplo: <code>infantil-a</code>. Al cambiarla, la URL antigua dejará de funcionar.
                     </div>
                 </div>
             </div>

@@ -11,7 +11,7 @@ import secrets
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
@@ -4035,10 +4035,55 @@ def finish_session(id):
     db.session.commit()
     return redirect('/my_teams')
 
+# Slugs reservados: rutas internas + archivos especiales.
+# IMPORTANTE: si añades una nueva @app.route('/xxx'), añade 'xxx' aquí.
+RESERVED_PORTAL_SLUGS = {
+    # auth / admin
+    'admin', 'api', 'login', 'logout', 'register', 'auth', 'user',
+    # static / well-known
+    'static', 'favicon.ico', 'robots.txt', 'sitemap.xml', 'manifest.json', '.well-known',
+    # equipos / sesiones
+    'my_teams', 'my_plans', 'team', 'teams', 'plan', 'plans', 'drill', 'drills',
+    'session', 'sessions', 'matches', 'match', 'analytics', 'health',
+    # acciones
+    'create', 'create_plan', 'edit', 'delete', 'new_match', 'edit_plan', 'edit_session',
+    'edit_team_settings', 'edit_match_event', 'start_session', 'finish_session',
+    'manage_staff', 'accept_invite', 'reject_invite', 'import_players',
+    'toggle_fav', 'check_link', 'add_item_to_plan', 'update_item_duration',
+    'delete_plan_item', 'delete_plan', 'duplicate_drill', 'duplicate_plan',
+    'game_config', 'game_config_add', 'game_config_reset', 'ranking_add',
+    # legacy / alias
+    'p', 'portal', 'settings', 'public', 'home', 'about', 'help', 'support',
+    'privacy', 'terms', 'contact', 'pricing', 'app', 'www',
+}
+
+
 @app.route('/p/<token>')
 def public_team_by_token(token):
-    """URL pública corta: trainbasket.com/p/xK9m2p o slug personalizado."""
-    team = Team.query.filter_by(public_token=token).first_or_404()
+    """URL pública legada (301 → URL corta en raíz)."""
+    team = Team.query.filter_by(public_token=token).first()
+    if not team:
+        abort(404)
+    target = '/' + team.public_token
+    if request.query_string:
+        target += '?' + request.query_string.decode('utf-8')
+    return redirect(target, code=301)
+
+
+@app.route('/<slug>')
+def public_team_by_slug(slug):
+    """URL pública corta: trainbasket.com/<slug>.
+    Flask prioriza rutas específicas (ej. /login) sobre esta. Si el slug es
+    reservado o no existe, devolvemos 404 para no tragarnos URLs erróneas."""
+    slug_lc = slug.lower()
+    if slug_lc in RESERVED_PORTAL_SLUGS:
+        abort(404)
+    # Sólo aceptamos slugs con formato válido (evita intentos de exploración)
+    if not re.match(r'^[a-z0-9][a-z0-9-]{2,59}$', slug_lc):
+        abort(404)
+    team = Team.query.filter_by(public_token=slug_lc).first()
+    if not team:
+        abort(404)
     return public_team_ranking_logic(team)
 
 @app.route('/api/update_portal_url', methods=['POST'])
@@ -4059,9 +4104,7 @@ def api_update_portal_url():
         return jsonify({'error': 'Solo minúsculas, números y guiones (3-60 caracteres, empieza con letra/número)'}), 400
     if new_token.startswith('-') or new_token.endswith('-') or '--' in new_token:
         return jsonify({'error': 'No se permiten guiones al inicio, al final o duplicados'}), 400
-    # Palabras reservadas que podrían chocar con rutas internas
-    reserved = {'admin', 'api', 'login', 'logout', 'register', 'my_teams', 'my_plans', 'team', 'static', 'session', 'settings'}
-    if new_token in reserved:
+    if new_token in RESERVED_PORTAL_SLUGS:
         return jsonify({'error': 'Esa URL está reservada, elige otra'}), 400
 
     # Comprobar disponibilidad
@@ -4081,6 +4124,8 @@ def api_check_portal_url():
     candidate = (request.args.get('token') or '').strip().lower()
     if not re.match(r'^[a-z0-9][a-z0-9-]{2,59}$', candidate) or '--' in candidate:
         return jsonify({'available': False, 'reason': 'format'})
+    if candidate in RESERVED_PORTAL_SLUGS:
+        return jsonify({'available': False, 'reason': 'reserved'})
     existing = Team.query.filter(Team.public_token == candidate, Team.id != team_id).first()
     return jsonify({'available': existing is None})
 
@@ -4089,7 +4134,7 @@ def public_team_ranking(id):
     """URL legada — redirige a la URL corta si el equipo ya tiene token."""
     team = Team.query.get_or_404(id)
     _ensure_team_public_token(team)
-    return redirect(url_for('public_team_by_token', token=team.public_token))
+    return redirect('/' + team.public_token, code=301)
 
 def public_team_ranking_logic(team):
     _ensure_team_public_token(team)
